@@ -42,6 +42,21 @@
 *.VC.opendb
 .vsconfig
 
+# Excluded large content (re-downloadable from Quixel Bridge)
+Content/MetaHumans/
+Content/Main/Christopher/
+Content/ParagonTerra/
+
+# Marketplace content packs (redownloadable from Epic Launcher Vault)
+Content/SkeletonCharacter/
+Content/RealisticBlood/
+Content/QuangPhan/
+Content/Dodge_Animations/
+Content/Characters/
+Content/ProjectileHitVFX/
+Content/BattleMage/
+Content/KOM_Character/
+
 # Precompiled Assets
 SourceArt/**/*.png
 SourceArt/**/*.tga
@@ -73,3 +88,17 @@ Plugins/**/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+# Excluded large content (re-downloadable from Quixel Bridge)
+Content/MetaHumans/
+Content/Main/Christopher/
+Content/ParagonTerra/
+ 
+# Marketplace content packs (redownloadable from Epic Launcher Vault)
+Content/SkeletonCharacter/
+Content/RealisticBlood/
+Content/QuangPhan/
+Content/Dodge_Animations/
+Content/Characters/
+Content/ProjectileHitVFX/
+Content/BattleMage/
+Content/KOM_Character/
