@@ -20,6 +20,10 @@ public:
 	virtual void NativePreConstruct() override;
 	virtual void NativeConstruct() override;
 
+	void BindToAttribute(UAbilitySystemComponent* ASC, const FGameplayAttribute& InAttribute);
+	void SetValue(float NewValue);
+	void AttributeChanged(const FOnAttributeChangeData& Data);
+
 private:
 	UPROPERTY(meta=(BindWidget))
 	class UImage* Icon;
@@ -33,8 +37,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Visual")
 	UTexture2D* IconTexture;
 
-	void SetValue(float NewValue);
 	FNumberFormattingOptions NumberFormattingOptions;
 
-	void AttributeChanged(const FOnAttributeChangeData& Data);
+	
 };

@@ -36,6 +36,16 @@ void UStatsGauge::NativeConstruct()
 
 }
 
+void UStatsGauge::BindToAttribute(UAbilitySystemComponent* ASC, const FGameplayAttribute& InAttribute)
+{
+		if (!ASC) return;
+		Attribute = InAttribute;
+		bool bFound;
+		float Value = ASC->GetGameplayAttributeValue(Attribute, bFound);
+		SetValue(Value);
+		ASC->GetGameplayAttributeValueChangeDelegate(Attribute).AddUObject(this, &UStatsGauge::AttributeChanged);
+}
+
 void UStatsGauge::SetValue(float NewValue)
 {
 	AttributeText->SetText(FText::AsNumber(NewValue, &NumberFormattingOptions));
