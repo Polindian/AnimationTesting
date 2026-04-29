@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 
 #include "GAS/GA_Shoot.h"
@@ -39,7 +39,7 @@ void UGA_Shoot::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 
 	if (HasAuthorityOrPredictionKey(ActorInfo, &ActivationInfo))
 	{
-		// Listen for RMB RELEASED � this is how we know the player stopped aiming.
+		// Listen for RMB RELEASED — this is how we know the player stopped aiming.
 		// When received, StopShooting plays AimToIdle and ends the ability.
 		UAbilityTask_WaitGameplayEvent* WaitStopShootingEvent =
 			UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(

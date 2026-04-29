@@ -124,8 +124,6 @@ void UThrust::TargetReceived(const FGameplayAbilityTargetDataHandle& TargetDataH
 {
 	if (K2_HasAuthority())
 	{
-		//BP_ApplyGameplayEffectToTarget(TargetDataHandle, DamageEffect, GetAbilityLevel(CurrentSpecHandle, CurrentActorInfo));
-		//PushTargetsFromOwnerLocation(TargetDataHandle, TargetHitPushSpeed);
 
 		TArray<AActor*> TargetActors = UAbilitySystemBlueprintLibrary::GetAllActorsFromTargetData(TargetDataHandle);
 		AActor* OwnerActor = GetAvatarActorFromActorInfo();

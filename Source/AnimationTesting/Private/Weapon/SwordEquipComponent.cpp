@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+ï»¿// Christopher Naglik All Rights Reserved
 
 
 #include "Weapon/SwordEquipComponent.h"
@@ -92,7 +92,7 @@ void USwordEquipComponent::ExecutePhaseAction(ESwordPhaseAction Action)
         // BeginEquip/BeginUnequip was never called from the ability),
         // infer the transition direction from the current resting state.
         // This works because the montage is replicated by GAS, so anim
-        // notifies fire on ALL clients — we just need the state to be correct.
+        // notifies fire on ALL clients â€” we just need the state to be correct.
         if (!IsTransitioning())
         {
             if (EquipState == ESwordEquipState::Unequipped)
@@ -130,7 +130,7 @@ void USwordEquipComponent::FinalizeEquip()
     EquipState = ESwordEquipState::Equipped;
     UpdateEquippedTag();
 
-    UE_LOG(LogTemp, Log, TEXT("SwordEquip: FinalizeEquip — swords attached to hand sockets"));
+    UE_LOG(LogTemp, Log, TEXT("SwordEquip: FinalizeEquip â€” swords attached to hand sockets"));
 }
 
 void USwordEquipComponent::FinalizeUnequip()
@@ -142,7 +142,7 @@ void USwordEquipComponent::FinalizeUnequip()
     EquipState = ESwordEquipState::Unequipped;
     UpdateEquippedTag();
 
-    UE_LOG(LogTemp, Log, TEXT("SwordEquip: FinalizeUnequip — swords attached to sheath sockets"));
+    UE_LOG(LogTemp, Log, TEXT("SwordEquip: FinalizeUnequip â€” swords attached to sheath sockets"));
 }
 
 // -----------------------------------------------------------------------
@@ -383,7 +383,7 @@ void USwordEquipComponent::UpdateEquippedTag()
     }
     else
     {
-        // Equipping or Unequipping — remove BOTH tags (transitioning)
+        // Equipping or Unequipping â€” remove BOTH tags (transitioning)
         ASC->RemoveLooseGameplayTag(EquippedTag);
         ASC->RemoveLooseGameplayTag(UnequippedTag);
     }

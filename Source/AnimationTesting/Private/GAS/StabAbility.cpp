@@ -4,6 +4,7 @@
 #include "GAS/StabAbility.h"
 #include "GAS/GA_Combo.h"
 #include "GAS/ChrisAbilitySystemStatics.h"
+#include "AbilitySystemBlueprintLibrary.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "GameplayTagsManager.h"
@@ -59,9 +60,11 @@ void UStabAbility::StartCombo(FGameplayEventData EventData)
 {
 	if (K2_HasAuthority())
 	{
-		TArray<FHitResult> TargetHitResults = GetHitResultFromSweepLocationTargetData(EventData.TargetData, TargetSweepRadius, ETeamAttitude::Hostile, ShouldDrawDebug());
-		for (FHitResult& HitResult : TargetHitResults)
+		int HitResultCount = UAbilitySystemBlueprintLibrary::GetDataCountFromTargetData(EventData.TargetData);
+
+		for (int i = 0; i < HitResultCount; i++)
 		{
+			FHitResult HitResult = UAbilitySystemBlueprintLibrary::GetHitResultFromTargetData(EventData.TargetData, i);
 			// Apply push velocity on initial hit
 			if (!InitialHitPushVelocity.IsNearlyZero())
 			{
@@ -153,8 +156,11 @@ void UStabAbility::HandleComboDamageEvent(FGameplayEventData EventData)
 		{
 			return;
 		}
-		for (FHitResult& HitResult : TargetHitResults)
+		int HitResultCount = UAbilitySystemBlueprintLibrary::GetDataCountFromTargetData(EventData.TargetData);
+
+		for (int i = 0; i < HitResultCount; i++)
 		{
+			FHitResult HitResult = UAbilitySystemBlueprintLibrary::GetHitResultFromTargetData(EventData.TargetData, i);
 			FVector PushVelocity = GetAvatarActorFromActorInfo()->GetActorTransform().TransformVector(EffectDefinition->PushVelocity);
 			PushTarget(HitResult.GetActor(), PushVelocity);
 			ApplyGameplayEffectToHitResultActor(HitResult, EffectDefinition->DamageEffect, GetAbilityLevel(CurrentSpecHandle, CurrentActorInfo));

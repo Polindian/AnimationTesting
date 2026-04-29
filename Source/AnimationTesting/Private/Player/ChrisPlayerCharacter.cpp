@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 
 #include "Player/ChrisPlayerCharacter.h"
@@ -61,12 +61,18 @@ void AChrisPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 		EnhancedInputComp->BindAction(JumpInputAction, ETriggerEvent::Triggered, this, &AChrisPlayerCharacter::Jump);
 		EnhancedInputComp->BindAction(LookInputAction, ETriggerEvent::Triggered, this, &AChrisPlayerCharacter::HandleLookInput);
 		EnhancedInputComp->BindAction(MoveInputAction, ETriggerEvent::Triggered, this, &AChrisPlayerCharacter::HandleMoveInput);
+
 		EnhancedInputComp->BindAction(UpgradeAbilityLeaderAction, ETriggerEvent::Started, this, &AChrisPlayerCharacter::UpgradeAbilityLeaderDown);
 		EnhancedInputComp->BindAction(UpgradeAbilityLeaderAction, ETriggerEvent::Completed, this, &AChrisPlayerCharacter::UpgradeAbilityLeaderUp);
 
         for (const TPair<EChrisAbilityInputID,UInputAction*>& InputActionPair : GameplayAbilityInputActions)
         {
             EnhancedInputComp->BindAction(InputActionPair.Value, ETriggerEvent::Triggered, this, &AChrisPlayerCharacter::HandleAbilityInput, InputActionPair.Key);
+		}
+
+		for (const TPair<EChrisAbilityInputID, UInputAction*>& UpgradePair : UpgradeSlotInputActions)
+		{
+			EnhancedInputComp->BindAction(UpgradePair.Value, ETriggerEvent::Started, this, &AChrisPlayerCharacter::HandleUpgradeSlotInput, UpgradePair.Key);
 		}
         
 	}
@@ -92,11 +98,6 @@ void AChrisPlayerCharacter::HandleAbilityInput(const FInputActionValue& InputAct
 	UE_LOG(LogTemp, Warning, TEXT("HandleAbilityInput called with InputID: %d"), (int32)InputID);
 	bool bPressed = InputActionValue.Get<bool>();
 
-	if (bPressed && bIsUpgradeAbilityLeaderDown)
-	{
-		UpgradeAbilityWithInputID(InputID);
-		return;
-	}
 	if (bPressed)
 	{
 		GetAbilitySystemComponent()->AbilityLocalInputPressed((int32)InputID);
@@ -225,6 +226,15 @@ void AChrisPlayerCharacter::UpgradeAbilityLeaderUp(const FInputActionValue& Inpu
 	bIsUpgradeAbilityLeaderDown = false;
 }
 
+void AChrisPlayerCharacter::HandleUpgradeSlotInput(const FInputActionValue& InputActionValue, EChrisAbilityInputID InputID)
+{
+	bool bPressed = InputActionValue.Get<bool>();
+	if (bPressed && bIsUpgradeAbilityLeaderDown)
+	{
+		UpgradeAbilityWithInputID(InputID); 
+	}
+}
+
 EChrisAbilityInputID AChrisPlayerCharacter::GetRollDirectionFromInput(FVector2D MoveInput) const
 {
 	if (MoveInput.IsNearlyZero())
@@ -315,7 +325,7 @@ void AChrisPlayerCharacter::TickCameraLocalOffsetLerp()
 {
 	FVector CurrentLocalOffset = ViewCam->GetRelativeLocation();
 
-	// Check if we've reached the goal � if so, snap and STOP
+	// Check if we've reached the goal — if so, snap and STOP
 	if (FVector::Dist(CurrentLocalOffset, CameraLerpGoal) < 1.f)
 	{
 		ViewCam->SetRelativeLocation(CameraLerpGoal);

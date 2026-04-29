@@ -242,6 +242,68 @@ bool UChrisAbilitySystemStatics::IsAbilityAtMaxLevel(const FGameplayAbilitySpec&
 	return Spec.Level >= 4;
 }
 
+bool UChrisAbilitySystemStatics::CheckAbilityCost(const FGameplayAbilitySpec& AbilitySpec, const UAbilitySystemComponent* ASC)
+{
+	const UGameplayAbility* AbilityCDO = AbilitySpec.Ability;
+	if (AbilityCDO)
+	{
+		return AbilityCDO->CheckCost(AbilitySpec.Handle, ASC->AbilityActorInfo.Get());
+	}
+	return false;
+}
+
+float UChrisAbilitySystemStatics::GetManaCostFor(const UGameplayAbility* AbilityCDO, const UAbilitySystemComponent* ASC, int AbilityLevel)
+{
+	float ManaCost = 0.f;
+	if (AbilityCDO)
+	{
+		UGameplayEffect* CostEffect = AbilityCDO->GetCostGameplayEffect();
+		if (CostEffect)
+		{
+			FGameplayEffectSpecHandle EffectSpec = ASC->MakeOutgoingSpec(CostEffect->GetClass(), AbilityLevel, ASC->MakeEffectContext());
+			CostEffect->Modifiers[0].ModifierMagnitude.AttemptCalculateMagnitude(*EffectSpec.Data.Get(), ManaCost);
+		}
+	}
+	return FMath::Abs(ManaCost);
+}
+
+float UChrisAbilitySystemStatics::GetCooldownDurationFor(const UGameplayAbility* AbilityCDO, const UAbilitySystemComponent* ASC, int AbilityLevel)
+{
+	float CooldownDuration = 0.f;
+	if (AbilityCDO)
+	{
+		UGameplayEffect* CooldownEffect = AbilityCDO->GetCooldownGameplayEffect();
+		if (CooldownEffect)
+		{
+			FGameplayEffectSpecHandle EffectSpec = ASC->MakeOutgoingSpec(CooldownEffect->GetClass(), AbilityLevel, ASC->MakeEffectContext());
+			CooldownEffect->DurationMagnitude.AttemptCalculateMagnitude(*EffectSpec.Data.Get(), CooldownDuration);
+		}
+	}
+	return FMath::Abs(CooldownDuration);
+}
+
+float UChrisAbilitySystemStatics::GetCooldownRemainingFor(const UGameplayAbility* AbilityCDO, const UAbilitySystemComponent* ASC)
+{
+	if (!AbilityCDO)
+		return 0.f;
+
+	UGameplayEffect* CooldownEffect = AbilityCDO->GetCooldownGameplayEffect();
+	if(!CooldownEffect)
+		return 0.f;
+
+	FGameplayEffectQuery CooldownEffectQuery;
+	CooldownEffectQuery.EffectDefinition = CooldownEffect->GetClass();
+	float CooldownRemaining = 0.f;
+
+	TArray<float> CooldownTimeRemaining = ASC->GetActiveEffectsTimeRemaining(CooldownEffectQuery);
+	for(float Remaining : CooldownTimeRemaining)
+	{
+		if (Remaining > CooldownRemaining)
+			CooldownRemaining = Remaining;
+	}
+	return CooldownRemaining;
+}
+
 float UChrisAbilitySystemStatics::GetStaticCooldownDurationForAbility(const UGameplayAbility* Ability)
 {
 	if (!Ability)

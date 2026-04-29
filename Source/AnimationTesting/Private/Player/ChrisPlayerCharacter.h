@@ -48,8 +48,11 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	class UInputAction* MoveInputAction;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Input|Combat")
+	UPROPERTY(EditDefaultsOnly, Category = "Input|Upgrade")
 	class UInputAction* UpgradeAbilityLeaderAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input|Upgrade")
+	TMap<EChrisAbilityInputID, class UInputAction*> UpgradeSlotInputActions;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TMap<EChrisAbilityInputID, class UInputAction*> GameplayAbilityInputActions;
@@ -98,6 +101,7 @@ private:
 	bool bIsUpgradeAbilityLeaderDown = false;
 	void UpgradeAbilityLeaderDown(const FInputActionValue& InputActionValue);
 	void UpgradeAbilityLeaderUp(const FInputActionValue& InputActionValue);
+	void HandleUpgradeSlotInput(const FInputActionValue& InputActionValue, EChrisAbilityInputID InputID);
 
 	EChrisAbilityInputID GetRollDirectionFromInput(FVector2D MoveInput) const;
 

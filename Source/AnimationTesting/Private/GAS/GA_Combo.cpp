@@ -170,10 +170,11 @@ void UGA_Combo::ComboChangedEventReceived(FGameplayEventData Data)
 
 void UGA_Combo::DoDamage(FGameplayEventData Data)
 {
-    TArray<FHitResult> HitResults = GetHitResultFromSweepLocationTargetData(Data.TargetData, TargetSweepSphereRadius);
+    int HitResultCount = UAbilitySystemBlueprintLibrary::GetDataCountFromTargetData(Data.TargetData);
 
-    for (const FHitResult& HitResult : HitResults)
+    for (int i=0; i < HitResultCount; i++)
     {
+        FHitResult HitResult = UAbilitySystemBlueprintLibrary::GetHitResultFromTargetData(Data.TargetData, i);
         TSubclassOf<UGameplayEffect> GameplayEffect = GetDamageEffectForCurrentCombo();
         ApplyGameplayEffectToHitResultActor(HitResult, GameplayEffect, GetAbilityLevel());
     }

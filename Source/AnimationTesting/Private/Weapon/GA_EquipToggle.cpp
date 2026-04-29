@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+ï»¿// Christopher Naglik All Rights Reserved
 
 
 #include "Weapon/GA_EquipToggle.h"
@@ -8,7 +8,7 @@
 
 UGA_EquipToggle::UGA_EquipToggle()
 {
-    // This ability should NOT require weapons.equipped — it works in both states.
+    // This ability should NOT require weapons.equipped â€” it works in both states.
     // It still blocks on stun/dead from the base class constructor.
 
     // Only one equip/unequip at a time
@@ -60,7 +60,7 @@ void UGA_EquipToggle::ActivateAbility(
     }
     else
     {
-        // Already transitioning — don't do anything
+        // Already transitioning â€” don't do anything
         K2_EndAbility();
         return;
     }

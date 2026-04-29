@@ -40,9 +40,6 @@ private:
     UPROPERTY(EditDefaultsOnly, Category = "Combo")
     bool bStartsWithRightHand = true;
 
-    UPROPERTY(EditDefaultsOnly, Category = "Targetting")
-    float TargetSweepSphereRadius = 5.f;
-
     UPROPERTY(EditDefaultsOnly, Category = "Gameplay Effect")
     TSubclassOf<UGameplayEffect> DefaultDamageEffect;
 
