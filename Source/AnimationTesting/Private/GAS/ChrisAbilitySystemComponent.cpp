@@ -143,6 +143,8 @@ void UChrisAbilitySystemComponent::Server_UpgradeAbilityWithID_Implementation(EC
 	SetNumericAttributeBase(UCHeroAttributeSet::GetUpgradePointAttribute(), UpgradePoint - 1);
 	AbilitySpec->Level += 1;
 	MarkAbilitySpecDirty(*AbilitySpec);
+
+	Client_AbilitySpecLevelUpdated(AbilitySpec->Handle, AbilitySpec->Level);
 }
 
 bool UChrisAbilitySystemComponent::Server_UpgradeAbilityWithID_Validate(EChrisAbilityInputID InputID)
@@ -279,7 +281,7 @@ void UChrisAbilitySystemComponent::ExperienceUpdated(const FOnAttributeChangeDat
 		}
 
 		PreviousLevelExperience = ExperienceToReachNextLevel;
-		NewLevel = Iter.GetIndex() + 1;
+		NewLevel = Iter.GetIndex() + 2;
 	}
 
 	float CurrentLevel = GetNumericAttributeBase(UCHeroAttributeSet::GetLevelAttribute());
