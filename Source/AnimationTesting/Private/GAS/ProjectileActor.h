@@ -47,6 +47,9 @@ private:
 	UPROPERTY()
 	const AActor* Target;
 
+	UPROPERTY(VisibleAnywhere)
+	USphereComponent* CollisionSphere;
+
 	FGameplayEffectSpecHandle HitEffectSpecHandle;
 	FTimerHandle ShootTimerHandle;
 

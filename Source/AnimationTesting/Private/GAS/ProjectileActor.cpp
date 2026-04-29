@@ -12,12 +12,15 @@
 // Sets default values
 AProjectileActor::AProjectileActor()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	USceneComponent* RootComp = CreateDefaultSubobject<USceneComponent>(TEXT("Root Component"));
-	SetRootComponent(RootComp);
-
+	CollisionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("CollisionSphere"));
+	CollisionSphere->SetSphereRadius(15.f);
+	CollisionSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	CollisionSphere->SetCollisionResponseToAllChannels(ECR_Ignore);
+	CollisionSphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	CollisionSphere->SetGenerateOverlapEvents(true);
+	SetRootComponent(CollisionSphere);
 
 	bReplicates = true;
 }
@@ -58,37 +61,6 @@ void AProjectileActor::SetGenericTeamId(const FGenericTeamId& NewTeamID)
 	TeamId = NewTeamID;
 }
 
-/*void AProjectileActor::NotifyActorBeginOverlap(AActor* OtherActor)
-{
-	if(!OtherActor || OtherActor == GetOwner())
-	{
-		return;
-	}
-
-	if(GetTeamAttitudeTowards(*OtherActor) != ETeamAttitude::Hostile)
-	{
-		return;
-	}
-
-	UAbilitySystemComponent* OtherASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor);
-	if (IsValid(OtherASC))
-	{
-		if(HasAuthority() && HitEffectSpecHandle.IsValid())
-		{
-			OtherASC->ApplyGameplayEffectSpecToSelf(*HitEffectSpecHandle.Data.Get());
-			GetWorldTimerManager().ClearTimer(ShootTimerHandle);
-		}
-
-		FHitResult HitResult;
-		HitResult.ImpactPoint = GetActorLocation();
-		HitResult.ImpactNormal = GetActorForwardVector();
-
-		SendLocalGameplayCue(OtherActor, HitResult);
-
-		Destroy();
-	}
-}
-*/
 
 void AProjectileActor::NotifyActorBeginOverlap(AActor* OtherActor)
 {
@@ -144,15 +116,8 @@ void AProjectileActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (HasAuthority())
-	{
-		if (Target)
-		{
-			MoveDirection = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-		}
-	}
-
-	SetActorLocation(GetActorLocation() + MoveDirection * ProjectileSpeed * DeltaTime);
+	FVector NewLocation = GetActorLocation() + MoveDirection * ProjectileSpeed * DeltaTime;
+	SetActorLocation(NewLocation, true);
 }
 
 void AProjectileActor::TravelMaxDistanceReached()
