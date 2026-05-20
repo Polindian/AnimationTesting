@@ -8,6 +8,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
+#include "Inventory/InventoryComponent.h"
 #include "GAS/ChrisAbilitySystemStatics.h"
 #include "GAS/CHeroAttributeSet.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -34,6 +35,8 @@ AChrisPlayerCharacter::AChrisPlayerCharacter()
 	SwordEquipComponent = CreateDefaultSubobject<USwordEquipComponent>(TEXT("SwordEquipComponent"));
 
 	HeroAttributeSet = CreateDefaultSubobject<UCHeroAttributeSet>(TEXT("Hero Attribute Set"));
+
+	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("Inventory Component"));
 }
 
 void AChrisPlayerCharacter::PawnClientRestart()

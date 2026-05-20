@@ -102,3 +102,26 @@ ASkeletonAI* ASkeletonBarrack::GetNextAvailableSkeleton() const
 	return nullptr;
 }
 
+void ASkeletonBarrack::StopSpawning()
+{
+	GetWorldTimerManager().ClearTimer(SpawnIntervalTimerHnadle);
+}
+
+void ASkeletonBarrack::StartSpawning()
+{
+	GetWorldTimerManager().SetTimer(SpawnIntervalTimerHnadle, this, &ASkeletonBarrack::SpawnNewGroup, GroupSpawnInterval, true);
+}
+
+void ASkeletonBarrack::DestroyAllSkeletons()
+{
+	GetWorldTimerManager().ClearTimer(SpawnIntervalTimerHnadle);
+	for (ASkeletonAI* Skeleton : SkeletonPool)
+	{
+		if (Skeleton)
+		{
+			Skeleton->Destroy();
+		}
+	}
+	SkeletonPool.Empty();
+}
+

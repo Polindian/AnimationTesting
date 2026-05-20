@@ -1,0 +1,76 @@
+// Christopher Naglik All Rights Reserved
+
+
+#include "Inventory/InventoryComponent.h"
+#include "AbilitySystemBlueprintLibrary.h"
+#include "AbilitySystemComponent.h"
+#include "GAS/CHeroAttributeSet.h"
+#include "Inventory/PA_ShopItem.h"
+
+// Sets default values for this component's properties
+UInventoryComponent::UInventoryComponent()
+{
+	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
+	// off to improve performance if you don't need them.
+	PrimaryComponentTick.bCanEverTick = true;
+
+	// ...
+}
+
+void UInventoryComponent::TryPurchase(const UPA_ShopItem* ItemToPurchase)
+{
+	if (!OwnerAbilitySystemComponent)
+	{
+		return;
+	}
+
+	Server_Purchase(ItemToPurchase);
+}
+
+float UInventoryComponent::GetSoul() const
+{
+	bool bFound = false;
+	if (OwnerAbilitySystemComponent)
+	{
+		float Soul = OwnerAbilitySystemComponent->GetGameplayAttributeValue(UCHeroAttributeSet::GetSoulAttribute(), bFound);
+		if (bFound)
+		{
+			return Soul;
+		}
+	}
+
+	return 0.f;
+}
+
+
+// Called when the game starts
+void UInventoryComponent::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// ...
+	OwnerAbilitySystemComponent = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetOwner());
+}
+
+void UInventoryComponent::Server_Purchase_Implementation(const UPA_ShopItem* ItemToPurchase)
+{
+	if (!ItemToPurchase)
+	{
+		return;
+	}
+
+	if (GetSoul() < ItemToPurchase->GetPrice())
+	{
+		return;
+	}
+
+	OwnerAbilitySystemComponent->ApplyModToAttribute(UCHeroAttributeSet::GetSoulAttribute(), EGameplayModOp::Additive, -ItemToPurchase->GetPrice());
+	UE_LOG(LogTemp, Warning, TEXT("Bought Item: %s"), *(ItemToPurchase->GetName()));	
+}
+
+bool UInventoryComponent::Server_Purchase_Validate(const UPA_ShopItem* ItemToPurchase)
+{
+	return true;
+}
+
+

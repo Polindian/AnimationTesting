@@ -150,4 +150,10 @@ private:
 	UPROPERTY()
 	class UCHeroAttributeSet* HeroAttributeSet;
 
+	/**********************************************/
+	/*                 Inventory                  */
+	/**********************************************/
+private:
+	UPROPERTY()
+		class UInventoryComponent* InventoryComponent;
 };
