@@ -92,6 +92,11 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Input|Combat")
 	class UInputAction* IA_HeavyAttack3Shoot;
 
+	// Use Consumables 
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input|Activation")
+	class UInputAction* UseInventoryitemAction;
+
 	
 
 
@@ -102,6 +107,8 @@ private:
 	void UpgradeAbilityLeaderDown(const FInputActionValue& InputActionValue);
 	void UpgradeAbilityLeaderUp(const FInputActionValue& InputActionValue);
 	void HandleUpgradeSlotInput(const FInputActionValue& InputActionValue, EChrisAbilityInputID InputID);
+
+	void UseInventoryItem(const FInputActionValue& InputActionValue);
 
 	EChrisAbilityInputID GetRollDirectionFromInput(FVector2D MoveInput) const;
 

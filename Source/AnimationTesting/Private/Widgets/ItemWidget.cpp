@@ -1,19 +1,22 @@
-// Christopher Naglik All Rights Reserved
-
+﻿// Christopher Naglik All Rights Reserved
 
 #include "Widgets/ItemWidget.h"
 #include "Widgets/ItemToolTip.h"
 #include "Components/Image.h"
+#include "Inventory/PA_ShopItem.h"
 
 void UItemWidget::NativeConstruct()
 {
-	Super::NativeConstruct();
-	SetIsFocusable(true);
+    Super::NativeConstruct();
+    SetIsFocusable(true);
 }
 
 void UItemWidget::SetIcon(UTexture2D* IconTexture)
 {
-	ItemIcon->SetBrushFromTexture(IconTexture);
+    if (ItemIcon && IconTexture)
+    {
+        ItemIcon->SetBrushFromTexture(IconTexture);
+    }
 }
 
 void UItemWidget::SetTooltipTexture(UTexture2D* InTooltipTexture)
@@ -24,51 +27,52 @@ void UItemWidget::SetTooltipTexture(UTexture2D* InTooltipTexture)
 
 UItemToolTip* UItemWidget::SetToolTipWidget()
 {
-    UE_LOG(LogTemp, Warning, TEXT("SetToolTipWidget called. Texture: %s, Class: %s, Player: %s"),
-        TooltipTexture ? TEXT("YES") : TEXT("NULL"),
-        ItemToolTipClass ? TEXT("YES") : TEXT("NULL"),
-        GetOwningPlayer() ? TEXT("YES") : TEXT("NULL"));
-
-    if (!TooltipTexture || !ItemToolTipClass || !GetOwningPlayer())
+    if (!ItemToolTipClass || !TooltipTexture)
+    {
         return nullptr;
-
-    UItemToolTip* ToolTip = CreateWidget<UItemToolTip>(GetOwningPlayer(), ItemToolTipClass);
-    UE_LOG(LogTemp, Warning, TEXT("Tooltip created: %s"), ToolTip ? TEXT("YES") : TEXT("NULL"));
-    if (ToolTip)
-    {
-        ToolTip->SetTooltipImage(TooltipTexture);
-        SetToolTip(ToolTip);
     }
 
-    return ToolTip;
+    UItemToolTip* NewToolTip = CreateWidget<UItemToolTip>(GetOwningPlayer(), ItemToolTipClass);
+    if (NewToolTip)
+    {
+        NewToolTip->SetTooltipImage(TooltipTexture);
+        SetToolTip(NewToolTip);
+    }
+    return NewToolTip;
 }
 
-FReply UItemWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+void UItemWidget::SetStock(int32 InStock)
 {
-    if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
-    {
-        return FReply::Handled().SetUserFocus(TakeWidget());
-    }
-
-    return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+    Stock = InStock;
 }
 
-FReply UItemWidget::NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+void UItemWidget::DecrementStock()
 {
-    if (HasAnyUserFocus() && InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+    Stock = FMath::Max(0, Stock - 1);
+    if (Stock <= 0)
     {
-        OnItemClicked();
-        return FReply::Handled();
+        SetColorAndOpacity(FLinearColor(0.3f, 0.3f, 0.3f, 1.f));
     }
-
-    return Super::NativeOnMouseButtonUp(InGeometry, InMouseEvent);
 }
 
 void UItemWidget::OnItemClicked()
 {
-    UE_LOG(LogTemp, Log, TEXT("Item clicked!"));
+    if (Stock <= 0 && ShopItem && ShopItem->GetIsConsumable())
+        return;
+
     if (ShopItem)
     {
         OnItemPurchaseRequested.Broadcast(ShopItem);
     }
+}
+
+FReply UItemWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+    return FReply::Handled();
+}
+
+FReply UItemWidget::NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+    OnItemClicked();
+    return FReply::Handled();
 }

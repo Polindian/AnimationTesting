@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -24,6 +24,7 @@ public:
 	TSubclassOf<class UGameplayEffect> GetEquippedEffect() const { return EquippedEffect; }
 	TSubclassOf<class UGameplayEffect> GetConsumedEffect() const { return ConsumedEffect; }
 	TSubclassOf<class UGameplayAbility> GetGrantedAbility() const { return GrantedAbility; }
+	class UGameplayAbility* GetGrantedAbilityCDO() const;
 
 	bool GetIsConsumable() const { return bIsConsumable; }
 	bool GetIsStackable() const { return bIsStackable; }

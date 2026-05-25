@@ -39,6 +39,8 @@ void UShopWidget::ShopItemLoadFinished()
     UCAssetManager::Get().GetLoadedShopItems(ShopItems);
 
     TMap<FName, UItemWidget*> WidgetMap;
+
+    //Skills
     WidgetMap.Add(FName("DA_BladedEdge"), Skill_Assassin1);
     WidgetMap.Add(FName("DA_Fleetfoot"), Skill_Assassin2);
     WidgetMap.Add(FName("DA_StealthStrike"), Skill_Assassin3);
@@ -52,6 +54,13 @@ void UShopWidget::ShopItemLoadFinished()
     WidgetMap.Add(FName("DA_ArcaneAegis"), Skill_Magician2);
     WidgetMap.Add(FName("DA_Dominion"), Skill_Magician3);
 
+    //Consumables
+    WidgetMap.Add(FName("DA_ElixirOfLife"), ElixirOfLife);
+    WidgetMap.Add(FName("DA_BloodSerum"), BloodSerum);
+    WidgetMap.Add(FName("DA_WardensPhial"), WardensPhial);
+    WidgetMap.Add(FName("DA_Quicksilver"), Quicksilver);
+    WidgetMap.Add(FName("DA_Nightflare"), Nightflare);
+
     for (const UPA_ShopItem* ShopItem : ShopItems)
     {
         if (!ShopItem) continue;
@@ -64,15 +73,26 @@ void UShopWidget::ShopItemLoadFinished()
             (*FoundWidget)->SetIcon(ShopItem->GetIcon());
             (*FoundWidget)->SetTooltipTexture(ShopItem->GetTooltipIcon());
             BindWidgetPurchase(*FoundWidget);
+
+            if (ShopItem->GetIsConsumable())
+            {
+                (*FoundWidget)->SetStock(ShopItem->GetMaxStackCount());
+            }
         }
     }
+
+    RestoreShopState();
 }
 
 void UShopWidget::OnItemPurchaseRequested(const UPA_ShopItem* Item)
 {
     if (OwnerInventoryComponent && Item)
     {
-        OwnerInventoryComponent->TryPurchase(Item);
+        bool bSuccess = OwnerInventoryComponent->TryPurchase(Item);
+        if (bSuccess && Item->GetIsConsumable())
+        {
+            DecrementStockForItem(Item);
+        }
     }
 }
 
@@ -84,6 +104,58 @@ void UShopWidget::LoadShopItems()
 void UShopWidget::StartTimer(float Duration)
 {
     EndTime = GetWorld()->GetTimeSeconds() + Duration;
+}
+
+void UShopWidget::DecrementStockForItem(const UPA_ShopItem* Item)
+{
+    TArray<TPair<UItemWidget*, UTextBlock*>> ConsumableSlots = {
+        {ElixirOfLife, ElixirOfLifeStockText},
+        {BloodSerum, BloodSerumStockText},
+        {WardensPhial, WardensPhialStockText},
+        {Quicksilver, QuicksilverStockText},
+        {Nightflare, NightflareStockText}
+    };
+
+    for (auto& Pair : ConsumableSlots)
+    {
+        if (Pair.Key && Pair.Key->GetShopItem() == Item)
+        {
+            Pair.Key->DecrementStock();
+            if (Pair.Value)
+            {
+                Pair.Value->SetText(FText::AsNumber(Pair.Key->GetStock()));
+            }
+            break;
+        }
+    }
+}
+void UShopWidget::RestoreShopState()
+{
+    if (!OwnerInventoryComponent) return;
+
+    TArray<TPair<UItemWidget*, UTextBlock*>> ConsumableSlots = {
+        {ElixirOfLife, ElixirOfLifeStockText},
+        {BloodSerum, BloodSerumStockText},
+        {WardensPhial, WardensPhialStockText},
+        {Quicksilver, QuicksilverStockText},
+        {Nightflare, NightflareStockText}
+    };
+
+    // Restore consumable stock based on how many the player already owns
+    for (auto& Pair : ConsumableSlots)
+    {
+        if (Pair.Key && Pair.Key->GetShopItem() && Pair.Key->GetShopItem()->GetIsConsumable())
+        {
+            int32 Owned = OwnerInventoryComponent->GetConsumableCount(Pair.Key->GetShopItem());
+            int32 MaxStock = Pair.Key->GetShopItem()->GetMaxStackCount();
+            int32 Remaining = FMath::Max(0, MaxStock - Owned);
+            Pair.Key->SetStock(Remaining);
+            if (Pair.Value)
+            {
+                Pair.Value->SetText(FText::AsNumber(Remaining));
+            }
+        }
+    }
 }
 
 void UShopWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)

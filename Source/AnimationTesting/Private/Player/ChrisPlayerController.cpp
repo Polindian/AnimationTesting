@@ -188,21 +188,26 @@ void AChrisPlayerController::Client_OnFadeToBlack_Implementation(float Duration)
 // SHOP PHASE START RPC
 void AChrisPlayerController::Client_OnShopPhaseStart_Implementation(float InShopDuration, float FadeInDuration)
 {
-	// Hide the gameplay widget (do not destroy - reuse it next round)
 	if (GameplayWidget)
 	{
 		GameplayWidget->SetVisibility(ESlateVisibility::Collapsed);
 	}
 
-	// Create and show the shop widget
-	if (ShopWidgetClass)
+	// Create the shop widget only the first time
+	if (!ShopWidget && ShopWidgetClass)
 	{
 		ShopWidget = CreateWidget<UShopWidget>(this, ShopWidgetClass);
 		if (ShopWidget)
 		{
 			ShopWidget->AddToViewport();
-			ShopWidget->StartTimer(InShopDuration);
 		}
+	}
+
+	// Show it and restart the timer
+	if (ShopWidget)
+	{
+		ShopWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+		ShopWidget->StartTimer(InShopDuration);
 	}
 
 	SetShowMouseCursor(true);
@@ -212,19 +217,15 @@ void AChrisPlayerController::Client_OnShopPhaseStart_Implementation(float InShop
 // RETURN TO ARENA RPC
 void AChrisPlayerController::Client_OnReturnToArena_Implementation(float FadeInDuration)
 {
-	// Remove the shop widget
+	// Hide the shop widget (keep it alive so state persists)
 	if (ShopWidget)
 	{
-		ShopWidget->RemoveFromParent();
-		ShopWidget = nullptr;
+		ShopWidget->SetVisibility(ESlateVisibility::Collapsed);
 	}
 
-	// Hide cursor, return to game-only input mode.
-	// FInputModeGameOnly means mouse is captured by the game (no visible cursor).
 	SetShowMouseCursor(false);
 	SetInputMode(FInputModeGameOnly());
 
-	// Show gameplay widget again for the next round
 	if (GameplayWidget)
 	{
 		GameplayWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);

@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -62,9 +62,36 @@ private:
     UPROPERTY(meta = (BindWidget))
     UItemWidget* Skill_Magician3;
 
+    // Consumables
+    UPROPERTY(meta = (BindWidget))
+    UItemWidget* ElixirOfLife;
+    UPROPERTY(meta = (BindWidget))
+    UItemWidget* BloodSerum;
+    UPROPERTY(meta = (BindWidget))
+    UItemWidget* WardensPhial;
+    UPROPERTY(meta = (BindWidget))
+    UItemWidget* Quicksilver;
+    UPROPERTY(meta = (BindWidget))
+    UItemWidget* Nightflare;
+
+    // Stock
+    UPROPERTY(meta = (BindWidget))
+    class UTextBlock* ElixirOfLifeStockText;
+    UPROPERTY(meta = (BindWidget))
+    class UTextBlock* BloodSerumStockText;
+    UPROPERTY(meta = (BindWidget))
+    class UTextBlock* WardensPhialStockText;
+    UPROPERTY(meta = (BindWidget))
+    class UTextBlock* QuicksilverStockText;
+    UPROPERTY(meta = (BindWidget))
+    class UTextBlock* NightflareStockText;
+
     void LoadShopItems();
     void ShopItemLoadFinished();
     void BindWidgetPurchase(UItemWidget* Widget);
+
+    void DecrementStockForItem(const UPA_ShopItem* Item);
+    void RestoreShopState();
 
     UPROPERTY()
     UInventoryComponent* OwnerInventoryComponent;

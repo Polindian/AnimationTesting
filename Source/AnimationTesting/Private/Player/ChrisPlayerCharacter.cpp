@@ -77,6 +77,8 @@ void AChrisPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
 		{
 			EnhancedInputComp->BindAction(UpgradePair.Value, ETriggerEvent::Started, this, &AChrisPlayerCharacter::HandleUpgradeSlotInput, UpgradePair.Key);
 		}
+
+		EnhancedInputComp->BindAction(UseInventoryitemAction, ETriggerEvent::Triggered, this, &AChrisPlayerCharacter::UseInventoryItem);
         
 	}
 }
@@ -236,6 +238,12 @@ void AChrisPlayerCharacter::HandleUpgradeSlotInput(const FInputActionValue& Inpu
 	{
 		UpgradeAbilityWithInputID(InputID); 
 	}
+}
+
+void AChrisPlayerCharacter::UseInventoryItem(const FInputActionValue& InputActionValue)
+{
+	int Value = FMath::RoundToInt(InputActionValue.Get<float>());
+	InventoryComponent->TryActivateItemInSlot(Value - 1);
 }
 
 EChrisAbilityInputID AChrisPlayerCharacter::GetRollDirectionFromInput(FVector2D MoveInput) const

@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -12,39 +12,48 @@ class UPA_ShopItem;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnItemPurchaseRequested, const UPA_ShopItem*);
 /**
- * 
+ *
  */
 UCLASS()
 class UItemWidget : public UUserWidget
 {
-	GENERATED_BODY()
-	
+    GENERATED_BODY()
+
 public:
-	virtual void NativeConstruct() override;
-	virtual void SetIcon(UTexture2D* IconTexture);
-	void SetTooltipTexture(UTexture2D* InTooltipTexture);
-	void SetShopItem(const UPA_ShopItem* InItem) { ShopItem = InItem; }
-	const UPA_ShopItem* GetShopItem() const { return ShopItem; }
+    virtual void NativeConstruct() override;
+    virtual void SetIcon(UTexture2D* IconTexture);
+    void SetTooltipTexture(UTexture2D* InTooltipTexture);
+    void SetShopItem(const UPA_ShopItem* InItem) { ShopItem = InItem; }
+    const UPA_ShopItem* GetShopItem() const { return ShopItem; }
 
-	FOnItemPurchaseRequested OnItemPurchaseRequested;
+    FOnItemPurchaseRequested OnItemPurchaseRequested;
 
-protected:
-	virtual void OnItemClicked();
-	UItemToolTip* SetToolTipWidget();
+    void SetStock(int32 InStock);
+    int32 GetStock() const { return Stock; }
+    void DecrementStock();
 
 private:
-	UPROPERTY(meta=(BindWidget))
-	class UImage* ItemIcon;
+    int32 Stock = 0;
 
-	UPROPERTY(EditAnywhere, Category = "ToolTip")
-	TSubclassOf<UItemToolTip> ItemToolTipClass;
+protected:
+    virtual void OnItemClicked();
+    UItemToolTip* SetToolTipWidget();
 
-	UPROPERTY()
-	UTexture2D* TooltipTexture;
+    class UImage* GetItemIcon() const { return ItemIcon; };
 
-	UPROPERTY()
-	const UPA_ShopItem* ShopItem = nullptr;
+private:
+    UPROPERTY(meta = (BindWidget))
+    class UImage* ItemIcon;
 
-	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
-	virtual FReply NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+    UPROPERTY(EditAnywhere, Category = "ToolTip")
+    TSubclassOf<UItemToolTip> ItemToolTipClass;
+
+    UPROPERTY()
+    UTexture2D* TooltipTexture;
+
+    UPROPERTY()
+    const UPA_ShopItem* ShopItem = nullptr;
+
+    virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+    virtual FReply NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 };
