@@ -116,6 +116,56 @@ void UChrisAbilitySystemComponent::ApplyFullStatEffect()
 	AuthApplyGameEffect(AbilitySystemGenerics->GetFullStatEffect());
 }
 
+void UChrisAbilitySystemComponent::ResetAllCooldowns()
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+		return;
+
+	int32 TotalRemoved = 0;
+	for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
+	{
+		if (!Spec.Ability)
+			continue;
+
+		const FGameplayTagContainer* CooldownTags = Spec.Ability->GetCooldownTags();
+		if (!CooldownTags || CooldownTags->Num() == 0)
+			continue;
+
+		UE_LOG(LogTemp, Warning, TEXT("ResetCooldowns: Ability %s has cooldown tags: %s"),
+			*Spec.Ability->GetName(), *CooldownTags->ToString());
+
+		int32 Removed = RemoveActiveEffectsWithGrantedTags(*CooldownTags);
+		TotalRemoved += Removed;
+
+		UE_LOG(LogTemp, Warning, TEXT("ResetCooldowns: Removed %d effects for %s"), Removed, *Spec.Ability->GetName());
+	}
+	UE_LOG(LogTemp, Warning, TEXT("ResetCooldowns: Total effects removed: %d"), TotalRemoved);
+}
+
+void UChrisAbilitySystemComponent::ApplyHeavyAbilityCooldowns()
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+		return;
+
+	for (const TPair<EChrisAbilityInputID, TSubclassOf<UGameplayAbility>>& AbilityPair : Abilities)
+	{
+		FGameplayAbilitySpec* Spec = FindAbilitySpecFromClass(AbilityPair.Value);
+		if (!Spec || Spec->Level <= 0)
+			continue;
+
+		UGameplayAbility* AbilityCDO = Spec->Ability;
+		if (!AbilityCDO)
+			continue;
+
+		UGameplayEffect* CooldownGE = AbilityCDO->GetCooldownGameplayEffect();
+		if (!CooldownGE)
+			continue;
+
+		FGameplayEffectSpecHandle SpecHandle = MakeOutgoingSpec(CooldownGE->GetClass(), Spec->Level, MakeEffectContext());
+		ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+	}
+}
+
 const TMap<EChrisAbilityInputID, TSubclassOf<UGameplayAbility>>& UChrisAbilitySystemComponent::GetAbilities() const
 {
 	return Abilities;

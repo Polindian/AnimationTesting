@@ -40,4 +40,10 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Rewards")
 	TSubclassOf<UGameplayEffect> RewardEffect;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rewards")
+	float HeroExperienceReward = 300.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rewards")
+	float HeroSoulReward = 30.f;
 };

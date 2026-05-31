@@ -58,6 +58,48 @@ void UAbilityGauge::ConfigureWithWidgetData(const FAbilityWidgetData* WidgetData
 	}
 }
 
+void UAbilityGauge::ResetCooldownVisual()
+{
+	GetWorld()->GetTimerManager().ClearTimer(CooldownTimerHandle);
+	GetWorld()->GetTimerManager().ClearTimer(CooldownTimerUpdateHandle);
+	CachedCooldownDuration = 0.f;
+	CachedCooldownTimeRemaining = 0.f;
+	CooldownCounterText->SetVisibility(ESlateVisibility::Hidden);
+	if (Icon)
+	{
+		Icon->GetDynamicMaterial()->SetScalarParameterValue(CooldownPercentParamName, 1.f);
+	}
+}
+
+void UAbilityGauge::StartRoundCooldown()
+{
+	// First clear any existing cooldown timers
+	GetWorld()->GetTimerManager().ClearTimer(CooldownTimerHandle);
+	GetWorld()->GetTimerManager().ClearTimer(CooldownTimerUpdateHandle);
+
+	const FGameplayAbilitySpec* Spec = GetAbilitySpec();
+	if (!Spec || Spec->Level <= 0)
+	{
+		// Ability not learned — just show as ready/disabled
+		ResetCooldownVisual();
+		return;
+	}
+
+	// Get the full cooldown duration for this ability at its current level
+	float CooldownDuration = UChrisAbilitySystemStatics::GetCooldownDurationFor(
+		AbilityCDO, OwnerAbilitySystemComponent, Spec->Level);
+
+	if (CooldownDuration > 0.f)
+	{
+		// Start the visual cooldown at full duration
+		StartCooldown(CooldownDuration, CooldownDuration);
+	}
+	else
+	{
+		ResetCooldownVisual();
+	}
+}
+
 void UAbilityGauge::AbilityCommitted(UGameplayAbility* Ability)
 {
 	if (Ability->GetClass()->GetDefaultObject() == AbilityCDO)

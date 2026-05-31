@@ -118,4 +118,28 @@ private:
     FVector OriginalBoomSocketOffset;
     bool bOriginalUsePawnControlRotation = true;
     float OriginalArmLength = 0.f;
+
+
+public:
+	virtual void SetupInputComponent() override;
+
+ private:
+	UFUNCTION()
+	void ToggleGameplayMenu();
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+    class UInputMappingContext* UIInputMapping;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Input")
+    class UInputAction* ToggleGameplayMenuAction;
+
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    TSubclassOf<class UGameplayMenu> GameplayMenuClass;
+
+    UPROPERTY()
+    class UGameplayMenu* GameplayMenuWidget;
+
+    bool bIsGameplayMenuOpen = false;
+
+    bool bIsRoundActive = false;
 };

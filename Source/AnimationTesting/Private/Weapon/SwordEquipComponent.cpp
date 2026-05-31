@@ -145,6 +145,23 @@ void USwordEquipComponent::FinalizeUnequip()
     UE_LOG(LogTemp, Log, TEXT("SwordEquip: FinalizeUnequip — swords attached to sheath sockets"));
 }
 
+void USwordEquipComponent::ResetToUnequipped()
+{
+    // Cancel any in-progress transition
+    CurrentPhase = ESwordFlyPhase::None;
+    PhaseAlpha = 0.f;
+    SetComponentTickEnabled(false);
+
+    // Snap swords to sheath sockets
+    if (LeftSword && RightSword && OwnerMesh)
+    {
+        AttachSwordsToSockets(LeftSheathSocket, RightSheathSocket);
+    }
+
+    EquipState = ESwordEquipState::Unequipped;
+    UpdateEquippedTag();
+}
+
 // -----------------------------------------------------------------------
 // Attachment helpers
 // -----------------------------------------------------------------------

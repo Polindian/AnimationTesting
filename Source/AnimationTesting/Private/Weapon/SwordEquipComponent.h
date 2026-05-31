@@ -62,6 +62,8 @@ class USwordEquipComponent : public UActorComponent
         void FinalizeEquip();
         void FinalizeUnequip();
 
+        void ResetToUnequipped();
+
 private:
     // ---------- Socket names ----------
     UPROPERTY(EditDefaultsOnly, Category = "Swords|Sockets")

@@ -1,16 +1,19 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 
 #include "Widgets/GameplayWidget.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "Character/ChrisCharacter.h"
+#include "Components/WidgetSwitcher.h"
+#include "Components/CanvasPanel.h"
 #include "Widgets/ValueGauge.h"
 #include "Widgets/AbilityListView.h"
 #include "GAS/ChrisAttributeSet.h"
 #include "GAS/ChrisAbilitySystemComponent.h"
 #include "GAS/CHeroAttributeSet.h"
 #include "Widgets/StatsGauge.h"
+#include "Widgets/GameplayMenu.h"
 
 void UGameplayWidget::NativeConstruct()
 {
@@ -36,3 +39,40 @@ void UGameplayWidget::ConfigureAbilities(const TMap<EChrisAbilityInputID, TSubcl
 	AbilityListView->ConfigureAbilities(Abilities);
 }
 
+void UGameplayWidget::ResetAllCooldowns()
+{
+	if (AbilityListView)
+	{
+		AbilityListView->ResetAllCooldownVisuals();
+	}
+}
+
+void UGameplayWidget::SetOwningPawnInputEnabled(bool bPawnInputEnabled)
+{
+	if(bPawnInputEnabled)
+	{
+		GetOwningPlayerPawn()->EnableInput(GetOwningPlayer());
+	}
+	else
+	{
+		GetOwningPlayerPawn()->DisableInput(GetOwningPlayer());
+	}
+}
+
+/*void UGameplayWidget::SetShowMouseCursor(bool bShowCursor)
+{
+	GetOwningPlayer()->SetShowMouseCursor(bShowCursor);
+}
+*/
+void UGameplayWidget::SetFocusToGameAndUI()
+{
+	FInputModeGameAndUI GameAndUIInputMode;
+	GameAndUIInputMode.SetHideCursorDuringCapture(false);
+	GetOwningPlayer()->SetInputMode(GameAndUIInputMode);
+}
+
+void UGameplayWidget::SetFocusToGameOnly()
+{
+	FInputModeGameOnly GameOnlyInputMode;
+	GetOwningPlayer()->SetInputMode(GameOnlyInputMode);
+}

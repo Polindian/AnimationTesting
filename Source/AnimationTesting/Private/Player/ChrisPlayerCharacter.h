@@ -163,4 +163,13 @@ private:
 private:
 	UPROPERTY()
 		class UInventoryComponent* InventoryComponent;
+
+	/**********************************************/
+	/*               Flag Capture                 */
+	/**********************************************/
+
+public:
+	float ZoneTimeAccumulator = 0.f;
+	void ResetZoneTimeAccumulator() { ZoneTimeAccumulator = 0.f; };
+
 };

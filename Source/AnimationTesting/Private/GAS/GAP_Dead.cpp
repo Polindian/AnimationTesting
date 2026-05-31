@@ -47,8 +47,12 @@ void UGAP_Dead::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 		bool bFound = false;
 		float SelfExperience = GetAbilitySystemComponentFromActorInfo_Ensured()->GetGameplayAttributeValue(UCHeroAttributeSet::GetExperienceAttribute(), bFound);
 
-		float TotalExperienceReward = BaseExperenceReward + ExperienceRewardPerExperience * SelfExperience;
-		float TotalSoulReward = BaseSoulReward + SoulRewardPerExperience * SelfExperience;
+		// Use different base rewards depending on whether the dying actor is a Hero or AI
+		float BaseXP = UChrisAbilitySystemStatics::IsHero(GetAvatarActorFromActorInfo()) ? HeroExperienceReward : BaseExperenceReward;
+		float BaseSoul = UChrisAbilitySystemStatics::IsHero(GetAvatarActorFromActorInfo()) ? HeroSoulReward : BaseSoulReward;
+
+		float TotalExperienceReward = BaseXP + ExperienceRewardPerExperience * SelfExperience;
+		float TotalSoulReward = BaseSoul + SoulRewardPerExperience * SelfExperience;
 
 		if (Killer)
 		{

@@ -2,10 +2,16 @@
 
 
 #include "Framework/ChrisGameMode.h"
+#include "AbilitySystemInterface.h"
+#include "AbilitySystemComponent.h"
 #include "Player/ChrisPlayerController.h"
+#include "Player/ChrisPlayerCharacter.h"
 #include "GameFramework/PlayerStart.h"
+#include "GAS/ChrisAbilitySystemComponent.h"
 #include "EngineUtils.h"
+#include "Framework/Flag.h"
 #include "AI/SkeletonBarrack.h"
+#include "Weapon/SwordEquipComponent.h" 
 
 
 APlayerController* AChrisGameMode::SpawnPlayerController(ENetRole InRemoteRole, const FString& Options)
@@ -139,6 +145,33 @@ void AChrisGameMode::StartRound()
 
 	UE_LOG(LogTemp, Log, TEXT("[MatchFlow] Round %d started! Duration: %.0fs"), CurrentRound, RoundDuration);
 
+	ForEachPlayerController([](AChrisPlayerController* PC)
+		{
+			if (APawn* Pawn = PC->GetPawn())
+			{
+				if (USwordEquipComponent* SwordComponent = Pawn->FindComponentByClass<USwordEquipComponent>())
+				{
+					SwordComponent->ResetToUnequipped();
+				}
+			}
+		});
+
+	ForEachPlayerController([](AChrisPlayerController* PC)
+		{
+			if (APawn* Pawn = PC->GetPawn())
+			{
+				if (IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(Pawn))
+				{
+					if (UChrisAbilitySystemComponent* ASC = Cast<UChrisAbilitySystemComponent>(ASI->GetAbilitySystemComponent()))
+					{
+						ASC->ResetAllCooldowns();
+						ASC->ApplyHeavyAbilityCooldowns();
+						ASC->ApplyFullStatEffect();
+					}
+				}
+			}
+		});
+
 	// Notify all clients: "enable input, show gameplay UI, start your timer display"
 	ForEachPlayerController([this](AChrisPlayerController* PC)
 		{
@@ -147,6 +180,19 @@ void AChrisGameMode::StartRound()
 
 	// After RoundDuration seconds, end the round.
 	GetWorldTimerManager().SetTimer(PhaseTimerHandle, this, &AChrisGameMode::EndRound, RoundDuration, false);
+
+	// Enable flag capturing for this round and white banner slam animation
+	int32 FlagCount = 0;
+	for (TActorIterator<AFlag> It(GetWorld()); It; ++It)
+	{
+		FlagCount++;
+		UE_LOG(LogTemp, Warning, TEXT("Found flag: %s | BannerEffect: %s"),
+			*It->GetName(),
+			It->FindComponentByClass<UNiagaraComponent>() ? TEXT("VALID") : TEXT("NULL"));
+		It->SetCaptureEnabled(true);
+		It->PlayBannerSlam(FLinearColor::White);
+	}
+	UE_LOG(LogTemp, Warning, TEXT("[MatchFlow] Total flags found: %d"), FlagCount);
 }
 
 // ROUND_END phase: 5 second pause, input disabled
@@ -156,12 +202,42 @@ void AChrisGameMode::EndRound()
 
 	UE_LOG(LogTemp, Log, TEXT("[MatchFlow] Round %d ended. Waiting %.0fs before shop transition."), CurrentRound, RoundEndWaitTime);
 
+	// Cancel ALL active abilities on all players FIRST (stops aim, attacks, etc.)
+	ForEachPlayerController([](AChrisPlayerController* PC)
+		{
+			if (APawn* Pawn = PC->GetPawn())
+			{
+				if (IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(Pawn))
+				{
+					if (UAbilitySystemComponent* ASC = ASI->GetAbilitySystemComponent())
+					{
+						ASC->CancelAllAbilities();
+					}
+				}
+			}
+		});
+
 	ForEachPlayerController([](AChrisPlayerController* PC)
 		{
 			PC->Client_OnRoundEnd();
 		});
 
 	GetWorldTimerManager().SetTimer(PhaseTimerHandle, this, &AChrisGameMode::StartTransitionToShop, RoundEndWaitTime, false);
+
+	// Stop all flag capturing
+	for (TActorIterator<AFlag> It(GetWorld()); It; ++It)
+	{
+		It->SetCaptureEnabled(false);
+	}
+
+	// Reset zone time accumulators for all players
+	ForEachPlayerController([](AChrisPlayerController* PC)
+		{
+			if (AChrisPlayerCharacter* Hero = Cast<AChrisPlayerCharacter>(PC->GetPawn()))
+			{
+				Hero->ResetZoneTimeAccumulator();
+			}
+		});
 }
 
 // TRANSITION TO SHOP: 3 second fade (1.5s out + 1.5s in)
@@ -187,6 +263,11 @@ void AChrisGameMode::OnTransitionToShopMidpoint()
 	StopAllAISpawning();
 	DestroyAllAI();
 	TeleportPlayersToStart();
+
+	for (TActorIterator<AFlag> It(GetWorld()); It; ++It)
+	{
+		It->DismissBanner();
+	}
 
 	float HalfTransition = TransitionDuration / 2.f;
 
@@ -274,6 +355,12 @@ void AChrisGameMode::OnTransitionToArenaMidpoint()
 	// Screen is fully black. Restart AI, swap widgets, restore camera.
 	StartAllAISpawning();
 
+	// Reset all flag zones for the new round
+	for (TActorIterator<AFlag> It(GetWorld()); It; ++It)
+	{
+		It->ResetCapture();
+	}
+
 	float HalfTransition = TransitionDuration / 2.f;
 
 	UE_LOG(LogTemp, Log, TEXT("[MatchFlow] Screen black. Swapping to arena UI, fading in (%.1fs)"), HalfTransition);
@@ -287,6 +374,7 @@ void AChrisGameMode::OnTransitionToArenaMidpoint()
 
 	// Hold black screen, then fade in
 	GetWorldTimerManager().SetTimer(PhaseTimerHandle, this, &AChrisGameMode::OnTransitionToArenaFadeIn, BlackScreenHoldDuration, false);
+
 }
 
 void AChrisGameMode::OnTransitionToArenaFadeIn()

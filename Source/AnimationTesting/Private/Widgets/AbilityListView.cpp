@@ -41,3 +41,15 @@ const FAbilityWidgetData* UAbilityListView::FindWidgetDataForAbility(const TSubc
 
 	return nullptr;
 }
+
+void UAbilityListView::ResetAllCooldownVisuals()
+{
+	for (int32 i = 0; i < GetNumItems(); i++)
+	{
+		UUserWidget* EntryWidget = GetEntryWidgetFromItem(GetItemAt(i));
+		if (UAbilityGauge* Gauge = Cast<UAbilityGauge>(EntryWidget))
+		{
+			Gauge->StartRoundCooldown(); 
+		}
+	}
+}

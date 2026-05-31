@@ -25,4 +25,6 @@ public:
 
 	const struct FAbilityWidgetData* FindWidgetDataForAbility(const TSubclassOf<UGameplayAbility>& AbilityClass) const;
 
+	void ResetAllCooldownVisuals();
+
 };

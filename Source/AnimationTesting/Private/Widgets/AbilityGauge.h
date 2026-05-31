@@ -46,6 +46,9 @@ public:
 	
 	void ConfigureWithWidgetData(const FAbilityWidgetData* WidgetData);
 
+	void ResetCooldownVisual();
+	void StartRoundCooldown();
+
 private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Cooldown")

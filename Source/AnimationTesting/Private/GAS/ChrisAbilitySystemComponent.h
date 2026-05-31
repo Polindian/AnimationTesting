@@ -22,6 +22,9 @@ public:
 	void ServerSideInit();
 	void ApplyFullStatEffect();
 
+	void ResetAllCooldowns();
+	void ApplyHeavyAbilityCooldowns();
+
 	const TMap<EChrisAbilityInputID, TSubclassOf<UGameplayAbility>>& GetAbilities() const;
 	bool IsAtMaxLevel() const;
 

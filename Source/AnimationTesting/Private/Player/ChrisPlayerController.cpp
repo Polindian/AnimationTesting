@@ -4,13 +4,20 @@
 #include "Player/ChrisPlayerController.h"
 #include "Player/ChrisPlayerCharacter.h"
 #include "Net/UnrealNetwork.h"
+#include "EnhancedInputSubsystems.h"
+#include "EnhancedInputComponent.h"
 #include "Widgets/GameplayWidget.h"
+#include "Widgets/GameplayMenu.h"
 #include "Widgets/MatchCountdownWidget.h"
 #include "Widgets/RoundTimerWidget.h"
 #include "Widgets/ShopWidget.h"
 #include "Framework/ChrisGameMode.h"
+#include "Framework/Application/SlateApplication.h"
+#include "Weapon/SwordEquipComponent.h"
 #include "Camera/PlayerCameraManager.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Animation/AnimInstance.h"
+
 
 
 
@@ -34,6 +41,15 @@ void AChrisPlayerController::AcknowledgePossession(APawn* NewPawn)
 	{
 		ChrisPlayerCharacter->ClientSideInit();
 		SpawnGameplayWidget();
+
+		// Register UI input mapping context so Esc (menu toggle) always works
+		if (ULocalPlayer* LP = GetLocalPlayer())
+		{
+			if (UEnhancedInputLocalPlayerSubsystem* InputSubsystem = LP->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
+			{
+				InputSubsystem->AddMappingContext(UIInputMapping, 1);
+			}
+		}
 
 		// Disable input immediately
 		ChrisPlayerCharacter->DisableInput(this);
@@ -72,6 +88,87 @@ void AChrisPlayerController::SpawnGameplayWidget()
 	{
 		GameplayWidget->AddToViewport();
 		GameplayWidget->ConfigureAbilities(ChrisPlayerCharacter->GetAbilities());
+	}
+}
+
+void AChrisPlayerController::SetupInputComponent()
+{
+	Super::SetupInputComponent();
+
+	UEnhancedInputComponent* EnhancedInputComp = Cast<UEnhancedInputComponent>(InputComponent);
+	if (EnhancedInputComp)
+	{
+		EnhancedInputComp->BindAction(ToggleGameplayMenuAction, ETriggerEvent::Triggered, this, &AChrisPlayerController::ToggleGameplayMenu);
+	}
+}
+
+void AChrisPlayerController::ToggleGameplayMenu()
+{
+	if (bIsGameplayMenuOpen)
+	{
+		// CLOSE the menu
+		if (GameplayMenuWidget)
+		{
+			GameplayMenuWidget->SetVisibility(ESlateVisibility::Collapsed);
+		}
+		bIsGameplayMenuOpen = false;
+
+		// Restore state based on which phase we're in
+		bool bInShop = ShopWidget && ShopWidget->GetVisibility() != ESlateVisibility::Collapsed;
+		
+
+		if (bIsRoundActive)
+		{
+			// Active round: re-enable input, hide cursor
+			if (ChrisPlayerCharacter)
+			{
+				ChrisPlayerCharacter->EnableInput(this);
+			}
+			SetShowMouseCursor(false);
+			SetInputMode(FInputModeGameOnly());
+		}
+		else if (bInShop)
+		{
+			// Shop: keep cursor, Game+UI mode
+			SetShowMouseCursor(true);
+			FInputModeGameAndUI GameAndUI;
+			GameAndUI.SetHideCursorDuringCapture(false);
+			SetInputMode(GameAndUI);
+		}
+		else
+		{
+			// Countdown/round end/transition: hide cursor, don't re-enable input
+			SetShowMouseCursor(false);
+			SetInputMode(FInputModeGameOnly());
+		}
+	}
+	else
+	{
+		// OPEN the menu (same as before)
+		if (!GameplayMenuWidget && GameplayMenuClass)
+		{
+			GameplayMenuWidget = CreateWidget<UGameplayMenu>(this, GameplayMenuClass);
+			if (GameplayMenuWidget)
+			{
+				GameplayMenuWidget->AddToViewport(200);
+				GameplayMenuWidget->GetReturnToArenaButtonClickedEventDelegate().AddDynamic(this, &AChrisPlayerController::ToggleGameplayMenu);
+			}
+		}
+
+		if (GameplayMenuWidget)
+		{
+			GameplayMenuWidget->SetVisibility(ESlateVisibility::Visible);
+		}
+		bIsGameplayMenuOpen = true;
+
+		if (ChrisPlayerCharacter)
+		{
+			ChrisPlayerCharacter->DisableInput(this);
+		}
+		SetShowMouseCursor(true);
+		FInputModeGameAndUI GameAndUI;
+		GameAndUI.SetHideCursorDuringCapture(false);
+		SetInputMode(GameAndUI);
 	}
 }
 
@@ -122,8 +219,19 @@ void AChrisPlayerController::Client_OnCountdownTick_Implementation(int32 Seconds
 // ROUND START RPC
 void AChrisPlayerController::Client_OnRoundStart_Implementation(float Duration)
 {
-	// Re-enable input so the player can move and use abilities.
+	bIsRoundActive = true;
+
+	// Reset swords to sheathed state on the CLIENT (visual update)
 	if (ChrisPlayerCharacter)
+	{
+		if (USwordEquipComponent* SwordComponent = ChrisPlayerCharacter->FindComponentByClass<USwordEquipComponent>())
+		{
+			SwordComponent->ResetToUnequipped();
+		}
+	}
+
+	// Only re-enable input if the gameplay menu is NOT open
+	if (!bIsGameplayMenuOpen && ChrisPlayerCharacter)
 	{
 		ChrisPlayerCharacter->EnableInput(this);
 	}
@@ -139,6 +247,7 @@ void AChrisPlayerController::Client_OnRoundStart_Implementation(float Duration)
 	// Show the gameplay widget (health bars, stats, abilities).
 	if (GameplayWidget)
 	{
+		GameplayWidget->ResetAllCooldowns();
 		GameplayWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 	}
 
@@ -159,6 +268,8 @@ void AChrisPlayerController::Client_OnRoundStart_Implementation(float Duration)
 // ROUND END RPC
 void AChrisPlayerController::Client_OnRoundEnd_Implementation()
 {
+	bIsRoundActive = false;
+
 	if (ChrisPlayerCharacter)
 	{
 		ChrisPlayerCharacter->DisableInput(this);
@@ -170,6 +281,16 @@ void AChrisPlayerController::Client_OnRoundEnd_Implementation()
 		RoundTimerWidget->RemoveFromParent();
 		RoundTimerWidget = nullptr;
 	}
+
+	// Force character back to idle animation (stop any active montages)
+	if (ChrisPlayerCharacter)
+	{
+		if (UAnimInstance* AnimInstance = ChrisPlayerCharacter->GetMesh()->GetAnimInstance())
+		{
+			AnimInstance->Montage_Stop(0.25f);  // Quick blend to idle
+		}
+	}
+
 
 	UE_LOG(LogTemp, Log, TEXT("[Client] Round ended."));
 }
@@ -214,10 +335,18 @@ void AChrisPlayerController::Client_OnShopPhaseStart_Implementation(float InShop
 	SetInputMode(FInputModeGameAndUI());
 }
 
-// RETURN TO ARENA RPC
 void AChrisPlayerController::Client_OnReturnToArena_Implementation(float FadeInDuration)
 {
-	// Hide the shop widget (keep it alive so state persists)
+	// Force-close menu if it was open during shop
+	if (bIsGameplayMenuOpen)
+	{
+		if (GameplayMenuWidget)
+		{
+			GameplayMenuWidget->SetVisibility(ESlateVisibility::Collapsed);
+		}
+		bIsGameplayMenuOpen = false;
+	}
+
 	if (ShopWidget)
 	{
 		ShopWidget->SetVisibility(ESlateVisibility::Collapsed);
@@ -226,10 +355,8 @@ void AChrisPlayerController::Client_OnReturnToArena_Implementation(float FadeInD
 	SetShowMouseCursor(false);
 	SetInputMode(FInputModeGameOnly());
 
-	if (GameplayWidget)
-	{
-		GameplayWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-	}
+	// Explicitly grab focus for the game viewport
+	FSlateApplication::Get().SetAllUserFocusToGameViewport();
 }
 
 // CONTINUE VOTE (Server RPC)

@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -18,6 +18,9 @@ class UGameplayWidget : public UUserWidget
 public:
 	virtual void NativeConstruct() override;
 	void ConfigureAbilities(const TMap<EChrisAbilityInputID, TSubclassOf<class UGameplayAbility>>& Abilities);
+
+	void ResetAllCooldowns();
+	
 
 private:
 	UPROPERTY(meta = (BindWidget))
@@ -44,6 +47,9 @@ private:
 	UPROPERTY(meta = (BindWidget))
 	class UInventoryWidget* InventoryWidget;
 
+	UPROPERTY(meta = (BindWidget))
+	class UFlagProgressWidget* FlagStatProgressWidget;
+
 	UPROPERTY()
 	class UAbilitySystemComponent* OwnerAbilitySystemComponent;
 
@@ -52,4 +58,10 @@ private:
 
 	UPROPERTY(meta=(BindWidget))
 	class UCrosshairWidget* CrosshairWidget;
+
+	void SetOwningPawnInputEnabled(bool bPawnInputEnabled);
+	//void SetShowMouseCursor(bool bShowCursor);
+	void SetFocusToGameAndUI();
+	void SetFocusToGameOnly();
+
 };
