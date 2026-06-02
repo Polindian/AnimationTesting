@@ -33,6 +33,7 @@ public:
 	ATTRIBUTE_ACCESSORS(UChrisAttributeSet, Armour)
 	ATTRIBUTE_ACCESSORS(UChrisAttributeSet, MoveSpeed)
 	ATTRIBUTE_ACCESSORS(UChrisAttributeSet, MoveAcceleration)
+	ATTRIBUTE_ACCESSORS(UChrisAttributeSet, LightAttackDamageBonus)
 	virtual void GetLifetimeReplicatedProps(TArray< class FLifetimeProperty >& OutLifetimeProps) const override;
 
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
@@ -64,6 +65,9 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_MoveAcceleration)
 	FGameplayAttributeData MoveAcceleration;
 
+	UPROPERTY(ReplicatedUsing = OnRep_LightAttackDamageBonus)
+	FGameplayAttributeData LightAttackDamageBonus;
+
 	UPROPERTY()
 	FGameplayAttributeData CachedHealthPercent;
 
@@ -91,4 +95,7 @@ private:
 
 	UFUNCTION()
 	void OnRep_MoveAcceleration(const FGameplayAttributeData& OldValue);
+
+	UFUNCTION()
+	void OnRep_LightAttackDamageBonus(const FGameplayAttributeData& OldValue);
 };

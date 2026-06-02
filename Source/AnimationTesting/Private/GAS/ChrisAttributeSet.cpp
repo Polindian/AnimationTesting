@@ -89,6 +89,11 @@ void UChrisAttributeSet::OnRep_MoveAcceleration(const FGameplayAttributeData& Ol
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UChrisAttributeSet, MoveAcceleration, OldValue);
 }
 
+void UChrisAttributeSet::OnRep_LightAttackDamageBonus(const FGameplayAttributeData& OldValue)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UChrisAttributeSet, LightAttackDamageBonus, OldValue);
+}
+
 
 void UChrisAttributeSet::GetLifetimeReplicatedProps(TArray< class FLifetimeProperty >& OutLifetimeProps) const 
 {
@@ -101,4 +106,5 @@ void UChrisAttributeSet::GetLifetimeReplicatedProps(TArray< class FLifetimePrope
 		DOREPLIFETIME_CONDITION_NOTIFY(UChrisAttributeSet, Armour, COND_None, REPNOTIFY_Always);
 		DOREPLIFETIME_CONDITION_NOTIFY(UChrisAttributeSet, MoveSpeed, COND_None, REPNOTIFY_Always);
 		DOREPLIFETIME_CONDITION_NOTIFY(UChrisAttributeSet, MoveAcceleration, COND_None, REPNOTIFY_Always);
+		DOREPLIFETIME_CONDITION_NOTIFY(UChrisAttributeSet, LightAttackDamageBonus, COND_None, REPNOTIFY_Always);
 }
