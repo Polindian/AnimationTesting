@@ -55,13 +55,11 @@ void AFlag::OnRep_BannerState()
 void AFlag::ApplyBannerState()
 {
     if (!BannerActor) return;
-
     UNiagaraComponent* NC = BannerActor->GetNiagaraComponent();
     if (!NC) return;
 
     if (BannerState == 0)
     {
-        // Kill everything immediately
         NC->SetPaused(false);
         NC->DeactivateImmediate();
         GetWorldTimerManager().ClearTimer(BannerPauseTimerHandle);
@@ -80,7 +78,7 @@ void AFlag::ApplyBannerState()
         NC->SetVariableLinearColor(FName("Colour"), Color);
         NC->Activate(true);
 
-        // After 2 seconds (slam done), freeze in place
+        // After 4 seconds (slam done), freeze in place
         GetWorldTimerManager().SetTimer(BannerPauseTimerHandle, [NC]()
             {
                 if (NC)
@@ -122,14 +120,15 @@ void AFlag::PlayTeamCaptureBanner(EFlagOwnership Team)
     NC->SetPaused(false);
     GetWorldTimerManager().ClearTimer(BannerPauseTimerHandle);
 
-    // After the disappear animation finishes (~2-3s), slam the team color version
+    // After the disappear animation finishes, slam the team color version
     FLinearColor TeamColor = (Team == EFlagOwnership::TeamOne) ? TeamOneBannerColor : TeamTwoBannerColor;
 
     GetWorldTimerManager().SetTimer(BannerTransitionTimerHandle, [this, TeamColor]()
         {
             PlayBannerSlam(TeamColor);
-        }, 1.0f, false);  // Adjust this to match how long the disappear portion takes
+        }, 1.0f, false);
 }
+
 void AFlag::ResetCapture()
 {
     CapturePercent = 0.f;
