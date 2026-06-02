@@ -15,6 +15,8 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FOnItemRemovedDelegate, const FInventoryItem
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnItemStackCountChangeDelegate, const FInventoryItemHandle&, int /*NewCount*/);
 DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnItemAbilityCommitted, const FInventoryItemHandle&, float /*CooldownDuration*/, float /*TimeRemaining*/);
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnSkillPurchasedDelegate, const UPA_ShopItem* /*Item*/);
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class UInventoryComponent : public UActorComponent
 {
@@ -27,6 +29,8 @@ public:
 	FOnItemRemovedDelegate OnItemRemoved;
 	FOnItemStackCountChangeDelegate OnItemStackCountChanged;
 	FOnItemAbilityCommitted OnItemAbilityCommitted;
+
+	FOnSkillPurchasedDelegate OnSkillPurchased;
 
 	void TryActivateItem(const FInventoryItemHandle& ItemHandle);
 	bool TryPurchase(const UPA_ShopItem* ItemToPurchase);
@@ -95,4 +99,7 @@ private:
 
 	UFUNCTION(Client, Reliable)
 	void Client_ItemStackCountChanged(FInventoryItemHandle Handle, int NewCount);
+
+	UFUNCTION(Client, Reliable)
+	void Client_SkillPurchased(const UPA_ShopItem* Item);
 };

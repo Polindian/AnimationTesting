@@ -11,3 +11,14 @@ void UItemToolTip::SetTooltipImage(UTexture2D* InTexture)
         TooltipImage->SetBrushFromTexture(InTexture);
     }
 }
+
+
+void UItemToolTip::SetTooltipSize(FVector2D InSize)
+{
+    if (TooltipImage)
+    {
+        FSlateBrush Brush = TooltipImage->GetBrush();
+        Brush.ImageSize = InSize;
+        TooltipImage->SetBrush(Brush);
+    }
+}

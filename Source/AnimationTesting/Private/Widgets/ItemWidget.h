@@ -56,4 +56,24 @@ private:
 
     virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
     virtual FReply NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+
+//Skill Tree Lock System
+public:
+    void SetSkillState(bool bPurchased, bool bLocked);
+
+private:
+    UPROPERTY(meta = (BindWidgetOptional))
+    class UImage* LockIcon;
+
+    bool bIsLocked = false;
+    bool bIsPurchased = false;
+
+    // Material used for greyscale/brightness control on skill icons.
+    // Set this to M_SkillIcon in the Blueprint defaults.
+    UPROPERTY(EditDefaultsOnly, Category = "Skill Icon")
+    UMaterialInterface* SkillIconMaterial;
+
+    // Runtime dynamic instance so we can change parameters per-widget.
+    UPROPERTY()
+    UMaterialInstanceDynamic* IconMaterialInstance;
 };

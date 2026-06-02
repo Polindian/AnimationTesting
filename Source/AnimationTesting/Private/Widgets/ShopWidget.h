@@ -4,11 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Components/Image.h"
 #include "ShopWidget.generated.h"
 
 class UPA_ShopItem;
 class UItemWidget;
 class UInventoryComponent;
+class UItemToolTip;
 
 UCLASS()
 class UShopWidget : public UUserWidget
@@ -74,6 +76,16 @@ private:
     UPROPERTY(meta = (BindWidget))
     UItemWidget* Nightflare;
 
+    // Ability Upgrades
+    UPROPERTY(meta = (BindWidget))
+    UItemWidget* Bonebreaker;
+    UPROPERTY(meta = (BindWidget))
+    UItemWidget* Shockwave;    
+    UPROPERTY(meta = (BindWidget))
+    UItemWidget* Scorched;
+    UPROPERTY(meta = (BindWidget))
+    UItemWidget* Deadeye;
+
     // Stock
     UPROPERTY(meta = (BindWidget))
     class UTextBlock* ElixirOfLifeStockText;
@@ -95,4 +107,119 @@ private:
 
     UPROPERTY()
     UInventoryComponent* OwnerInventoryComponent;
+
+    void UpdateSkillLockStates();
+    void OnSkillPurchasedCallback(const UPA_ShopItem* Item);
+
+    void UpdateAbilityUpgradeStates();
+
+    // ── Category Tooltips ──────────────────────────────────────────
+
+    UPROPERTY(meta = (BindWidget))
+    UWidget* CategoryHeader_Assassin;
+    UPROPERTY(meta = (BindWidget))
+    UWidget* CategoryHeader_Gambler;
+    UPROPERTY(meta = (BindWidget))
+    UWidget* CategoryHeader_Tank;
+    UPROPERTY(meta = (BindWidget))
+    UWidget* CategoryHeader_Magician;
+    UPROPERTY(meta = (BindWidget))
+    UWidget* AbilityUpgradesHeader;
+    UPROPERTY(meta = (BindWidget))
+    UWidget* ConsumablesHeader;
+
+    // Tooltip textures for each category (set in WBP class defaults).
+    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
+    UTexture2D* AssassinTooltipTexture;
+    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
+    UTexture2D* GamblerTooltipTexture;
+    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
+    UTexture2D* TankTooltipTexture;
+    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
+    UTexture2D* MagicianTooltipTexture;
+    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
+    UTexture2D* AbilityUpgradesTooltipTexture;
+    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
+    UTexture2D* ConsumablesTooltipTexture;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
+    FVector2D AbilityUpgradesTooltipSize = FVector2D(400.f, 300.f);
+
+    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
+    FVector2D ConsumablesTooltipSize = FVector2D(400.f, 300.f);
+
+    // The same tooltip widget class used by ItemWidget.
+    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
+    TSubclassOf<UItemToolTip> CategoryToolTipClass;
+
+    void SetupCategoryTooltips();
+
+    // ── Branch Fill System ──────────────────────────────────────────
+
+// Branch images connecting skill tiers (set in WBP editor).
+    UPROPERTY(meta = (BindWidget))
+    class UImage* Branch_Assassin_0to1;
+    UPROPERTY(meta = (BindWidget))
+    class UImage* Branch_Assassin_1to2;
+    UPROPERTY(meta = (BindWidget))
+    class UImage* Branch_Assassin_2to3;
+    UPROPERTY(meta = (BindWidget))
+    class UImage* Branch_Gambler_0to1;
+    UPROPERTY(meta = (BindWidget))
+    class UImage* Branch_Gambler_1to2;
+    UPROPERTY(meta = (BindWidget))
+    class UImage* Branch_Gambler_2to3;
+    UPROPERTY(meta = (BindWidget))
+    class UImage* Branch_Tank_0to1;
+    UPROPERTY(meta = (BindWidget))
+    class UImage* Branch_Tank_1to2;
+    UPROPERTY(meta = (BindWidget))
+    class UImage* Branch_Tank_2to3;
+    UPROPERTY(meta = (BindWidget))
+    class UImage* Branch_Magician_0to1;
+    UPROPERTY(meta = (BindWidget))
+    class UImage* Branch_Magician_1to2;
+    UPROPERTY(meta = (BindWidget))
+    class UImage* Branch_Magician_2to3;
+
+    // The parent material created in Step 1. Set this in the WBP class defaults.
+    UPROPERTY(EditDefaultsOnly, Category = "Branch Fill")
+    UMaterialInterface* BranchFillMaterial;
+
+    // Sound to play when a branch fill completes and the next skill unlocks.
+    UPROPERTY(EditDefaultsOnly, Category = "Branch Fill")
+    USoundBase* SkillUnlockSound;
+
+    // How long the fill animation takes (seconds).
+    UPROPERTY(EditDefaultsOnly, Category = "Branch Fill")
+    float BranchFillDuration = 1.0f;
+
+    // Category colors for the branch fill. Order: Assassin, Gambler, Tank, Magician.
+    UPROPERTY(EditDefaultsOnly, Category = "Branch Fill")
+    TArray<FLinearColor> CategoryColors;
+
+    // Tracks one active branch-fill animation.
+    struct FBranchFillAnim
+    {
+        UMaterialInstanceDynamic* DMI = nullptr;
+        float Elapsed = 0.f;
+        int32 CategoryIndex = -1;
+        int32 TierIndex = -1;       // tier that was just purchased (0-based)
+    };
+
+    // All currently-playing branch fill animations.
+    TArray<FBranchFillAnim> ActiveBranchAnims;
+
+    // Runtime DMIs for each branch (parallel to the branch image arrays).
+    // [CategoryIndex][0 = 1to2, 1 = 2to3]
+    TArray<TArray<UMaterialInstanceDynamic*>> BranchDMIs;
+
+    // Helpers
+    void InitBranchMaterials();
+    void StartBranchFillAnim(int32 CategoryIndex, int32 TierIndex);
+    void TickBranchAnims(float DeltaTime);
+    void OnBranchFillComplete(const FBranchFillAnim& Anim);
+
+    // Finds category/tier index for a purchased shop item. Returns false if not a skill.
+    bool FindSkillIndices(const UPA_ShopItem* Item, int32& OutCategory, int32& OutTier) const;
 };

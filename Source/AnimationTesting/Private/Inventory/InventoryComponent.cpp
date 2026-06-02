@@ -51,6 +51,12 @@ bool UInventoryComponent::TryPurchase(const UPA_ShopItem* ItemToPurchase)
 		UE_LOG(LogTemp, Warning, TEXT("Not enough soul for: %s"), *ItemToPurchase->GetName());
 		return false;
 	}
+	// Mark purchased locally so rapid clicks are blocked instantly.
+	// Server validates and Client_SkillPurchased confirms later.
+	if (!ItemToPurchase->GetIsConsumable())
+	{
+		PurchasedItems.Add(ItemToPurchase);
+	}
 
 	Server_Purchase(ItemToPurchase);
 	return true;
@@ -188,6 +194,8 @@ void UInventoryComponent::Server_Purchase_Implementation(const UPA_ShopItem* Ite
 			OwnerAbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(ItemToPurchase->GetGrantedAbility(), 1));
 		}
 		PurchasedItems.Add(ItemToPurchase);
+		Client_SkillPurchased(ItemToPurchase);  
+		OnSkillPurchased.Broadcast(ItemToPurchase);
 	}
 }
 
@@ -311,6 +319,19 @@ void UInventoryComponent::RemoveItem(UInventoryItem* Item)
 	OnItemRemoved.Broadcast(Item->GetHandle());
 	InventoryMap.Remove(Item->GetHandle());
 	Client_ItemRemoved(Item->GetHandle());
+}
+
+void UInventoryComponent::Client_SkillPurchased_Implementation(const UPA_ShopItem* Item)
+{
+	// Server already has it — only update on the remote client.
+	if (GetOwner()->HasAuthority())
+		return;
+
+	if (!PurchasedItems.Contains(Item))
+	{
+		PurchasedItems.Add(Item);
+	}
+	OnSkillPurchased.Broadcast(Item);
 }
 
 void UInventoryComponent::Client_ItemRemoved_Implementation(FInventoryItemHandle ItemHandle)

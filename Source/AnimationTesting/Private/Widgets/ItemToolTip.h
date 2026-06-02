@@ -16,6 +16,8 @@ class UItemToolTip : public UUserWidget
 	
 public:
 	void SetTooltipImage(UTexture2D* InTexture);
+	void SetTooltipSize(FVector2D InSize);
+
 
 private:
 	UPROPERTY(meta = (BindWidget))
