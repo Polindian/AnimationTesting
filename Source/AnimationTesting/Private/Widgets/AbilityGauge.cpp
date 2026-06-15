@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 
 #include "Widgets/AbilityGauge.h"
@@ -80,7 +80,7 @@ void UAbilityGauge::StartRoundCooldown()
 	const FGameplayAbilitySpec* Spec = GetAbilitySpec();
 	if (!Spec || Spec->Level <= 0)
 	{
-		// Ability not learned � just show as ready/disabled
+		// Ability not learned — just show as ready/disabled
 		ResetCooldownVisual();
 		return;
 	}
@@ -146,14 +146,11 @@ void UAbilityGauge::UpdateCooldown()
 
 const FGameplayAbilitySpec* UAbilityGauge::GetAbilitySpec()
 {
-	if (!CachedAbilitySpec)
+	if (AbilityCDO && OwnerAbilitySystemComponent)
 	{
-		if (AbilityCDO && OwnerAbilitySystemComponent)
-		{
-			CachedAbilitySpec = OwnerAbilitySystemComponent->FindAbilitySpecFromClass(AbilityCDO->GetClass());
-		}
+		return OwnerAbilitySystemComponent->FindAbilitySpecFromClass(AbilityCDO->GetClass());
 	}
-	return CachedAbilitySpec;
+	return nullptr;
 }
 
 void UAbilityGauge::AbilitySpecUpdated(const FGameplayAbilitySpec& AbilitySpec)
@@ -166,6 +163,12 @@ void UAbilityGauge::AbilitySpecUpdated(const FGameplayAbilitySpec& AbilitySpec)
 	bIsAbilityLearned = AbilitySpec.Level > 0;
 	LevelGauge->GetDynamicMaterial()->SetScalarParameterValue(AbilityLevelParamName, AbilitySpec.Level);
 	UpdateCanCast();
+
+	// Don't update cooldown/cost for unlearned abilities
+	if (!bIsAbilityLearned)
+	{
+		return;
+	}
 
 	float NewCooldownDuration = UChrisAbilitySystemStatics::GetCooldownDurationFor(AbilitySpec.Ability, OwnerAbilitySystemComponent, AbilitySpec.Level);
 	float NewCost = UChrisAbilitySystemStatics::GetManaCostFor(AbilitySpec.Ability, OwnerAbilitySystemComponent, AbilitySpec.Level);

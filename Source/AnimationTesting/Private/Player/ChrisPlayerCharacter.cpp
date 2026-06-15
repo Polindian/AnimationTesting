@@ -30,6 +30,7 @@ AChrisPlayerCharacter::AChrisPlayerCharacter()
 
 	bUseControllerRotationYaw = false;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
+	GetCharacterMovement()->bUseControllerDesiredRotation = false;
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 720.f, 0.f);
 
 	SwordEquipComponent = CreateDefaultSubobject<USwordEquipComponent>(TEXT("SwordEquipComponent"));
@@ -71,6 +72,7 @@ void AChrisPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
         for (const TPair<EChrisAbilityInputID,UInputAction*>& InputActionPair : GameplayAbilityInputActions)
         {
             EnhancedInputComp->BindAction(InputActionPair.Value, ETriggerEvent::Triggered, this, &AChrisPlayerCharacter::HandleAbilityInput, InputActionPair.Key);
+			EnhancedInputComp->BindAction(InputActionPair.Value, ETriggerEvent::Completed, this, &AChrisPlayerCharacter::HandleAbilityInput, InputActionPair.Key);
 		}
 
 		for (const TPair<EChrisAbilityInputID, UInputAction*>& UpgradePair : UpgradeSlotInputActions)
@@ -198,6 +200,12 @@ void AChrisPlayerCharacter::HandleAbilityInput(const FInputActionValue& InputAct
 		// Rolling 
 		if (InputID == EChrisAbilityInputID::Roll)
 		{
+			// Can't roll in the air
+			if (GetCharacterMovement()->IsFalling())
+			{
+				return;
+			}
+
 			APlayerController* PlayerController = Cast<APlayerController>(GetController());
 			if (PlayerController)
 			{

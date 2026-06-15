@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -18,7 +18,7 @@ public:
 
 	bool IsActive() const;
 	void Activate();
-	void SetGoal(AActor* Goal);
+	//void SetGoal(AActor* Goal);
 	
 private:
 
@@ -27,6 +27,8 @@ private:
 	void PickSkinBasedOnTeamID();
 
 	virtual void OnRep_TeamID() override;
+
+	virtual void MoveSpeedUpdated(const FOnAttributeChangeData& Data) override;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Visual")
 	TMap<FGenericTeamId, USkeletalMesh*> SkinMap;
@@ -42,4 +44,8 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "AI")
 	FName GoalBlackboardKeyName = "Goal";
+
+	UPROPERTY(EditDefaultsOnly, Category = "Gameplay Abilities")
+	class UPA_GenericAbilitySystem* AbilitySystemGenerics;
+
 };

@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 
 #include "GAS/GA_Combo.h"
@@ -6,7 +6,10 @@
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Abilities/Tasks/AbilityTask_WaitInputPress.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "AbilitySystemComponent.h"
 #include "GameplayTagsManager.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GAS/ChrisAbilitySystemStatics.h"
 
 
@@ -23,6 +26,17 @@ void UGA_Combo::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
     {
         K2_EndAbility();
         return;
+    }
+
+    if (ACharacter* OwnerChar = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
+    {
+        OwnerChar->GetCharacterMovement()->MaxWalkSpeed = AttackMoveSpeed;
+    }
+
+    UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+    if (ASC)
+    {
+        ASC->AddLooseGameplayTag(UChrisAbilitySystemStatics::GetSpeedOverrideTag());
     }
 
     if (HasAuthorityOrPredictionKey(ActorInfo, &ActivationInfo))
@@ -63,6 +77,17 @@ FGameplayTag UGA_Combo::GetComboChangedEventEndTag()
 FGameplayTag UGA_Combo::GetComboTargetEventTag()
 {
     return FGameplayTag::RequestGameplayTag("ability.combo.damage");
+}
+
+void UGA_Combo::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+{
+    UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+    if (ASC)
+    {
+        ASC->RemoveLooseGameplayTag(UChrisAbilitySystemStatics::GetSpeedOverrideTag());
+    }
+
+    Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
 // === CHANGED === was: SetupWaitComboInputPress() using WaitInputPress

@@ -58,13 +58,17 @@ private:
 	int32 MaxShots = 3;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Shoot")
-	float ShootCooldownDuration = 10.f;  // Match your GE_Shoot_Cooldown duration
+	float ShootCooldownDuration = 100.f; 
+
+	float ActiveCooldownDuration = 0.f;
+	float GetLeveledCooldownDuration() const;
 
 	int32 CurrentShotCount = 0;
 	double CooldownEndTime = 0.0;
 	bool IsCooldownActive() const;
 	FTimerHandle ShootCooldownTimerHandle;
 	void OnShootCooldownFinished();
+	double LastShotTime = 0.0;
 	
 	static FGameplayTag GetShootTag();
 
@@ -72,5 +76,7 @@ private:
 	void StopShooting(FGameplayEventData Payload);
 	UFUNCTION()
 	void ShootProjectile(FGameplayEventData Payload);
+
+	bool bEventTasksCreated = false;
 	
 };

@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -50,6 +50,11 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Effects")
 	TSubclassOf<UGameplayEffect> ThrustEffect;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	TSubclassOf<UGameplayEffect> BurnEffect;
+
+	
 
 	UPROPERTY()
 	class UCharacterMovementComponent* OwnerCharacterMovementComponent;

@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 
 #include "GAS/Thrust.h"
@@ -9,6 +9,7 @@
 #include "Abilities/Tasks/AbilityTask_NetworkSyncPoint.h"
 #include "Abilities/Tasks/AbilityTask_WaitTargetData.h"
 #include "GAS/ChrisAbilitySystemStatics.h"
+#include "GAS/ChrisAttributeSet.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Character.h"
 #include "GenericTeamAgentInterface.h"
@@ -143,6 +144,31 @@ void UThrust::TargetReceived(const FGameplayAbilityTargetDataHandle& TargetDataH
 
 		// Apply damage after push
 		BP_ApplyGameplayEffectToTarget(TargetDataHandle, DamageEffect, GetAbilityLevel(CurrentSpecHandle, CurrentActorInfo));
+
+		// ======================================================
+		// SCORCHED: if the skill is equipped, apply a burn DoT
+		// to every enemy we just hit.
+		// ======================================================
+		if (BurnEffect)
+		{
+			UAbilitySystemComponent* OwnerASC = GetAbilitySystemComponentFromActorInfo();
+			if (OwnerASC)
+			{
+				bool bFound = false;
+				float Scorched = OwnerASC->GetGameplayAttributeValue(
+					UChrisAttributeSet::GetScorchedActiveAttribute(), bFound);
+
+				if (bFound && Scorched > 0.f)
+				{
+					// Apply burn to all targets we hit.
+					BP_ApplyGameplayEffectToTarget(TargetDataHandle, BurnEffect,
+						GetAbilityLevel(CurrentSpecHandle, CurrentActorInfo));
+
+					UE_LOG(LogTemp, Warning, TEXT("[Scorched] Burn applied to %d targets for 5 seconds"),
+						TargetActors.Num());
+				}
+			}
+		}
 	}
 }
 

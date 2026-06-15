@@ -29,6 +29,7 @@ void AChrisPlayerController::OnPossess(APawn* NewPawn)
 	{
 		ChrisPlayerCharacter->ServerSideInit();
 		ChrisPlayerCharacter->SetGenericTeamId(TeamID);
+		InitialSpawnRotation = ChrisPlayerCharacter->GetActorRotation();
 	}
 }
 
@@ -76,6 +77,16 @@ void AChrisPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AChrisPlayerController, TeamID);
+}
+
+void AChrisPlayerController::Client_OnResetRotation_Implementation(FRotator SpawnRotation)
+{
+	SetControlRotation(SpawnRotation);
+
+	if (ChrisPlayerCharacter)
+	{
+		ChrisPlayerCharacter->SetActorRotation(SpawnRotation);
+	}
 }
 
 void AChrisPlayerController::SpawnGameplayWidget()
@@ -328,9 +339,25 @@ void AChrisPlayerController::Client_OnShopPhaseStart_Implementation(float InShop
 	if (ShopWidget)
 	{
 		ShopWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+		ShopWidget->SetRenderOpacity(0.f);
 		ShopWidget->StartTimer(InShopDuration);
-	}
 
+		// Fade the widget in over the same duration as the camera fade
+		GetWorldTimerManager().SetTimer(ShopFadeTimerHandle, [this]()
+			{
+				if (ShopWidget)
+				{
+					float Current = ShopWidget->GetRenderOpacity();
+					float NewOpacity = FMath::Clamp(Current + 0.005f, 0.f, 1.f);
+					ShopWidget->SetRenderOpacity(NewOpacity);
+
+					if (NewOpacity >= 1.f)
+					{
+						GetWorldTimerManager().ClearTimer(ShopFadeTimerHandle);
+					}
+				}
+			}, 0.016f, true);
+	}
 	SetShowMouseCursor(true);
 	SetInputMode(FInputModeGameAndUI());
 }
@@ -349,7 +376,21 @@ void AChrisPlayerController::Client_OnReturnToArena_Implementation(float FadeInD
 
 	if (ShopWidget)
 	{
-		ShopWidget->SetVisibility(ESlateVisibility::Collapsed);
+		GetWorldTimerManager().SetTimer(ShopFadeTimerHandle, [this]()
+			{
+				if (ShopWidget)
+				{
+					float Current = ShopWidget->GetRenderOpacity();
+					float NewOpacity = FMath::Clamp(Current - 0.005f, 0.f, 1.f);
+					ShopWidget->SetRenderOpacity(NewOpacity);
+
+					if (NewOpacity <= 0.f)
+					{
+						GetWorldTimerManager().ClearTimer(ShopFadeTimerHandle);
+						ShopWidget->SetVisibility(ESlateVisibility::Collapsed);
+					}
+				}
+			}, 0.016f, true);
 	}
 
 	SetShowMouseCursor(false);

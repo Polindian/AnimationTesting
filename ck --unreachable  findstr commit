@@ -1,0 +1,23 @@
+[33m10b67ec[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/shop-ability-implementation[m[33m, [m[1;31morigin/feature/shop-ability-implementation[m[33m)[m HEAD@{0}: checkout: moving from feature/match-logic to feature/shop-ability-implementation
+[33m43376b2[m[33m ([m[1;32mfeature/match-logic[m[33m)[m HEAD@{1}: checkout: moving from master to feature/match-logic
+[33mfd50587[m[33m ([m[1;31morigin/master[m[33m, [m[1;32mmaster[m[33m)[m HEAD@{2}: checkout: moving from feature/match-logic to master
+[33m43376b2[m[33m ([m[1;32mfeature/match-logic[m[33m)[m HEAD@{3}: commit: Merge shop-ability-implementation into match-logic
+[33m10b67ec[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/shop-ability-implementation[m[33m, [m[1;31morigin/feature/shop-ability-implementation[m[33m)[m HEAD@{4}: merge feature/shop-ability-implementation: Fast-forward
+[33mc6bba6f[m[33m ([m[1;31morigin/feature/match-logic[m[33m)[m HEAD@{5}: checkout: moving from feature/shop-ability-implementation to feature/match-logic
+[33m10b67ec[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/shop-ability-implementation[m[33m, [m[1;31morigin/feature/shop-ability-implementation[m[33m)[m HEAD@{6}: checkout: moving from feature/match-logic to feature/shop-ability-implementation
+[33mc6bba6f[m[33m ([m[1;31morigin/feature/match-logic[m[33m)[m HEAD@{7}: checkout: moving from feature/shop-ability-implementation to feature/match-logic
+[33m10b67ec[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/shop-ability-implementation[m[33m, [m[1;31morigin/feature/shop-ability-implementation[m[33m)[m HEAD@{8}: commit: Added ability upgrades to shop, fixed tooltip sizing
+[33mc6bba6f[m[33m ([m[1;31morigin/feature/match-logic[m[33m)[m HEAD@{9}: merge feature/match-logic: Fast-forward
+[33mac0662c[m HEAD@{10}: reset: moving to HEAD
+[33mac0662c[m HEAD@{11}: checkout: moving from feature/match-logic to feature/shop-ability-implementation
+[33mc6bba6f[m[33m ([m[1;31morigin/feature/match-logic[m[33m)[m HEAD@{12}: commit: Fix flag banner VFX colour for red team, changed blue channel node in material niagara component
+[33m34f62af[m HEAD@{13}: commit: feat: Flag banner VFX integration with round lifecycle
+[33mac0662c[m HEAD@{14}: checkout: moving from feature/shop-ability-implementation to feature/match-logic
+[33mac0662c[m HEAD@{15}: commit: Implemented consumables with in-game inventory stock, activation of items triggers cooldown logic
+[33mb6ef6dc[m[33m ([m[1;32mfeature/multiplayer-round-flow[m[33m)[m HEAD@{16}: checkout: moving from feature/multiplayer-round-flow to feature/shop-ability-implementation
+[33mb6ef6dc[m[33m ([m[1;32mfeature/multiplayer-round-flow[m[33m)[m HEAD@{17}: commit: Implementation of Shop UI from Figma with manual widget layout, tooltips, and basic purchase logic
+[33mfd50587[m[33m ([m[1;31morigin/master[m[33m, [m[1;32mmaster[m[33m)[m HEAD@{18}: checkout: moving from master to feature/multiplayer-round-flow
+[33mfd50587[m[33m ([m[1;31morigin/master[m[33m, [m[1;32mmaster[m[33m)[m HEAD@{19}: commit: refactor: changed player abilities to local GameplayCues for better GAS optimisation
+[33m5bb6014[m HEAD@{20}: commit: fix: changed ProjectileActor to sphere component with Tick tracking for more consistent colliison in-game
+[33m95c4a8d[m HEAD@{21}: commit: fix: bind StatsGauge widgets to base atributes in GameplayWidget
+[33m7dc2c6d[m HEAD@{22}: commit: fix: level-up experience goes from 1->2 instead of 1->1 in ExperienceUpdated

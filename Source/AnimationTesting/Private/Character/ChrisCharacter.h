@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -61,6 +61,8 @@ protected:
 private:
 	void BindGASChangeDelegate();
 	void DeathTagUpdated(const FGameplayTag Tag, int32 NewCount);
+	
+
 	void StunTagUpdated(const FGameplayTag Tag, int32 NewCount);
 	void FallBackTagUpdated(const FGameplayTag Tag, int32 NewCount);
 
@@ -73,11 +75,13 @@ private:
 	UPROPERTY()
 	class UChrisAttributeSet* ChrisAttributeSet;
 
-	void MoveSpeedUpdated(const FOnAttributeChangeData& Data);
+	virtual void MoveSpeedUpdated(const FOnAttributeChangeData& Data);
 	void MoveAccelerationUpdated(const FOnAttributeChangeData& Data);
 
 	void MaxHealthUpdated(const FOnAttributeChangeData& Data);
 	void MaxManaUpdated(const FOnAttributeChangeData& Data);
+
+	
 
 
 	/********************************/
@@ -89,7 +93,7 @@ private:
 	void ConfigureOverheadStatusWidget();
 
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
-	float HeadStatGaugeVisibilityCheckUpdateGap = 1.f;
+	float HeadStatGaugeVisibilityCheckUpdateGap = 0.1f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	float HeadStatGaugeVisibilityCheckUpdateRangeSquared = 10000000.f;
@@ -99,6 +103,19 @@ private:
 	void UpdateHeadStatGaugeVisibility();
 
 	void SetStatusGaugeEnabled(bool bIsEnabled);
+
+	// The widget's size at the reference distance 
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	FVector2D OverheadWidgetBaseSize = FVector2D(200.f, 60.f);
+
+	// Distance at which the widget renders at full BaseSize.
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	float OverheadWidgetReferenceDistance = 500.f;
+
+	// Beyond this distance the widget hides completely.
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	float OverheadWidgetMaxDistance = 3000.f;
+
 
 	/********************************/
 	/*            Stun              */
@@ -124,6 +141,13 @@ public:
 
 	bool IsDead() const;
 	void RespawnImmediately();
+
+// Called by GameMode at round end to cleanly reset a dead player
+  // without re-enabling input or teleporting
+	void ForceResetFromDeath();
+
+	// Cancel any pending death/respawn timers
+	void CancelDeathTimers();
 private:
 
 	FTransform MeshRelativeTransform;
@@ -138,7 +162,12 @@ private:
 
 	void DeathMontageFinished();
 	void SetRagdollEnabled(bool bIsEnabled);
+	FTimerHandle RespawnDelayTimerHandle;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Death")
+	float RespawnDelay = 8.f;
+
+	bool bSuppressRespawnInput = false;
 
 	void PlayDeathAnimation();
 
@@ -159,12 +188,14 @@ public:
 	/** Retrieve team identifier in form of FGenericTeamId */
 	virtual FGenericTeamId GetGenericTeamId() const override;
 
+	UFUNCTION()
+	virtual void OnRep_TeamID();
+
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_TeamID)
 	FGenericTeamId TeamID;
 
-	UFUNCTION()
-	virtual void OnRep_TeamID();
+	
 
 
 	/********************************/

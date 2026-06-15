@@ -21,4 +21,5 @@ public:
 private:
 	FGameplayEffectAttributeCaptureDefinition DamageCaptureDefinition;
 	FGameplayEffectAttributeCaptureDefinition ArmourCaptureDefinition;
+	FGameplayEffectAttributeCaptureDefinition DoubleDownChanceCaptureDefinition;
 };

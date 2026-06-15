@@ -5,6 +5,7 @@
 #include "Components/SphereComponent.h"
 #include "GenericTeamAgentInterface.h"
 #include "GAS/CHeroAttributeSet.h"
+#include "GAS/ChrisAttributeSet.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/ChrisPlayerCharacter.h"
 
@@ -231,9 +232,25 @@ float AFlag::GetActorCaptureWeight(AActor* Actor) const
     if (!Actor)
         return 0.f;
 
-    // Hero = HeroCaptureWeight (3), AI = MinionCaptureWeight (1)
-    if (Cast<AChrisPlayerCharacter>(Actor))
-        return HeroCaptureWeight;
+    // Hero = HeroCaptureWeight (3) + DominionBonus from skill
+    if (AChrisPlayerCharacter* Hero = Cast<AChrisPlayerCharacter>(Actor))
+    {
+        float Weight = HeroCaptureWeight;
+
+        // Check for Dominion skill — adds extra influence points
+        UAbilitySystemComponent* ASC = Hero->GetAbilitySystemComponent();
+        if (ASC)
+        {
+            bool bFound = false;
+            float Bonus = ASC->GetGameplayAttributeValue(UChrisAttributeSet::GetDominionBonusAttribute(), bFound);
+            if (bFound && Bonus > 0.f)
+            {
+                Weight += Bonus;
+            }
+        }
+
+        return Weight;
+    }
 
     // If it implements the team interface but isn't a hero, it's an AI minion
     if (Cast<IGenericTeamAgentInterface>(Actor))

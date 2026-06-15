@@ -78,6 +78,11 @@ public:
 
     UFUNCTION(Server, Reliable, WithValidation)
     void Server_VoteContinue();
+
+
+    // Resetting round rotation for all players
+    UFUNCTION(Client, Reliable)
+    void Client_OnResetRotation(FRotator SpawnRotation);
 private:
 
 	void SpawnGameplayWidget();
@@ -118,6 +123,10 @@ private:
     FVector OriginalBoomSocketOffset;
     bool bOriginalUsePawnControlRotation = true;
     float OriginalArmLength = 0.f;
+
+    FRotator InitialSpawnRotation;
+
+    FTimerHandle ShopFadeTimerHandle;
 
 
 public:

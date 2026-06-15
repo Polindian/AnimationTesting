@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 
 #include "Character/ChrisCharacter.h"
@@ -15,6 +15,10 @@
 #include "Kismet/GameplayStatics.h"
 #include "Perception/AIPerceptionStimuliSourceComponent.h"
 #include "Perception/AISense_Sight.h"
+#include "Player/ChrisPlayerCharacter.h"
+#include "Weapon/SwordEquipComponent.h"
+#include "Widgets/ValueGauge.h"
+#include "Components/WidgetComponent.h"
 
 
 // Sets default values
@@ -29,6 +33,14 @@ AChrisCharacter::AChrisCharacter()
 
 	OverheadWidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("Overhead Widget Component"));
 	OverheadWidgetComponent->SetupAttachment(GetRootComponent());
+
+	// ======================================================
+   // Screen space: widget renders as 2D overlay pinned to
+   // the actor's position.
+   // ======================================================
+	OverheadWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+	OverheadWidgetComponent->SetDrawAtDesiredSize(false);
+	OverheadWidgetComponent->SetDrawSize(FVector2D(200.f, 60.f));
 
 	BindGASChangeDelegate();
 
@@ -170,7 +182,9 @@ void AChrisCharacter::ConfigureOverheadStatusWidget()
     if (OverheadStatsGauge)
     {
         OverheadStatsGauge->ConfigureWithASC(ChrisAbilitySystemComponent);
-        OverheadWidgetComponent->SetHiddenInGame(false);
+		OverheadStatsGauge->SetTextVisibility(false);
+		OverheadStatsGauge->ConfigureTeamColor(this);
+		OverheadWidgetComponent->SetHiddenInGame(false);
 		GetWorldTimerManager().ClearTimer(HeadStatGaugeVisibilityUpdateTimerHandle);
 		GetWorldTimerManager().SetTimer(HeadStatGaugeVisibilityUpdateTimerHandle, this, &AChrisCharacter::UpdateHeadStatGaugeVisibility, HeadStatGaugeVisibilityCheckUpdateGap, true);
 	}
@@ -179,10 +193,57 @@ void AChrisCharacter::ConfigureOverheadStatusWidget()
 void AChrisCharacter::UpdateHeadStatGaugeVisibility()
 {
 	APawn* LocalPlayerPawn = UGameplayStatics::GetPlayerPawn(this, 0);
-    if (LocalPlayerPawn)
-    {
-        float DistSquared = FVector::DistSquared(GetActorLocation(), LocalPlayerPawn->GetActorLocation());
-		OverheadWidgetComponent->SetHiddenInGame(DistSquared > HeadStatGaugeVisibilityCheckUpdateRangeSquared);
+	if (!LocalPlayerPawn || !OverheadWidgetComponent) return;
+
+	float Distance = FVector::Dist(GetActorLocation(), LocalPlayerPawn->GetActorLocation());
+
+	// ======================================================
+	// Hide completely beyond max range
+	// ======================================================
+	if (Distance > OverheadWidgetMaxDistance)
+	{
+		OverheadWidgetComponent->SetHiddenInGame(true);
+		return;
+	}
+
+	OverheadWidgetComponent->SetHiddenInGame(false);
+
+	// ======================================================
+	// Scale the widget like perspective: full size at the
+	// reference distance, smaller as you move further away.
+	// ======================================================
+	float Scale = FMath::Clamp(
+		OverheadWidgetReferenceDistance / FMath::Max(Distance, 1.f),
+		0.4f,   // minimum scale at far distance
+		1.0f    // maximum scale (at or closer than reference distance)
+	);
+
+	OverheadWidgetComponent->SetDrawSize(OverheadWidgetBaseSize * Scale);
+
+	// Squish the widget vertically at distance — this compresses the gap between bars
+	float HeightSquish = FMath::GetMappedRangeValueClamped(
+		FVector2D(0.4f, 1.0f),   // Scale range
+		FVector2D(0.5f, 1.0f),   // Squish range: 0.5 = half height at max distance
+		Scale
+	);
+
+	UUserWidget* Widget = OverheadWidgetComponent->GetUserWidgetObject();
+	if (Widget)
+	{
+		Widget->SetRenderTransform(FWidgetTransform(FVector2D::ZeroVector, FVector2D(1.f, HeightSquish), FVector2D::ZeroVector, 0.f));
+
+		UOverheadStatsGauge* Gauge = Cast<UOverheadStatsGauge>(Widget);
+		if (Gauge)
+		{
+			if (UChrisAbilitySystemStatics::IsHero(this))
+			{
+				Gauge->SetTextVisibility(Distance <= 800.f);
+			}
+			else
+			{
+				Gauge->SetTextVisibility(false);
+			}
+		}
 	}
 }
 
@@ -202,7 +263,18 @@ void AChrisCharacter::SetStatusGaugeEnabled(bool bIsEnabled)
 
 void AChrisCharacter::DeathMontageFinished()
 {
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	UCapsuleComponent* Capsule = GetCapsuleComponent();
+
+	if (Capsule)
+	{
+		Capsule->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		Capsule->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+	}
+
+	if (HasAuthority())
+	{
+		GetWorldTimerManager().SetTimer(RespawnDelayTimerHandle, this, &AChrisCharacter::RespawnImmediately, RespawnDelay);
+	}
 }
 
 void AChrisCharacter::SetRagdollEnabled(bool bIsEnabled)
@@ -245,6 +317,7 @@ void AChrisCharacter::StartDeathSequence()
 	SetStatusGaugeEnabled(false);
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
 	SetAIPerceptionStimuliSourceEnabled(false);
+
 }
 
 void AChrisCharacter::StunTagUpdated(const FGameplayTag Tag, int32 NewCount)
@@ -359,16 +432,74 @@ void AChrisCharacter::RespawnImmediately()
 	}
 }
 
+void AChrisCharacter::ForceResetFromDeath()
+{
+	CancelDeathTimers();
+
+	// Only reset if actually dead
+	if (!IsDead()) return;
+
+	// Reset physical state (same as Respawn but without input/teleport/perception)
+	SetRagdollEnabled(false);
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
+	GetMesh()->GetAnimInstance()->StopAllMontages(0.f);
+	SetStatusGaugeEnabled(true);
+
+	if (USwordEquipComponent* SwordComp = FindComponentByClass<USwordEquipComponent>())
+	{
+		SwordComp->ResetToUnequipped();
+	}
+
+	bSuppressRespawnInput = true;
+
+	// Remove the death tag (this will trigger DeathTagUpdated → Respawn)
+	// So we need to guard Respawn — see below
+	if (HasAuthority())
+	{
+		GetAbilitySystemComponent()->RemoveActiveEffectsWithGrantedTags(
+			FGameplayTagContainer(UChrisAbilitySystemStatics::GetDeadStatsTag()));
+	}
+
+	// Apply full stats after removing death
+	if (ChrisAbilitySystemComponent)
+	{
+		ChrisAbilitySystemComponent->ApplyFullStatEffect();
+	}
+}
+
+void AChrisCharacter::CancelDeathTimers()
+{
+	GetWorldTimerManager().ClearTimer(DeathMontageTimerHandle);
+	GetWorldTimerManager().ClearTimer(RespawnDelayTimerHandle);
+}
+
 void AChrisCharacter::Respawn()
 {
+	if (bSuppressRespawnInput)
+	{
+		// ForceResetFromDeath already handled everything
+		bSuppressRespawnInput = false;
+		return;
+	}
+	
 	OnRespawn();
 	SetAIPerceptionStimuliSourceEnabled(true);
 	SetRagdollEnabled(false);
 	UE_LOG(LogTemp, Warning, TEXT("Respawned"))
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	//GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
 	GetMesh()->GetAnimInstance()->StopAllMontages(0.f);
 	SetStatusGaugeEnabled(true);
+
+	// Reset sword equip state so player respawns unequipped
+	if (USwordEquipComponent* SwordComp = FindComponentByClass<USwordEquipComponent>())
+	{
+		SwordComp->ResetToUnequipped();
+	}
+
 
 	if (HasAuthority() && GetController())
 	{
@@ -378,7 +509,6 @@ void AChrisCharacter::Respawn()
 			SetActorTransform(StartSpot->GetActorTransform());
 		}
 	}
-
 
 	if (ChrisAbilitySystemComponent)
 	{
@@ -406,7 +536,12 @@ FGenericTeamId AChrisCharacter::GetGenericTeamId() const
 
 void AChrisCharacter::OnRep_TeamID()
 {
-	//override in child class
+	UOverheadStatsGauge* OverheadStatsGauge = Cast<UOverheadStatsGauge>(
+		OverheadWidgetComponent->GetUserWidgetObject());
+	if (OverheadStatsGauge)
+	{
+		OverheadStatsGauge->ConfigureTeamColor(this);
+	}
 }
 
 void AChrisCharacter::SetAIPerceptionStimuliSourceEnabled(bool bIsEnabled)

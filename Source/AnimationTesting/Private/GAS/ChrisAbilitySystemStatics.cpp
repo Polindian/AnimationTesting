@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 
 #include "GAS/ChrisAbilitySystemStatics.h"
@@ -363,4 +363,9 @@ void UChrisAbilitySystemStatics::SendLocalGameplayCue(AActor* TargetActor, const
 
 		ASC->ExecuteGameplayCue(GameplayCueTag, CueParams);
 	}
+}
+
+FGameplayTag UChrisAbilitySystemStatics::GetSpeedOverrideTag()
+{
+	return FGameplayTag::RequestGameplayTag("stats.speed.override");
 }

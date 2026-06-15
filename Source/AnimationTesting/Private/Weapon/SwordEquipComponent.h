@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -162,4 +162,10 @@ private:
     void UpdateSwordTransforms(float EasedAlpha);
     void UpdateEquippedTag();
     bool IsTransitioning() const;
+
+
+    // ---------- AI Setup ----------
+
+    UPROPERTY(EditDefaultsOnly, Category = "Swords|Setup")
+    bool bStartEquipped = false;
 };

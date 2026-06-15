@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -28,10 +28,12 @@ public:
 	FORCEINLINE float GetSpeed() const { return Speed; }
 
 	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
-	FORCEINLINE bool IsMoving() const { return Speed != 0; }
+	//FORCEINLINE bool IsMoving() const { return Speed != 0; }  
+	FORCEINLINE bool IsMoving() const { return Speed > 10.f; }
 
 	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
-	FORCEINLINE bool IsNotMoving() const { return Speed == 0; }
+	//FORCEINLINE bool IsNotMoving() const { return Speed == 0; }
+	FORCEINLINE bool IsNotMoving() const { return Speed <= 10.f; }
 
 	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
 	FORCEINLINE float GetForwardSpeed() const { return ForwardSpeed; }
@@ -74,6 +76,8 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Movement")
 	float Lean;
 
+	
+
 
 
 private:
@@ -88,6 +92,21 @@ private:
 	float Speed;
 	float ForwardSpeed = 0.f;
 	float RightSpeed = 0.f;
+
+	UPROPERTY(EditAnywhere, Category = "Movement|Speed")
+	float ForwardMoveSpeed = 750.f;
+
+	UPROPERTY(EditAnywhere, Category = "Movement|Speed")
+	float StrafeMoveSpeed = 720.f;
+
+	UPROPERTY(EditAnywhere, Category = "Movement|Speed")
+	float BackwardMoveSpeed = 600.f;
+
+	UPROPERTY(EditAnywhere, Category = "Movement|Speed")
+	float BackDiagonalMoveSpeed = 550.f;
+
+	UPROPERTY(EditAnywhere, Category = "Movement")
+	FGameplayTag SpeedOverrideTag;
 
 	float YawSpeed;
 	float SmoothedYawSpeed;
