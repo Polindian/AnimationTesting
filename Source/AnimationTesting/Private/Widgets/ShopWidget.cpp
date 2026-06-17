@@ -103,6 +103,9 @@ void UShopWidget::ShopItemLoadFinished()
 
 void UShopWidget::OnItemPurchaseRequested(const UPA_ShopItem* Item)
 {
+    if (bShopClosed)
+        return;
+    
     if (OwnerInventoryComponent && Item)
     {
         bool bSuccess = OwnerInventoryComponent->TryPurchase(Item);
@@ -457,6 +460,11 @@ void UShopWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
         int32 Minutes = (int32)(Remaining / 60.f);
         int32 Seconds = (int32)(Remaining) % 60;
         TimerText->SetText(FText::FromString(FString::Printf(TEXT("%d:%02d"), Minutes, Seconds)));
+
+        if (Remaining <= 0.f)
+        {
+            bShopClosed = true;
+        }
     }
 
     // Advance branch fill animations.
@@ -468,6 +476,8 @@ void UShopWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 
 void UShopWidget::OnContinueClicked()
 {
+    bShopClosed = true;
+    
     AChrisPlayerController* PC = Cast<AChrisPlayerController>(GetOwningPlayer());
     if (PC)
     {
