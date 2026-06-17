@@ -299,7 +299,9 @@ void UInventoryComponent::ConsumeItem(UInventoryItem* Item)
 	Item->ApplyConsumeEffect();
 	if(!Item->ReduceStackCount())
 	{
-		RemoveItem(Item);
+		OnItemRemoved.Broadcast(Item->GetHandle());
+		InventoryMap.Remove(Item->GetHandle());
+		Client_ItemRemoved(Item->GetHandle());
 	}
 	else
 	{
