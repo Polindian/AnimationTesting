@@ -50,9 +50,10 @@ void UChrisAbilitySystemComponent::InitializeBaseAttributes()
 
 		SetNumericAttributeBase(UCHeroAttributeSet::GetIntelligenceAttribute(), BaseStats->Intelligence);
 		SetNumericAttributeBase(UCHeroAttributeSet::GetIntelligenceGrowthRateAttribute(), BaseStats->IntelligenceGrowthRate);
-
 		SetNumericAttributeBase(UCHeroAttributeSet::GetStrengthAttribute(), BaseStats->Strength);
 		SetNumericAttributeBase(UCHeroAttributeSet::GetStrengthGrowthRateAttribute(), BaseStats->StrengthGrowthRate);	
+		SetNumericAttributeBase(UCHeroAttributeSet::GetAttackDamageGrowthRateAttribute(), BaseStats->AttackDamageGrowthRate);
+		SetNumericAttributeBase(UCHeroAttributeSet::GetArmourGrowthRateAttribute(), BaseStats->ArmourGrowthRate);
 	}
 
 	const FRealCurve* ExperienceCurve = AbilitySystemGenerics->GetExperienceCurve();

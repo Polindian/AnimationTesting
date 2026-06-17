@@ -32,6 +32,8 @@ public:
     ATTRIBUTE_ACCESSORS(UCHeroAttributeSet, MaxLevel)
 	ATTRIBUTE_ACCESSORS(UCHeroAttributeSet, MaxLevelExperience)
     ATTRIBUTE_ACCESSORS(UCHeroAttributeSet, Soul)
+	ATTRIBUTE_ACCESSORS(UCHeroAttributeSet, AttackDamageGrowthRate)
+	ATTRIBUTE_ACCESSORS(UCHeroAttributeSet, ArmourGrowthRate)
 	virtual void GetLifetimeReplicatedProps( TArray< class FLifetimeProperty > & OutLifetimeProps ) const override;
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_Intelligence)
@@ -69,6 +71,15 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_Soul)
 	FGameplayAttributeData Soul;
+
+	UPROPERTY()
+	FGameplayAttributeData AttackDamageGrowthRate;
+
+	UPROPERTY()
+	FGameplayAttributeData ArmourGrowthRate;
+
+
+
 
 	UFUNCTION()
 	void OnRep_Intelligence(const FGameplayAttributeData& OldValue);

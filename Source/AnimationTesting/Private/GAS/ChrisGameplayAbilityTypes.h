@@ -88,4 +88,10 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	float BaseMaxMana;
+
+	UPROPERTY(EditAnywhere)
+	float AttackDamageGrowthRate;
+
+	UPROPERTY(EditAnywhere)
+	float ArmourGrowthRate;
 };
