@@ -25,6 +25,9 @@ protected:
     virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 private:
+
+    bool bShopClosed = false;
+
     UFUNCTION()
     void OnContinueClicked();
 

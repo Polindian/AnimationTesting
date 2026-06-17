@@ -5,6 +5,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "GAS/CHeroAttributeSet.h"
+#include "Framework/ChrisGameMode.h"
 #include "Inventory/PA_ShopItem.h"
 
 // Sets default values for this component's properties
@@ -161,6 +162,11 @@ void UInventoryComponent::Server_Purchase_Implementation(const UPA_ShopItem* Ite
 		return;
 	}
 
+	// Server-side: block purchases if shop phase has ended
+	AChrisGameMode* GM = Cast<AChrisGameMode>(GetWorld()->GetAuthGameMode());
+	if (!GM || !GM->IsInShopPhase())
+		return;
+
 	if (GetSoul() < ItemToPurchase->GetPrice())
 	{
 		return;
@@ -299,7 +305,9 @@ void UInventoryComponent::ConsumeItem(UInventoryItem* Item)
 	Item->ApplyConsumeEffect();
 	if(!Item->ReduceStackCount())
 	{
-		RemoveItem(Item);
+		OnItemRemoved.Broadcast(Item->GetHandle());
+		InventoryMap.Remove(Item->GetHandle());
+		Client_ItemRemoved(Item->GetHandle());
 	}
 	else
 	{

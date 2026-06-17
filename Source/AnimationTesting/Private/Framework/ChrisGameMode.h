@@ -42,6 +42,9 @@ public:
     // === NEW === Call this from your death/kill handling code to track kills per round
     void ReportKill(FGenericTeamId KillerTeam);
 
+    // Stop Purchasing logic 
+    bool IsInShopPhase() const { return CurrentPhase == EMatchPhase::ShopPhase; }
+
 private:
     FGenericTeamId GetTeamIDForPlayer(const APlayerController* PlayerController) const;
     AActor* FindNextStartSpotForTeam(const FGenericTeamId& TeamID);
