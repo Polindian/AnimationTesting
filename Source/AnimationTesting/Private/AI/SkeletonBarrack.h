@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -16,6 +16,10 @@ public:
 	// Sets default values for this actor's properties
 	ASkeletonBarrack();
 
+	void StartSpawning(int32 PlayersPerTeam = 1);
+	void StopSpawning();
+	void DestroyAllSkeletons();
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -27,9 +31,6 @@ public:
 private:
 	UPROPERTY(EditAnywhere, Category = "Spawn")
 	FGenericTeamId BarrackTeamId;
-
-	UPROPERTY(EditAnywhere, Category = "Spawn")
-	AActor* Goal;
 
 	UPROPERTY()
 	TArray<class ASkeletonAI*> SkeletonPool;
@@ -44,7 +45,15 @@ private:
 	int SkeletonPerGroup = 1;
 
 	UPROPERTY(EditAnywhere, Category = "Spawn")
+	int SkeletonsPerPlayer = 1;
+
+	UPROPERTY(EditAnywhere, Category = "Spawn")
 	float GroupSpawnInterval = 30.f;
+
+	bool IsSpawnSpotOccupied(const APlayerStart* SpawnSpot) const;
+
+	UPROPERTY(EditAnywhere, Category = "Spawn")
+	float OccupiedRadius = 10.f;
 
 	int NextSpawnSpotIndex = -1;
 
@@ -57,5 +66,5 @@ private:
 
 	FTimerHandle SpawnIntervalTimerHnadle;
 
-
+	FTransform SnapToGround(const FTransform& InTransform) const;
 };

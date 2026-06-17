@@ -28,7 +28,16 @@ void USwordEquipComponent::BeginPlay()
 
     if (LeftSword && RightSword && OwnerMesh)
     {
-        AttachSwordsToSockets(LeftSheathSocket, RightSheathSocket);
+        if (bStartEquipped)
+        {
+            // AI path: 
+            EquipState = ESwordEquipState::Equipped;
+        }
+        else
+        {
+            // Player path: swords start sheathed as before
+            AttachSwordsToSockets(LeftSheathSocket, RightSheathSocket);
+        }
     }
 
     UpdateEquippedTag();
@@ -92,7 +101,7 @@ void USwordEquipComponent::ExecutePhaseAction(ESwordPhaseAction Action)
         // BeginEquip/BeginUnequip was never called from the ability),
         // infer the transition direction from the current resting state.
         // This works because the montage is replicated by GAS, so anim
-        // notifies fire on ALL clients — we just need the state to be correct.
+        // notifies fire on ALL clients
         if (!IsTransitioning())
         {
             if (EquipState == ESwordEquipState::Unequipped)
@@ -143,6 +152,23 @@ void USwordEquipComponent::FinalizeUnequip()
     UpdateEquippedTag();
 
     UE_LOG(LogTemp, Log, TEXT("SwordEquip: FinalizeUnequip — swords attached to sheath sockets"));
+}
+
+void USwordEquipComponent::ResetToUnequipped()
+{
+    // Cancel any in-progress transition
+    CurrentPhase = ESwordFlyPhase::None;
+    PhaseAlpha = 0.f;
+    SetComponentTickEnabled(false);
+
+    // Snap swords to sheath sockets
+    if (LeftSword && RightSword && OwnerMesh)
+    {
+        AttachSwordsToSockets(LeftSheathSocket, RightSheathSocket);
+    }
+
+    EquipState = ESwordEquipState::Unequipped;
+    UpdateEquippedTag();
 }
 
 // -----------------------------------------------------------------------

@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -15,6 +15,11 @@ class UOverheadStatsGauge : public UUserWidget
 	GENERATED_BODY()
 public:
 	void ConfigureWithASC(class UAbilitySystemComponent* AbilitySystemComponent);
+
+	void ConfigureTeamColor(AActor* OwnerActor);
+
+	void SetTextVisibility(bool bVisible);
+	
 
 private:
 	UPROPERTY(meta = (BindWidget))

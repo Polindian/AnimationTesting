@@ -162,6 +162,13 @@ FGenericTeamId UChrisGameplayAbility::GetOwnerTeamId() const
 
 void UChrisGameplayAbility::ApplyGameplayEffectToHitResultActor(const FHitResult& HitResult, TSubclassOf<UGameplayEffect> GameplayEffect, int Level)
 {
+    
+    if (!GameplayEffect)
+    {
+        UE_LOG(LogTemp, Error, TEXT("[Ability] ApplyGameplayEffectToHitResultActor called with NULL GameplayEffect!"));
+        return;
+    }
+
     FGameplayEffectSpecHandle EffectSpecHandle = MakeOutgoingGameplayEffectSpec(GameplayEffect, Level);
     FGameplayEffectContextHandle EffectContext = MakeEffectContext(GetCurrentAbilitySpecHandle(), GetCurrentActorInfo());
     EffectContext.AddHitResult(HitResult);

@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -87,4 +87,7 @@ public:
 	static float GetStaticCostForAbility(const UGameplayAbility* Ability);
 
 	static void SendLocalGameplayCue(AActor* TargetActor, const FHitResult& HitResult, const FGameplayTag& GameplayCueTag);
+
+	// Override Tags
+	static FGameplayTag GetSpeedOverrideTag();
 };

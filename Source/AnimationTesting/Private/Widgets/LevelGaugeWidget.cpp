@@ -27,12 +27,31 @@ void ULevelGaugeWidget::NativeConstruct()
 	}
 	OwnerASC = OwnerAbilitySystemComponent;
 
+	// Cache the dynamic material instance
+	if (LevelProgressImage)
+	{
+		ProgressMaterial = LevelProgressImage->GetDynamicMaterial();
+	}
+
 	UpdateGauge(FOnAttributeChangeData());
 	OwnerAbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UCHeroAttributeSet::GetExperienceAttribute()).AddUObject(this, &ULevelGaugeWidget::UpdateGauge);
 	OwnerAbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UCHeroAttributeSet::GetNextLevelExperienceAttribute()).AddUObject(this, &ULevelGaugeWidget::UpdateGauge);
 	OwnerAbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UCHeroAttributeSet::GetPrevLevelExperienceAttribute()).AddUObject(this, &ULevelGaugeWidget::UpdateGauge);
 	OwnerAbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UCHeroAttributeSet::GetLevelAttribute()).AddUObject(this, &ULevelGaugeWidget::UpdateGauge);
 
+}
+
+void ULevelGaugeWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+
+	// Smoothly interpolate the displayed percent toward the target
+	DisplayedPercent = FMath::FInterpTo(DisplayedPercent, TargetPercent, InDeltaTime, InterpSpeed);
+
+	if (ProgressMaterial)
+	{
+		ProgressMaterial->SetScalarParameterValue(PercentMaterialParamName, DisplayedPercent);
+	}
 }
 
 void ULevelGaugeWidget::UpdateGauge(const FOnAttributeChangeData& Data)
@@ -51,20 +70,13 @@ void ULevelGaugeWidget::UpdateGauge(const FOnAttributeChangeData& Data)
 	if (!bFound)
 		return;
 
+	// Update level number text
 	LevelText->SetText(FText::AsNumber(CurrentLevel, &NumberFormattingOptions));
+
+	// Calculate target percent — the tick will smoothly interpolate toward this
 	float Progress = CurrentExperience - PrevLevelExperience;
-	float LevelExperienceAmountLeft = NextLevelExperience - PrevLevelExperience;
+	float LevelRange = NextLevelExperience - PrevLevelExperience;
 
-	float Percent = Progress / LevelExperienceAmountLeft;
-
-	if (NextLevelExperience == 0)
-	{
-		Percent = 1;
-	}
-
-	if (LevelProgressImage)
-	{
-		LevelProgressImage->GetDynamicMaterial()->SetScalarParameterValue(PercentMaterialParamName, Percent);
-	}
+	TargetPercent = (LevelRange > 0.f) ? (Progress / LevelRange) : 1.f;
 }
 

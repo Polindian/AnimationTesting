@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -21,6 +21,9 @@ public:
 	void InitializeBaseAttributes();
 	void ServerSideInit();
 	void ApplyFullStatEffect();
+
+	void ResetAllCooldowns();
+	void ApplyHeavyAbilityCooldowns();
 
 	const TMap<EChrisAbilityInputID, TSubclassOf<UGameplayAbility>>& GetAbilities() const;
 	bool IsAtMaxLevel() const;

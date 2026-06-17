@@ -44,7 +44,18 @@
 
 # Excluded large content (re-downloadable from Quixel Bridge)
 Content/MetaHumans/
-Content/Main/Christopher/
+Content/Main/Christopher/Animations/
+Content/Main/Christopher/Base/
+Content/Main/Christopher/C++_Classes/
+Content/Main/Christopher/Chris_Metahuman/
+Content/Main/Christopher/DeadStuff/
+Content/Main/Christopher/GAS/
+Content/Main/Christopher/Grooms/
+Content/Main/Christopher/Face/
+Content/Main/Christopher/KOM_Character/
+Content/Main/Christopher/MAT_Locodrome/
+Content/Main/Christopher/Player_Art_Assets/
+Content/Main/Christopher/Test/
 Content/ParagonTerra/
 
 # Marketplace content packs (redownloadable from Epic Launcher Vault)
@@ -88,17 +99,3 @@ Plugins/**/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
-# Excluded large content (re-downloadable from Quixel Bridge)
-Content/MetaHumans/
-Content/Main/Christopher/
-Content/ParagonTerra/
- 
-# Marketplace content packs (redownloadable from Epic Launcher Vault)
-Content/SkeletonCharacter/
-Content/RealisticBlood/
-Content/QuangPhan/
-Content/Dodge_Animations/
-Content/Characters/
-Content/ProjectileHitVFX/
-Content/BattleMage/
-Content/KOM_Character/

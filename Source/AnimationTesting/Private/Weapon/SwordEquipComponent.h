@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -61,6 +61,8 @@ class USwordEquipComponent : public UActorComponent
         // Called when the whole transition finishes (montage end or snap complete)
         void FinalizeEquip();
         void FinalizeUnequip();
+
+        void ResetToUnequipped();
 
 private:
     // ---------- Socket names ----------
@@ -160,4 +162,10 @@ private:
     void UpdateSwordTransforms(float EasedAlpha);
     void UpdateEquippedTag();
     bool IsTransitioning() const;
+
+
+    // ---------- AI Setup ----------
+
+    UPROPERTY(EditDefaultsOnly, Category = "Swords|Setup")
+    bool bStartEquipped = false;
 };

@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -45,6 +45,9 @@ public:
 	virtual void NativeOnListItemObjectSet(UObject* ListItemObject) override;
 	
 	void ConfigureWithWidgetData(const FAbilityWidgetData* WidgetData);
+
+	void ResetCooldownVisual();
+	void StartRoundCooldown();
 
 private:
 

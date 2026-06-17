@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 
 #include "AI/ChrisAIController.h"
@@ -6,6 +6,8 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "GAS/ChrisAbilitySystemComponent.h"
 #include "GAS/ChrisAbilitySystemStatics.h"
+#include "GAS/ChrisAttributeSet.h"
+#include "Player/ChrisPlayerCharacter.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
 #include "Perception/AISense_Sight.h"
@@ -26,10 +28,10 @@ AChrisAIController::AChrisAIController()
 	SightConfig->DetectionByAffiliation.bDetectNeutrals = false;
 
 	SightConfig->SightRadius = 1000.0f;
-	SightConfig->LoseSightRadius = 1200.0f;
+	SightConfig->LoseSightRadius = 2000.0f;
 	SightConfig->SetMaxAge(5.0f);
 
-	SightConfig->PeripheralVisionAngleDegrees = 180.0f;
+	SightConfig->PeripheralVisionAngleDegrees = 350.0f;
 
 	AIPerceptionComponent->ConfigureSense(*SightConfig);
 	AIPerceptionComponent->OnTargetPerceptionUpdated.AddDynamic(this, &AChrisAIController::TargetPerceptionUpdated);
@@ -55,12 +57,60 @@ void AChrisAIController::OnPossess(APawn* NewPawn)
 		PawnASC->RegisterGameplayTagEvent(UChrisAbilitySystemStatics::GetStunStatsTag()).AddUObject(this, &AChrisAIController::PawnStunTagUpdated);
 		PawnASC->RegisterGameplayTagEvent(UChrisAbilitySystemStatics::GetFallBackStatsTag()).AddUObject(this, &AChrisAIController::PawnFallBackTagUpdated);
 	}
+
+	// ======================================================
+	// Force the WeaponsEquipped tag after a short delay.
+	// SwordEquipComponent::BeginPlay runs during spawn and
+	// calls UpdateEquippedTag which REMOVES the equipped tag
+	// (because it defaults to Unequipped state). A next-tick
+	// timer still loses to late BeginPlay calls. A 0.5s delay
+	// guarantees everything has fully initialized.
+	//
+	// Uses the correct tag from ChrisAbilitySystemStatics
+	// (NOT a raw string) so it matches the registered tag.
+	// ======================================================
+	TWeakObjectPtr<APawn> WeakPawn = NewPawn;
+	GetWorld()->GetTimerManager().SetTimer(EquipTagTimerHandle, [WeakPawn]()
+		{
+			if (!WeakPawn.IsValid()) return;
+
+			UAbilitySystemComponent* ASC =
+				UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(WeakPawn.Get());
+			if (ASC)
+			{
+				ASC->AddLooseGameplayTag(UChrisAbilitySystemStatics::GetWeaponsEquippedTag());
+				ASC->RemoveLooseGameplayTag(UChrisAbilitySystemStatics::GetWeaponsUnequippedTag());
+
+				bool bHasTag = ASC->HasMatchingGameplayTag(UChrisAbilitySystemStatics::GetWeaponsEquippedTag());
+				UE_LOG(LogTemp, Warning, TEXT("[AI] WeaponsEquipped forced — has tag: %d"), bHasTag);
+			}
+		}, 0.5f, false);
+
+	GetWorld()->GetTimerManager().SetTimer(LowHealthCheckTimerHandle, this,&AChrisAIController::CheckForLowHealthHeroes, 0.5f, true);
 }
 
 void AChrisAIController::BeginPlay()
 {
 	Super::BeginPlay();
+	
 	RunBehaviorTree(BehaviourTree);
+}
+
+void AChrisAIController::StartAIBehavior()
+{
+	if (GetBrainComponent())
+	{
+		GetBrainComponent()->StartLogic();
+	}
+}
+
+void AChrisAIController::StopAIBehavior()
+{
+	if (GetBrainComponent())
+	{
+		GetBrainComponent()->StopLogic("RoundEnded");
+		GetWorld()->GetTimerManager().ClearTimer(LowHealthCheckTimerHandle);
+	}
 }
 
 void AChrisAIController::TargetPerceptionUpdated(AActor* TargetActor, FAIStimulus Stimulus)
@@ -74,10 +124,8 @@ void AChrisAIController::TargetPerceptionUpdated(AActor* TargetActor, FAIStimulu
 	}
 	else
 	{
-		if (GetCurrentTarget() == TargetActor)
-		{
-			SetCurrentTarget(GetNextPerceivedActor());
-		}
+		// Don't drop target immediately — let MaxAge expiration handle it
+		// via TargetForgotten. Only forget dead actors instantly.
 		ForgetActorIfDead(TargetActor);
 	}
 }
@@ -120,7 +168,7 @@ void AChrisAIController::SetCurrentTarget(AActor* NewTarget)
 
 AActor* AChrisAIController::GetNextPerceivedActor() const
 {
-	if (PerceptionComponent)
+	if (AIPerceptionComponent)
 	{
 		TArray<AActor*> ActorsPerceived;
 		AIPerceptionComponent->GetPerceivedHostileActors(ActorsPerceived);
@@ -181,6 +229,13 @@ void AChrisAIController::EnableAllSenses()
 
 void AChrisAIController::PawnDeadTagUpdated(const FGameplayTag Tag, int32 Count)
 {
+	if (Count == 0)
+	{
+		if (GetBlackboardComponent())
+		{
+			GetBlackboardComponent()->SetValueAsBool("bLockedToMidZone", false);
+		}
+	}
 	if (Count != 0)
 	{
 		GetBrainComponent()->StopLogic("Pawn is dead");
@@ -224,5 +279,50 @@ void AChrisAIController::PawnFallBackTagUpdated(const FGameplayTag Tag, int32 Co
 	else
 	{
 		GetBrainComponent()->StartLogic();
+	}
+}
+
+void AChrisAIController::CheckForLowHealthHeroes()
+{
+	if (!GetPawn()) return;
+	if (bIsPawnDead) return;
+
+	TArray<AActor*> PerceivedEnemies;
+	AIPerceptionComponent->GetPerceivedHostileActors(PerceivedEnemies);
+
+	AActor* BestTarget = nullptr;
+	float BestDist = TNumericLimits<float>::Max();
+
+	for (AActor* Enemy : PerceivedEnemies)
+	{
+		if (!Enemy || !IsValid(Enemy)) continue;
+
+		// Only heroes, not AI
+		if (!Cast<AChrisPlayerCharacter>(Enemy)) continue;
+		// Skip dead
+		if (IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(Enemy))
+		{
+			UAbilitySystemComponent* ASC = ASI->GetAbilitySystemComponent();
+			if (!ASC) continue;
+
+			bool bF1, bF2;
+			float HP = ASC->GetGameplayAttributeValue(UChrisAttributeSet::GetHealthAttribute(), bF1);
+			float MaxHP = ASC->GetGameplayAttributeValue(UChrisAttributeSet::GetMaxHealthAttribute(), bF2);
+
+			if (bF1 && bF2 && MaxHP > 0.f && (HP / MaxHP) < LowHealthThreshold)
+			{
+				float Dist = FVector::Dist(GetPawn()->GetActorLocation(), Enemy->GetActorLocation());
+				if (Dist < BestDist)
+				{
+					BestDist = Dist;
+					BestTarget = Enemy;
+				}
+			}
+		}
+	}
+
+	if (BestTarget)
+	{
+		SetCurrentTarget(BestTarget); // override target
 	}
 }

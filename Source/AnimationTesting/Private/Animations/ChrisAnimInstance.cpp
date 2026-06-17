@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 
 #include "Animations/ChrisAnimInstance.h"
@@ -27,61 +27,100 @@ void UChrisAnimInstance::NativeInitializeAnimation()
 
 void UChrisAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
-	if (OwnerCharacter)
-	{
-		Speed = OwnerCharacter->GetVelocity().Length();
+    if (!OwnerCharacter || DeltaSeconds <= 0.f) return;
 
-		// Offset Yaw For Strafing
-		FRotator ControlRotation = OwnerCharacter->GetBaseAimRotation();
-		FRotator MovementRotation = UKismetMathLibrary::MakeRotFromX(OwnerCharacter->GetVelocity());
-		FRotator DeltaRot = UKismetMathLibrary::NormalizedDeltaRotator(MovementRotation, ControlRotation);
-		DeltaRotation = FMath::RInterpTo(DeltaRotation, DeltaRot, DeltaSeconds, 5.f);
-		YawOffset = DeltaRotation.Yaw;
+    // --- Speed (2D only, ignore Z) ---
+    FVector Velocity = OwnerCharacter->GetVelocity();
+    Speed = Velocity.Size2D();
 
-		PlayerRotationLastFrame = PlayerRotation;
-		PlayerRotation = OwnerCharacter->GetActorRotation();
-		const FRotator Delta = UKismetMathLibrary::NormalizedDeltaRotator(PlayerRotation, PlayerRotationLastFrame);
-		const float Target = Delta.Yaw / DeltaSeconds;
-		const float Interp = FMath::FInterpTo(Lean, Target, DeltaSeconds, 8.f);
-		Lean = FMath::Clamp(Interp, -90.f, 90.f);
+    // --- Yaw Offset & Speed ---
+    FRotator ControlRotation = OwnerCharacter->GetBaseAimRotation();
+    FRotator MovementRotation = UKismetMathLibrary::MakeRotFromX(Velocity);
+    FRotator DeltaRot = UKismetMathLibrary::NormalizedDeltaRotator(MovementRotation, ControlRotation);
 
-		// Only rotate with camera when moving
-		if (!bIsAiming)
-		{
-			if (Speed > 5.f)  // Moving
-			{
-				OwnerCharacter->GetCharacterMovement()->bOrientRotationToMovement = false;
-				OwnerCharacter->bUseControllerRotationYaw = true;
-			}
-			else  // Stationary
-			{
-				OwnerCharacter->GetCharacterMovement()->bOrientRotationToMovement = true;
-				OwnerCharacter->bUseControllerRotationYaw = false;
-			}
-		}
+    // 1. Calculate raw yaw
+    if (Speed > 100.f)
+    {
+        DeltaRotation = FMath::RInterpTo(DeltaRotation, DeltaRot, DeltaSeconds, 15.f);
+    }
 
+    float RawYaw = DeltaRotation.Yaw;
 
-		//FRotator BodyRotation = OwnerCharacter->GetActorRotation();
-		//FRotator BodyRotationDelta = UKismetMathLibrary::NormalizedDeltaRotator(BodyRotation, BodyPreviousRotation);
-		//BodyPreviousRotation = BodyRotation;
+    if (Speed > 10.f)
+    {
+        // Don't override speed if an ability is controlling it
+        UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OwnerCharacter);
+        if (ASC && !ASC->HasMatchingGameplayTag(UChrisAbilitySystemStatics::GetSpeedOverrideTag()))
+        {
+            float AbsYaw = FMath::Abs(RawYaw);
 
-		//YawSpeed = BodyRotationDelta.Yaw / DeltaSeconds;
-		//SmoothedYawSpeed = UKismetMathLibrary::FInterpTo(SmoothedYawSpeed, YawSpeed, DeltaSeconds, YawSpeedSmoothLerpSpeed);
+            float TargetSpeed;
+            if (AbsYaw <= 67.5f)
+                TargetSpeed = ForwardMoveSpeed;
+            else if (AbsYaw <= 112.5f)
+                TargetSpeed = StrafeMoveSpeed;
+            else if (AbsYaw <= 157.5f)
+                TargetSpeed = BackDiagonalMoveSpeed;
+            else
+                TargetSpeed = BackwardMoveSpeed;
 
-		LookRotationOffset = UKismetMathLibrary::NormalizedDeltaRotator(ControlRotation, PlayerRotation);
+            OwnerMovementComp->MaxWalkSpeed = FMath::FInterpTo(
+                OwnerMovementComp->MaxWalkSpeed,
+                TargetSpeed,
+                DeltaSeconds,
+                8.f
+            );
+        }
+    }
 
-		ControlRotation.Pitch = FRotator::NormalizeAxis(ControlRotation.Pitch);
+    // 3. Quantize yaw for blendspace (smooth)
+  
+    float QuantizedYaw = FMath::RoundToFloat(RawYaw / 45.f) * 45.f;
 
-		LookRotationOffset.Pitch = FMath::Clamp(LookRotationOffset.Pitch, -45.f, 45.f);
+    // Wrap-safe interpolation: find the shortest angular path
+    float YawDelta = FRotator::NormalizeAxis(QuantizedYaw - YawOffset);
+    YawOffset = FRotator::NormalizeAxis(YawOffset + YawDelta * FMath::Clamp(DeltaSeconds * 10.f, 0.f, 1.f));
 
-	}
+  
+    /**/
+    // --- Lean (keep for cosmetic use, but NOT as a blendspace axis) ---
+    PlayerRotationLastFrame = PlayerRotation;
+    PlayerRotation = OwnerCharacter->GetActorRotation();
+    const FRotator Delta = UKismetMathLibrary::NormalizedDeltaRotator(PlayerRotation, PlayerRotationLastFrame);
+    float ClampedYawDelta = FMath::Clamp(Delta.Yaw, -10.f, 10.f);
+    const float Target = ClampedYawDelta / DeltaSeconds;
+    const float Interp = FMath::FInterpTo(Lean, Target, DeltaSeconds, 6.f);
+    Lean = FMath::Clamp(Interp, -45.f, 45.f); // Tighter range since it's cosmetic now
 
-	if(OwnerMovementComp)
-	{
-		bIsJumping = OwnerMovementComp->IsFalling();
-		bIsInAir = OwnerMovementComp->IsFalling();
-	}
+    // --- Rotation Mode ---
+    if (!bIsAiming)
+    {
+        if (Speed > 10.f)
+        {
+            OwnerCharacter->GetCharacterMovement()->bOrientRotationToMovement = false;
+            OwnerCharacter->bUseControllerRotationYaw = false;
+            OwnerCharacter->GetCharacterMovement()->bUseControllerDesiredRotation = true;
+        }
+        else
+        {
+            OwnerCharacter->GetCharacterMovement()->bOrientRotationToMovement = true;
+            OwnerCharacter->bUseControllerRotationYaw = false;
+            OwnerCharacter->GetCharacterMovement()->bUseControllerDesiredRotation = false;
+        }
+    }
+
+    // --- Look Offset ---
+    LookRotationOffset = UKismetMathLibrary::NormalizedDeltaRotator(ControlRotation, PlayerRotation);
+    LookRotationOffset.Pitch = FMath::Clamp(FRotator::NormalizeAxis(ControlRotation.Pitch), -45.f, 45.f);
+
+    // --- Jump ---
+    if (OwnerMovementComp)
+    {
+        bIsJumping = OwnerMovementComp->IsFalling();
+        bIsInAir = OwnerMovementComp->IsFalling();
+    }
 }
+
 
 void UChrisAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 {

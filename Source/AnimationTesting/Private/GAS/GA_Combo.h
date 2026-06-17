@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -20,6 +20,8 @@ public:
     static FGameplayTag GetComboChangedEventTag();
     static FGameplayTag GetComboChangedEventEndTag();
     static FGameplayTag GetComboTargetEventTag();
+
+    virtual void EndAbility(const FGameplayAbilitySpecHandle Handle,const FGameplayAbilityActorInfo* ActorInfo,const FGameplayAbilityActivationInfo ActivationInfo,bool bReplicateEndAbility, bool bWasCancelled) override;
 
 private:
     // === CHANGED === was: void SetupWaitComboInputPress();
@@ -58,4 +60,10 @@ private:
     void DoDamage(FGameplayEventData Data);
 
     FName NextComboName;
+
+    // Speed Override
+
+    UPROPERTY(EditDefaultsOnly, Category = "Movement")
+    float AttackMoveSpeed = 50.f;
+
 };

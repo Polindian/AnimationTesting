@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -21,6 +21,13 @@ public:
 
 	virtual void OnPossess(APawn* NewPawn) override;
 	virtual void BeginPlay() override;
+
+	// Activates the behavior tree so the AI begins acting.
+	void StartAIBehavior();
+
+	// Called by the game mode when the round ends.
+	// Pauses the behavior tree so AI stops moving.
+	void StopAIBehavior();
 
 private:
 
@@ -57,4 +64,13 @@ private:
 	void PawnFallBackTagUpdated(const FGameplayTag Tag, int32 Count);
 
 	bool bIsPawnDead = false;
+
+	FTimerHandle EquipTagTimerHandle;
+
+	FTimerHandle LowHealthCheckTimerHandle;
+
+	void CheckForLowHealthHeroes();
+
+	UPROPERTY(EditDefaultsOnly, Category = "AI Targeting")
+	float LowHealthThreshold = 0.25f;
 };

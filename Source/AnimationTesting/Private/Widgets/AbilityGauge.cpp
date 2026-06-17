@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 
 #include "Widgets/AbilityGauge.h"
@@ -58,6 +58,48 @@ void UAbilityGauge::ConfigureWithWidgetData(const FAbilityWidgetData* WidgetData
 	}
 }
 
+void UAbilityGauge::ResetCooldownVisual()
+{
+	GetWorld()->GetTimerManager().ClearTimer(CooldownTimerHandle);
+	GetWorld()->GetTimerManager().ClearTimer(CooldownTimerUpdateHandle);
+	CachedCooldownDuration = 0.f;
+	CachedCooldownTimeRemaining = 0.f;
+	CooldownCounterText->SetVisibility(ESlateVisibility::Hidden);
+	if (Icon)
+	{
+		Icon->GetDynamicMaterial()->SetScalarParameterValue(CooldownPercentParamName, 1.f);
+	}
+}
+
+void UAbilityGauge::StartRoundCooldown()
+{
+	// First clear any existing cooldown timers
+	GetWorld()->GetTimerManager().ClearTimer(CooldownTimerHandle);
+	GetWorld()->GetTimerManager().ClearTimer(CooldownTimerUpdateHandle);
+
+	const FGameplayAbilitySpec* Spec = GetAbilitySpec();
+	if (!Spec || Spec->Level <= 0)
+	{
+		// Ability not learned — just show as ready/disabled
+		ResetCooldownVisual();
+		return;
+	}
+
+	// Get the full cooldown duration for this ability at its current level
+	float CooldownDuration = UChrisAbilitySystemStatics::GetCooldownDurationFor(
+		AbilityCDO, OwnerAbilitySystemComponent, Spec->Level);
+
+	if (CooldownDuration > 0.f)
+	{
+		// Start the visual cooldown at full duration
+		StartCooldown(CooldownDuration, CooldownDuration);
+	}
+	else
+	{
+		ResetCooldownVisual();
+	}
+}
+
 void UAbilityGauge::AbilityCommitted(UGameplayAbility* Ability)
 {
 	if (Ability->GetClass()->GetDefaultObject() == AbilityCDO)
@@ -104,14 +146,11 @@ void UAbilityGauge::UpdateCooldown()
 
 const FGameplayAbilitySpec* UAbilityGauge::GetAbilitySpec()
 {
-	if (!CachedAbilitySpec)
+	if (AbilityCDO && OwnerAbilitySystemComponent)
 	{
-		if (AbilityCDO && OwnerAbilitySystemComponent)
-		{
-			CachedAbilitySpec = OwnerAbilitySystemComponent->FindAbilitySpecFromClass(AbilityCDO->GetClass());
-		}
+		return OwnerAbilitySystemComponent->FindAbilitySpecFromClass(AbilityCDO->GetClass());
 	}
-	return CachedAbilitySpec;
+	return nullptr;
 }
 
 void UAbilityGauge::AbilitySpecUpdated(const FGameplayAbilitySpec& AbilitySpec)
@@ -124,6 +163,12 @@ void UAbilityGauge::AbilitySpecUpdated(const FGameplayAbilitySpec& AbilitySpec)
 	bIsAbilityLearned = AbilitySpec.Level > 0;
 	LevelGauge->GetDynamicMaterial()->SetScalarParameterValue(AbilityLevelParamName, AbilitySpec.Level);
 	UpdateCanCast();
+
+	// Don't update cooldown/cost for unlearned abilities
+	if (!bIsAbilityLearned)
+	{
+		return;
+	}
 
 	float NewCooldownDuration = UChrisAbilitySystemStatics::GetCooldownDurationFor(AbilitySpec.Ability, OwnerAbilitySystemComponent, AbilitySpec.Level);
 	float NewCost = UChrisAbilitySystemStatics::GetManaCostFor(AbilitySpec.Ability, OwnerAbilitySystemComponent, AbilitySpec.Level);

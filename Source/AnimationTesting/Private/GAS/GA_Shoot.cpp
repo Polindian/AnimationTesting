@@ -4,6 +4,7 @@
 #include "GAS/GA_Shoot.h"
 #include "GAS/ChrisAbilitySystemStatics.h"
 #include "GAS/ProjectileActor.h"
+#include "GAS/ChrisAttributeSet.h"
 #include "GameplayTagsManager.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
@@ -41,16 +42,12 @@ void UGA_Shoot::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 	{
 		// Listen for RMB RELEASED — this is how we know the player stopped aiming.
 		// When received, StopShooting plays AimToIdle and ends the ability.
-		UAbilityTask_WaitGameplayEvent* WaitStopShootingEvent =
-			UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-				this, UChrisAbilitySystemStatics::GetHeavyAttack3InputReleasedTag());
+		UAbilityTask_WaitGameplayEvent* WaitStopShootingEvent =UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(this, UChrisAbilitySystemStatics::GetHeavyAttack3InputReleasedTag());
 		WaitStopShootingEvent->EventReceived.AddDynamic(this, &UGA_Shoot::StopShooting);
 		WaitStopShootingEvent->ReadyForActivation();
 
 		// Listen for shoot input
-		UAbilityTask_WaitGameplayEvent* WaitShootProjectileEvent =
-			UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-				this, GetShootTag(), nullptr, false, false);
+		UAbilityTask_WaitGameplayEvent* WaitShootProjectileEvent =UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(this, GetShootTag(), nullptr, false, false);
 		WaitShootProjectileEvent->EventReceived.AddDynamic(this, &UGA_Shoot::ShootProjectile);
 		WaitShootProjectileEvent->ReadyForActivation();
 
@@ -82,12 +79,12 @@ bool UGA_Shoot::CheckCooldown(const FGameplayAbilitySpecHandle Handle, const FGa
 	return true;
 }
 
-void UGA_Shoot::GetCooldownTimeRemainingAndDuration(FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, float& TimeRemaining, float& CooldownDuration) const
+void UGA_Shoot::GetCooldownTimeRemainingAndDuration(FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, float& TimeRemaining, float& CooldownDuration) const
 {
-	CooldownDuration = ShootCooldownDuration;
+	CooldownDuration = ActiveCooldownDuration > 0.f ? ActiveCooldownDuration : ShootCooldownDuration;
 	TimeRemaining = GetWorld() ? FMath::Max(0.f, (float)(CooldownEndTime - GetWorld()->GetTimeSeconds())) : 0.f;
 }
-
 
 FGameplayTag UGA_Shoot::GetShootTag()
 {
@@ -110,10 +107,12 @@ void UGA_Shoot::StopShooting(FGameplayEventData Payload)
 void UGA_Shoot::ShootProjectile(FGameplayEventData Payload)
 {
 
-	if (IsCooldownActive() || !ShootMontage) return;
+	double CurrentTime = GetWorld()->GetTimeSeconds();
+	if (IsCooldownActive() || !ShootMontage || (CurrentTime - LastShotTime) < 0.15) return;
+	LastShotTime = CurrentTime;
 
-		UAbilityTask_PlayMontageAndWait* PlayShootMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, ShootMontage);
-		PlayShootMontageTask->ReadyForActivation();
+	UAbilityTask_PlayMontageAndWait* PlayShootMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, ShootMontage);
+	PlayShootMontageTask->ReadyForActivation();
 	
 	if (K2_HasAuthority())
 	{
@@ -122,13 +121,6 @@ void UGA_Shoot::ShootProjectile(FGameplayEventData Payload)
 		SpawnParams.Owner = OwnerAvatarActor;
 		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-		/* Spawn at hand_r socket directly
-		FVector SocketLocation = OwnerAvatarActor->GetActorLocation(); // fallback
-		USkeletalMeshComponent* MeshComponent = GetOwningComponentFromActorInfo();
-		if (MeshComponent)
-		{
-			SocketLocation = MeshComponent->GetSocketLocation(FName("hand_r"));
-		}*/
 
 		// Spawn at hand_r socket directly
 		FVector SocketLocation = OwnerAvatarActor->GetActorLocation(); // fallback
@@ -154,12 +146,13 @@ void UGA_Shoot::ShootProjectile(FGameplayEventData Payload)
 	if (CurrentShotCount >= MaxShots)
 	{
 		CurrentShotCount = 0;
-		CooldownEndTime = GetWorld()->GetTimeSeconds() + ShootCooldownDuration;
+		ActiveCooldownDuration = GetLeveledCooldownDuration();
+		CooldownEndTime = GetWorld()->GetTimeSeconds() + ActiveCooldownDuration;
 
 		CommitAbilityCost(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo);
 
 		GetWorld()->GetTimerManager().SetTimer(
-			ShootCooldownTimerHandle, this, &UGA_Shoot::OnShootCooldownFinished, ShootCooldownDuration);
+			ShootCooldownTimerHandle, this, &UGA_Shoot::OnShootCooldownFinished, ActiveCooldownDuration);
 
 		UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
 		if (ASC)
@@ -167,6 +160,26 @@ void UGA_Shoot::ShootProjectile(FGameplayEventData Payload)
 			ASC->AbilityCommittedCallbacks.Broadcast(this);
 		}
 	}
+}
+
+float UGA_Shoot::GetLeveledCooldownDuration() const
+{
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	if (ASC)
+	{
+		UGameplayEffect* CooldownEffect = GetCooldownGameplayEffect();
+		if (CooldownEffect)
+		{
+			int32 Level = GetAbilityLevel(CurrentSpecHandle, CurrentActorInfo);
+			FGameplayEffectSpecHandle EffectSpec = ASC->MakeOutgoingSpec(
+				CooldownEffect->GetClass(), Level, ASC->MakeEffectContext());
+			float CalcDuration = 0.f;
+			CooldownEffect->DurationMagnitude.AttemptCalculateMagnitude(
+				*EffectSpec.Data.Get(), CalcDuration);
+			return FMath::Abs(CalcDuration);
+		}
+	}
+	return ShootCooldownDuration;  // fallback if no GE set
 }
 
 bool UGA_Shoot::IsCooldownActive() const
@@ -177,6 +190,26 @@ bool UGA_Shoot::IsCooldownActive() const
 void UGA_Shoot::OnShootCooldownFinished()
 {
 	CurrentShotCount = 0;
+
+	// ======================================================
+	// DEADEYE RESET: clear the hit counter at the start of
+	// each new volley. This prevents partial hits from the
+	// previous volley carrying over.
+	// ======================================================
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	if (ASC)
+	{
+		bool bFound = false;
+		float DeadeyeFlag = ASC->GetGameplayAttributeValue(
+			UChrisAttributeSet::GetDeadeyeActiveAttribute(), bFound);
+
+		if (bFound && DeadeyeFlag > 0.f)
+		{
+			ASC->SetNumericAttributeBase(
+				UChrisAttributeSet::GetDeadeyeHitCounterAttribute(), 0.f);
+		}
+	}
+
 	UE_LOG(LogTemp, Warning, TEXT("[GA_Shoot] OnShootCooldownFinished!"));
 }
 

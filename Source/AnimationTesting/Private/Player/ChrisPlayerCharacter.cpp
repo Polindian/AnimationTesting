@@ -8,6 +8,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
+#include "Inventory/InventoryComponent.h"
 #include "GAS/ChrisAbilitySystemStatics.h"
 #include "GAS/CHeroAttributeSet.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -29,11 +30,14 @@ AChrisPlayerCharacter::AChrisPlayerCharacter()
 
 	bUseControllerRotationYaw = false;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
+	GetCharacterMovement()->bUseControllerDesiredRotation = false;
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 720.f, 0.f);
 
 	SwordEquipComponent = CreateDefaultSubobject<USwordEquipComponent>(TEXT("SwordEquipComponent"));
 
 	HeroAttributeSet = CreateDefaultSubobject<UCHeroAttributeSet>(TEXT("Hero Attribute Set"));
+
+	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("Inventory Component"));
 }
 
 void AChrisPlayerCharacter::PawnClientRestart()
@@ -68,12 +72,15 @@ void AChrisPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInp
         for (const TPair<EChrisAbilityInputID,UInputAction*>& InputActionPair : GameplayAbilityInputActions)
         {
             EnhancedInputComp->BindAction(InputActionPair.Value, ETriggerEvent::Triggered, this, &AChrisPlayerCharacter::HandleAbilityInput, InputActionPair.Key);
+			EnhancedInputComp->BindAction(InputActionPair.Value, ETriggerEvent::Completed, this, &AChrisPlayerCharacter::HandleAbilityInput, InputActionPair.Key);
 		}
 
 		for (const TPair<EChrisAbilityInputID, UInputAction*>& UpgradePair : UpgradeSlotInputActions)
 		{
 			EnhancedInputComp->BindAction(UpgradePair.Value, ETriggerEvent::Started, this, &AChrisPlayerCharacter::HandleUpgradeSlotInput, UpgradePair.Key);
 		}
+
+		EnhancedInputComp->BindAction(UseInventoryitemAction, ETriggerEvent::Triggered, this, &AChrisPlayerCharacter::UseInventoryItem);
         
 	}
 }
@@ -193,6 +200,12 @@ void AChrisPlayerCharacter::HandleAbilityInput(const FInputActionValue& InputAct
 		// Rolling 
 		if (InputID == EChrisAbilityInputID::Roll)
 		{
+			// Can't roll in the air
+			if (GetCharacterMovement()->IsFalling())
+			{
+				return;
+			}
+
 			APlayerController* PlayerController = Cast<APlayerController>(GetController());
 			if (PlayerController)
 			{
@@ -233,6 +246,12 @@ void AChrisPlayerCharacter::HandleUpgradeSlotInput(const FInputActionValue& Inpu
 	{
 		UpgradeAbilityWithInputID(InputID); 
 	}
+}
+
+void AChrisPlayerCharacter::UseInventoryItem(const FInputActionValue& InputActionValue)
+{
+	int Value = FMath::RoundToInt(InputActionValue.Get<float>());
+	InventoryComponent->TryActivateItemInSlot(Value - 1);
 }
 
 EChrisAbilityInputID AChrisPlayerCharacter::GetRollDirectionFromInput(FVector2D MoveInput) const

@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 
 #include "GAS/ChrisAbilitySystemComponent.h"
@@ -9,6 +9,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "GameplayEffectExtension.h"
 #include "GAS/PA_GenericAbilitySystem.h"
+#include "Components/PostProcessComponent.h"
 
 UChrisAbilitySystemComponent::UChrisAbilitySystemComponent()
 {
@@ -49,9 +50,10 @@ void UChrisAbilitySystemComponent::InitializeBaseAttributes()
 
 		SetNumericAttributeBase(UCHeroAttributeSet::GetIntelligenceAttribute(), BaseStats->Intelligence);
 		SetNumericAttributeBase(UCHeroAttributeSet::GetIntelligenceGrowthRateAttribute(), BaseStats->IntelligenceGrowthRate);
-
 		SetNumericAttributeBase(UCHeroAttributeSet::GetStrengthAttribute(), BaseStats->Strength);
-		SetNumericAttributeBase(UCHeroAttributeSet::GetStrengthGrowthRateAttribute(), BaseStats->StrengthGrowthRate);
+		SetNumericAttributeBase(UCHeroAttributeSet::GetStrengthGrowthRateAttribute(), BaseStats->StrengthGrowthRate);	
+		SetNumericAttributeBase(UCHeroAttributeSet::GetAttackDamageGrowthRateAttribute(), BaseStats->AttackDamageGrowthRate);
+		SetNumericAttributeBase(UCHeroAttributeSet::GetArmourGrowthRateAttribute(), BaseStats->ArmourGrowthRate);
 	}
 
 	const FRealCurve* ExperienceCurve = AbilitySystemGenerics->GetExperienceCurve();
@@ -116,6 +118,56 @@ void UChrisAbilitySystemComponent::ApplyFullStatEffect()
 	AuthApplyGameEffect(AbilitySystemGenerics->GetFullStatEffect());
 }
 
+void UChrisAbilitySystemComponent::ResetAllCooldowns()
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+		return;
+
+	int32 TotalRemoved = 0;
+	for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
+	{
+		if (!Spec.Ability)
+			continue;
+
+		const FGameplayTagContainer* CooldownTags = Spec.Ability->GetCooldownTags();
+		if (!CooldownTags || CooldownTags->Num() == 0)
+			continue;
+
+		UE_LOG(LogTemp, Warning, TEXT("ResetCooldowns: Ability %s has cooldown tags: %s"),
+			*Spec.Ability->GetName(), *CooldownTags->ToString());
+
+		int32 Removed = RemoveActiveEffectsWithGrantedTags(*CooldownTags);
+		TotalRemoved += Removed;
+
+		UE_LOG(LogTemp, Warning, TEXT("ResetCooldowns: Removed %d effects for %s"), Removed, *Spec.Ability->GetName());
+	}
+	UE_LOG(LogTemp, Warning, TEXT("ResetCooldowns: Total effects removed: %d"), TotalRemoved);
+}
+
+void UChrisAbilitySystemComponent::ApplyHeavyAbilityCooldowns()
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+		return;
+
+	for (const TPair<EChrisAbilityInputID, TSubclassOf<UGameplayAbility>>& AbilityPair : Abilities)
+	{
+		FGameplayAbilitySpec* Spec = FindAbilitySpecFromClass(AbilityPair.Value);
+		if (!Spec || Spec->Level <= 0)
+			continue;
+
+		UGameplayAbility* AbilityCDO = Spec->Ability;
+		if (!AbilityCDO)
+			continue;
+
+		UGameplayEffect* CooldownGE = AbilityCDO->GetCooldownGameplayEffect();
+		if (!CooldownGE)
+			continue;
+
+		FGameplayEffectSpecHandle SpecHandle = MakeOutgoingSpec(CooldownGE->GetClass(), Spec->Level, MakeEffectContext());
+		ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+	}
+}
+
 const TMap<EChrisAbilityInputID, TSubclassOf<UGameplayAbility>>& UChrisAbilitySystemComponent::GetAbilities() const
 {
 	return Abilities;
@@ -176,6 +228,84 @@ void UChrisAbilitySystemComponent::AuthApplyGameEffect(TSubclassOf<UGameplayEffe
 
 void UChrisAbilitySystemComponent::HealthUpdated(const FOnAttributeChangeData& ChangeData)
 {
+	
+	// ======================================================
+	// INITIALIZATION GUARD
+	// ======================================================
+	bool bFoundMaxInit = false;
+	float MaxHealthInit = GetGameplayAttributeValue(
+		UChrisAttributeSet::GetMaxHealthAttribute(), bFoundMaxInit);
+	if (!bFoundMaxInit || MaxHealthInit <= 0.f) return;
+	// ======================================================
+	// LOW HEALTH VIGNETTE — runs on the LOCAL client only
+	//
+	// When health drops below 30%, we fade in a red vignette 
+	// with gradient depending on low health intensity
+	// ======================================================
+	APawn* OwnerPawn = Cast<APawn>(GetOwner());
+	if (OwnerPawn && OwnerPawn->IsLocallyControlled())
+	{
+		bool bFoundMaxHealth = false;
+		float MaxHealth = GetGameplayAttributeValue(
+			UChrisAttributeSet::GetMaxHealthAttribute(), bFoundMaxHealth);
+
+		if (bFoundMaxHealth && MaxHealth > 0.f)
+		{
+			float HealthPercent = ChangeData.NewValue / MaxHealth;
+			float LowHealthThreshold = 0.3f;
+
+			// Find the tagged PostProcessComponent
+			UPostProcessComponent* LowHealthPP = nullptr;
+			TArray<UPostProcessComponent*> PostProcessComponents;
+			OwnerPawn->GetComponents<UPostProcessComponent>(PostProcessComponents);
+
+			for (UPostProcessComponent* PP : PostProcessComponents)
+			{
+				if (PP->ComponentTags.Contains(FName("LowHealthVignette")))
+				{
+					LowHealthPP = PP;
+					break;
+				}
+			}
+
+			if (LowHealthPP)
+			{
+				if (HealthPercent <= LowHealthThreshold && HealthPercent > 0.f)
+				{
+					LowHealthPP->BlendWeight = 1.0f;
+
+					UMaterialInterface* BaseMat = nullptr;
+					if (LowHealthPP->Settings.WeightedBlendables.Array.Num() > 0)
+					{
+						BaseMat = Cast<UMaterialInterface>(
+							LowHealthPP->Settings.WeightedBlendables.Array[0].Object);
+					}
+
+					UMaterialInstanceDynamic* DynMat = Cast<UMaterialInstanceDynamic>(BaseMat);
+					if (!DynMat && BaseMat)
+					{
+						// First time — create the dynamic instance from the base material
+						DynMat = UMaterialInstanceDynamic::Create(BaseMat, OwnerPawn);
+						LowHealthPP->Settings.WeightedBlendables.Array[0].Object = DynMat;
+					}
+
+					if (DynMat)
+					{
+						// Scale intensity from 0.3 at 30% health to 1.0 at 0% health
+						  float Alpha = (LowHealthThreshold - HealthPercent) / LowHealthThreshold;
+						  float Intensity = FMath::Lerp(0.3f, 1.0f, Alpha);
+						  DynMat->SetScalarParameterValue(FName("Intensity"), Intensity);
+					}
+				}
+				else
+				{
+					// Above 30% health — turn off the vignette entirely
+					LowHealthPP->BlendWeight = 0.f;
+				}
+			}
+		}
+	}
+	
 	if (!GetOwner() || !GetOwner()->HasAuthority()) return;
 
 	bool bFound = false;
