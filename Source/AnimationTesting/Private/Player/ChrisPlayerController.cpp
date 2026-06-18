@@ -3,6 +3,7 @@
 
 #include "Player/ChrisPlayerController.h"
 #include "Player/ChrisPlayerCharacter.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
@@ -81,6 +82,7 @@ void AChrisPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 
 void AChrisPlayerController::Client_OnResetRotation_Implementation(FRotator SpawnRotation)
 {
+	InitialSpawnRotation = SpawnRotation;
 	SetControlRotation(SpawnRotation);
 
 	if (ChrisPlayerCharacter)
@@ -232,15 +234,6 @@ void AChrisPlayerController::Client_OnRoundStart_Implementation(float Duration)
 {
 	bIsRoundActive = true;
 
-	// Reset swords to sheathed state on the CLIENT (visual update)
-	if (ChrisPlayerCharacter)
-	{
-		if (USwordEquipComponent* SwordComponent = ChrisPlayerCharacter->FindComponentByClass<USwordEquipComponent>())
-		{
-			SwordComponent->ResetToUnequipped();
-		}
-	}
-
 	// Only re-enable input if the gameplay menu is NOT open
 	if (!bIsGameplayMenuOpen && ChrisPlayerCharacter)
 	{
@@ -364,6 +357,15 @@ void AChrisPlayerController::Client_OnShopPhaseStart_Implementation(float InShop
 
 void AChrisPlayerController::Client_OnReturnToArena_Implementation(float FadeInDuration)
 {
+	// Reset weapons to sheathed on client
+	if (ChrisPlayerCharacter)
+	{
+		if (USwordEquipComponent* SwordComponent = ChrisPlayerCharacter->FindComponentByClass<USwordEquipComponent>())
+		{
+			SwordComponent->ResetToUnequipped();
+		}
+	}
+	
 	// Force-close menu if it was open during shop
 	if (bIsGameplayMenuOpen)
 	{
@@ -428,24 +430,32 @@ void AChrisPlayerController::Client_OnFadeFromBlack_Implementation(float Duratio
 
 void AChrisPlayerController::Client_OnSetShopCamera_Implementation()
 {
+
 	if (!ChrisPlayerCharacter) return;
 
 	USpringArmComponent* Boom = ChrisPlayerCharacter->FindComponentByClass<USpringArmComponent>();
 	if (!Boom) return;
 
-	// Save current camera settings so we can restore them later
+	// Save current camera settings
 	OriginalBoomRotation = Boom->GetRelativeRotation();
 	OriginalBoomSocketOffset = Boom->SocketOffset;
 	bOriginalUsePawnControlRotation = Boom->bUsePawnControlRotation;
 
+	// Decouple CAMERA from controller (for shop preview angle)
 	Boom->bUsePawnControlRotation = false;
 
-	// Also stop the character itself from inheriting controller yaw
-	ChrisPlayerCharacter->bUseControllerRotationYaw = false;
+	// Keep character driven by controller rotation — this is what makes
+	// the rotation reset actually stick (same as arena camera)
+	ChrisPlayerCharacter->bUseControllerRotationYaw = true;
+	ChrisPlayerCharacter->GetCharacterMovement()->bOrientRotationToMovement = false;
+	ChrisPlayerCharacter->GetCharacterMovement()->StopMovementImmediately();
 
-	Boom->SetWorldRotation(FRotator(0.f, ChrisPlayerCharacter->GetActorRotation().Yaw + 170.f, 0.f));
+	// Force control rotation to spawn direction
+	SetControlRotation(InitialSpawnRotation);
 
-	// Offset camera to the left in screen space
+	// Position camera independently at the shop preview angle
+	Boom->SetWorldRotation(FRotator(0.f, InitialSpawnRotation.Yaw + 170.f, 0.f));
+
 	Boom->SocketOffset = FVector(0.f, -180.f, -10.f);
 	OriginalArmLength = Boom->TargetArmLength;
 	Boom->TargetArmLength = 240.f;
@@ -458,12 +468,12 @@ void AChrisPlayerController::Client_OnSetArenaCamera_Implementation()
 	USpringArmComponent* Boom = ChrisPlayerCharacter->FindComponentByClass<USpringArmComponent>();
 	if (!Boom) return;
 
-	// Restore original camera settings
 	Boom->SetRelativeRotation(OriginalBoomRotation);
 	Boom->SocketOffset = OriginalBoomSocketOffset;
 	Boom->bUsePawnControlRotation = bOriginalUsePawnControlRotation;
 	Boom->TargetArmLength = OriginalArmLength;
 
-	// Re-enable controller rotation on the character
+	// Restore movement rotation control
+	ChrisPlayerCharacter->GetCharacterMovement()->bOrientRotationToMovement = true;
 	ChrisPlayerCharacter->bUseControllerRotationYaw = true;
 }
