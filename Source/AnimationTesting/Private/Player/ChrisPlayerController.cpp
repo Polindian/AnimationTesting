@@ -234,15 +234,6 @@ void AChrisPlayerController::Client_OnRoundStart_Implementation(float Duration)
 {
 	bIsRoundActive = true;
 
-	// Reset swords to sheathed state on the CLIENT (visual update)
-	if (ChrisPlayerCharacter)
-	{
-		if (USwordEquipComponent* SwordComponent = ChrisPlayerCharacter->FindComponentByClass<USwordEquipComponent>())
-		{
-			SwordComponent->ResetToUnequipped();
-		}
-	}
-
 	// Only re-enable input if the gameplay menu is NOT open
 	if (!bIsGameplayMenuOpen && ChrisPlayerCharacter)
 	{
@@ -366,6 +357,15 @@ void AChrisPlayerController::Client_OnShopPhaseStart_Implementation(float InShop
 
 void AChrisPlayerController::Client_OnReturnToArena_Implementation(float FadeInDuration)
 {
+	// Reset weapons to sheathed on client
+	if (ChrisPlayerCharacter)
+	{
+		if (USwordEquipComponent* SwordComponent = ChrisPlayerCharacter->FindComponentByClass<USwordEquipComponent>())
+		{
+			SwordComponent->ResetToUnequipped();
+		}
+	}
+	
 	// Force-close menu if it was open during shop
 	if (bIsGameplayMenuOpen)
 	{

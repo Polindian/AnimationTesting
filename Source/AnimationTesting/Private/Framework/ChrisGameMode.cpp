@@ -156,17 +156,6 @@ void AChrisGameMode::StartRound()
 		{
 			if (APawn* Pawn = PC->GetPawn())
 			{
-				if (USwordEquipComponent* SwordComponent = Pawn->FindComponentByClass<USwordEquipComponent>())
-				{
-					SwordComponent->ResetToUnequipped();
-				}
-			}
-		});
-
-	ForEachPlayerController([](AChrisPlayerController* PC)
-		{
-			if (APawn* Pawn = PC->GetPawn())
-			{
 				if (IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(Pawn))
 				{
 					if (UChrisAbilitySystemComponent* ASC = Cast<UChrisAbilitySystemComponent>(ASI->GetAbilitySystemComponent()))
@@ -689,6 +678,18 @@ void AChrisGameMode::OnTransitionToArenaMidpoint()
 	{
 		It->ResetCapture();
 	}
+
+	// Reset weapons to sheathed while screen is black
+	ForEachPlayerController([](AChrisPlayerController* PC)
+		{
+			if (APawn* Pawn = PC->GetPawn())
+			{
+				if (USwordEquipComponent* SwordComponent = Pawn->FindComponentByClass<USwordEquipComponent>())
+				{
+					SwordComponent->ResetToUnequipped();
+				}
+			}
+		});
 
 	float HalfTransition = TransitionDuration / 2.f;
 
