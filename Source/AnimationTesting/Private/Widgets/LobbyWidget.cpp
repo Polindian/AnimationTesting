@@ -1,9 +1,12 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 
 #include "Widgets/LobbyWidget.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
+#include "Components/TextBlock.h"
+#include "Components/Button.h"
+#include "Components/RetainerBox.h" 
 #include "Framework/ChrisGameState.h"
 #include "Widgets/TeamSelectionWidget.h"
 #include "Network/ChrisNetStatics.h"
@@ -17,6 +20,39 @@ void ULobbyWidget::NativeConstruct()
     // Cache our controller so we can call Server RPCs from the UI
 	LobbyPlayerController = GetOwningPlayer<ALobbyPlayerController>();
     ConfigureGameState();
+
+    ReadyUpButton->OnClicked.AddDynamic(this, &ULobbyWidget::OnReadyUpClicked);
+    ReadyUpButton->OnHovered.AddDynamic(this, &ULobbyWidget::OnReadyUpHovered);
+    ReadyUpButton->OnUnhovered.AddDynamic(this, &ULobbyWidget::OnReadyUpUnhovered);
+}
+
+void ULobbyWidget::OnReadyUpHovered()
+{
+    if (ReadyUpRetainerDefault)
+        ReadyUpRetainerDefault->SetEffectMaterial(HoverGradientMaterial);
+}
+
+void ULobbyWidget::OnReadyUpUnhovered()
+{
+    if (ReadyUpRetainerDefault)
+        ReadyUpRetainerDefault->SetEffectMaterial(nullptr);
+}
+
+void ULobbyWidget::OnReadyUpClicked()
+{
+    SetReadyState(!bIsReady);
+}
+
+void ULobbyWidget::SetReadyState(bool bReady)
+{
+    bIsReady = bReady;
+    ReadyUpText->SetText(FText::FromString(bReady ? TEXT("UNREADY") : TEXT("READY UP")));
+
+    // Tell the server so all clients see the green bar
+    if (LobbyPlayerController)
+    {
+        LobbyPlayerController->Server_RequestReadyStateChange(bReady);
+    }
 }
 
 void ULobbyWidget::ClearAndPopulateTeamSelectionSlots()
@@ -56,10 +92,13 @@ void ULobbyWidget::ClearAndPopulateTeamSelectionSlots()
     }
 }
 
-// Called when any slot widget is clicked � sends the request to the server via RPC
+// Called when any slot widget is clicked — sends the request to the server via RPC
 void ULobbyWidget::SlotSelected(uint8 NewSlotId)
 {
-	UE_LOG(LogTemp, Log, TEXT("Attempted to switch to slot: %d"), NewSlotId);
+    // Can't switch slots while readied up
+    if (bIsReady) return;
+    
+    UE_LOG(LogTemp, Log, TEXT("Attempted to switch to slot: %d"), NewSlotId);
     if(LobbyPlayerController)
     {
         LobbyPlayerController->Server_RequestSlotSelectionChange(NewSlotId);
@@ -88,14 +127,19 @@ void ULobbyWidget::ConfigureGameState()
 // Refreshes all slot widgets: resets to "Unoccupied", then fills in occupied slots with player names
 void ULobbyWidget::UpdatePlayerSelectionDisplay(const TArray<FPlayerSelection>& PlayerSelections)
 {
+    // Pass 1: reset all slots
     for (UTeamSelectionWidget* SelectionSlot : TeamSelectionSlots)
     {
         SelectionSlot->UpdateSlotInfo("Unoccupied");
+        SelectionSlot->SetReadyVisual(false);
     }
+    // Pass 2: fill occupied slots with name and ready state
     for (const FPlayerSelection& PlayerSelection : PlayerSelections)
     {
         if (!PlayerSelection.IsValid()) continue;
 
-        TeamSelectionSlots[PlayerSelection.GetPlayerSlot()]->UpdateSlotInfo(PlayerSelection.GetPlayerNickname());
+        uint8 SlotIndex = PlayerSelection.GetPlayerSlot();
+        TeamSelectionSlots[SlotIndex]->UpdateSlotInfo(PlayerSelection.GetPlayerNickname());
+        TeamSelectionSlots[SlotIndex]->SetReadyVisual(PlayerSelection.GetIsReady());
     }
 }

@@ -26,6 +26,8 @@ public:
 
 	const TArray<FPlayerSelection>& GetPlayerSelection() const;
 
+	void RequestPlayerReadyChange(const APlayerState* RequestingPlayer, bool bReady);
+
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_PlayerSelectionArray)
 	TArray<FPlayerSelection> PlayerSelectionArray;

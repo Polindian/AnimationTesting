@@ -22,6 +22,9 @@ public:
 	FORCEINLINE FUniqueNetIdRepl GetPlayerUniqueId() const { return PlayerUniqueId; }
 	FORCEINLINE FString GetPlayerNickname() const { return PlayerNickname; }
 
+	FORCEINLINE bool GetIsReady() const { return bIsReady; }
+	FORCEINLINE void SetIsReady(bool bReady) { bIsReady = bReady; }
+
 	bool IsForPlayer(const APlayerState* PlayerState) const;
 	bool IsValid() const;
 
@@ -36,4 +39,7 @@ private:
 
 	UPROPERTY()
 	FString PlayerNickname;
+
+	UPROPERTY()
+	bool bIsReady = false;
 };

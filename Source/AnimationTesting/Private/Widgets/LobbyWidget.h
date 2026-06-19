@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -29,10 +29,33 @@ private:
 	class UButton* ReadyUpButton;
 
 	UPROPERTY(meta = (BindWidget))
+	class UTextBlock* ReadyUpText;
+
+	UPROPERTY(meta = (BindWidget))
+
+	class URetainerBox* ReadyUpRetainerDefault;
+	UPROPERTY(EditDefaultsOnly, Category = "Menu Style")
+	UMaterialInterface* HoverGradientMaterial;
+
+	UFUNCTION()
+	void OnReadyUpHovered();
+	UFUNCTION()
+	void OnReadyUpUnhovered();
+
+	bool bIsReady = false;
+
+	UFUNCTION()
+	void OnReadyUpClicked();
+
+	void SetReadyState(bool bReady);
+
+	UPROPERTY(meta = (BindWidget))
 	class UVerticalBox* RedTeamBox;
 
 	UPROPERTY(meta = (BindWidget))
 	class UVerticalBox* BlueTeamBox;
+
+	// Player Selection Logic
 
 	UPROPERTY(EditDefaultsOnly, Category = "TeamSelection")
 	TSubclassOf<class UTeamSelectionWidget> TeamSelectionWidgetClass;

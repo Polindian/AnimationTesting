@@ -27,6 +27,8 @@ public:
 
 	FOnSlotClicked OnSlotClicked;
 
+	void SetReadyVisual(bool bReady);
+
 private:
 	UPROPERTY(meta=(BindWidget))
 	class UButton* SelectButton;
@@ -41,4 +43,12 @@ private:
 	void SelectButtonClicked();
 
 	uint8 SlotID;
+
+	UPROPERTY(meta = (BindWidget))
+	class UImage* PlayerBar;
+
+	UPROPERTY(meta = (BindWidget))
+	class UImage* GreenPlayerBar;
+
+	
 };

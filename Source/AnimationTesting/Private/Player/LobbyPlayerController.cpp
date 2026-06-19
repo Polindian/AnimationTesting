@@ -23,3 +23,17 @@ bool ALobbyPlayerController::Server_RequestSlotSelectionChange_Validate(uint8 Ne
 {
 	return true;
 }
+
+void ALobbyPlayerController::Server_RequestReadyStateChange_Implementation(bool bNewReady)
+{
+	if (!GetWorld()) return;
+
+	AChrisGameState* GameState = GetWorld()->GetGameState<AChrisGameState>();
+	if (!GameState) return;
+	GameState->RequestPlayerReadyChange(GetPlayerState<APlayerState>(), bNewReady);
+}
+
+bool ALobbyPlayerController::Server_RequestReadyStateChange_Validate(bool bNewReady)
+{
+	return true;
+}

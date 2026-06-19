@@ -26,6 +26,7 @@ void AChrisGameState::RequestPlayerSelectionChange(const APlayerState* Requestin
 		PlayerSelectionArray.Add(FPlayerSelection(DesiredSlot, RequestingPlayer));
 	}
 
+	ForceNetUpdate();
 	OnPlayerSelectionUpdated.Broadcast(PlayerSelectionArray);
 }
 
@@ -52,6 +53,29 @@ void AChrisGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 const TArray<FPlayerSelection>& AChrisGameState::GetPlayerSelection() const
 {
 	return PlayerSelectionArray;
+}
+
+void AChrisGameState::RequestPlayerReadyChange(const APlayerState* RequestingPlayer, bool bReady)
+{
+	if (!HasAuthority()) return;
+
+	FPlayerSelection* Found = PlayerSelectionArray.FindByPredicate([&](const FPlayerSelection& PlayerSelectionReady)
+		{
+			return PlayerSelectionReady.IsForPlayer(RequestingPlayer);
+		});
+
+	// Player must have a slot before they can ready up
+	if (Found)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Player tried to ready up!"));
+		Found->SetIsReady(bReady);
+		ForceNetUpdate();
+		OnPlayerSelectionUpdated.Broadcast(PlayerSelectionArray);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Player tried to ready but has no slot!"));
+	}
 }
 
 // Called automatically on clients when the server's PlayerSelectionArray replicates down

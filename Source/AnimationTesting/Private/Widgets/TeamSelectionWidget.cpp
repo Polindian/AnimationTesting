@@ -40,4 +40,11 @@ void UTeamSelectionWidget::SelectButtonClicked()
 	OnSlotClicked.Broadcast(SlotID);
 }
 
+void UTeamSelectionWidget::SetReadyVisual(bool bReady)
+{
+	// Show green bar when ready, default bar when not
+	GreenPlayerBar->SetVisibility(bReady ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Hidden);
+	PlayerBar->SetVisibility(bReady ? ESlateVisibility::Hidden : ESlateVisibility::HitTestInvisible);
+}
+
 

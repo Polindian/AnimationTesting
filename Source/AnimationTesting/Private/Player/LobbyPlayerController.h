@@ -21,6 +21,9 @@ public:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_RequestSlotSelectionChange(uint8 NewSlotID);
 
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_RequestReadyStateChange(bool bNewReady);
+
 private:
 	
 
