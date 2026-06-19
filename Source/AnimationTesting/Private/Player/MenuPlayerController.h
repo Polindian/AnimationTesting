@@ -7,7 +7,8 @@
 #include "MenuPlayerController.generated.h"
 
 /**
- * 
+ * Base controller for UI-only screens (menus, lobby).
+ * Sets cursor visible, input mode to UI, and spawns a widget on BeginPlay.
  */
 UCLASS()
 class AMenuPlayerController : public APlayerController

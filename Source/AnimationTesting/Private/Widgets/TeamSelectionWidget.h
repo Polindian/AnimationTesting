@@ -9,7 +9,8 @@
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnSlotClicked, uint8 /*SlotID*/);
 
 /**
- * 
+ * Individual player slot in team selection. Handles click-to-select
+ * and hover glow feedback. Broadcasts OnSlotClicked with its SlotID.
  */
 UCLASS()
 class UTeamSelectionWidget : public UUserWidget
@@ -21,6 +22,9 @@ public:
 
 	virtual void NativeConstruct() override;
 
+	virtual void NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+	virtual void NativeOnMouseLeave(const FPointerEvent& InMouseEvent) override;
+
 	FOnSlotClicked OnSlotClicked;
 
 private:
@@ -29,6 +33,9 @@ private:
 
 	UPROPERTY(meta = (BindWidget))
 	class UTextBlock* InfoText;
+
+	UPROPERTY(meta = (BindWidget))
+	class UImage* HoverGlow;
 
 	UFUNCTION()
 	void SelectButtonClicked();

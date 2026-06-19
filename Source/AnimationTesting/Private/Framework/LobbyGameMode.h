@@ -3,14 +3,15 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Framework/ChrisGameMode.h"
+#include "GameFramework/GameMode.h"
 #include "LobbyGameMode.generated.h"
 
 /**
- * 
+ * Game mode for the pre-match lobby level.
+ * Enables seamless travel for server-to-game transitions.
  */
 UCLASS()
-class ALobbyGameMode : public AChrisGameMode
+class ALobbyGameMode : public AGameMode
 {
 	GENERATED_BODY()
 public:
