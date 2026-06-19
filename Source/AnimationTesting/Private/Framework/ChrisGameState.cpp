@@ -11,6 +11,7 @@ void AChrisGameState::RequestPlayerSelectionChange(const APlayerState* Requestin
 		return;
 	}
 
+	// Check if this player already has an entry (they're switching slots, not picking for the first time)
 	FPlayerSelection* PlayerSelectionPtr = PlayerSelectionArray.FindByPredicate([&] (const FPlayerSelection& PlayerSelection)
 	{
 		return PlayerSelection.IsForPlayer(RequestingPlayer);
@@ -41,6 +42,7 @@ bool AChrisGameState::IsSlotOccupied(uint8 SlotId) const
 	return false;
 }
 
+// Registers PlayerSelectionArray for replication — fires OnRep on every change
 void AChrisGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -52,6 +54,7 @@ const TArray<FPlayerSelection>& AChrisGameState::GetPlayerSelection() const
 	return PlayerSelectionArray;
 }
 
+// Called automatically on clients when the server's PlayerSelectionArray replicates down
 void AChrisGameState::OnRep_PlayerSelectionArray()
 {
 	OnPlayerSelectionUpdated.Broadcast(PlayerSelectionArray);

@@ -4,13 +4,19 @@
 #include "Widgets/LobbyWidget.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
+#include "Framework/ChrisGameState.h"
 #include "Widgets/TeamSelectionWidget.h"
 #include "Network/ChrisNetStatics.h"
+#include "Player/LobbyPlayerController.h"
 
 void ULobbyWidget::NativeConstruct()
 {
-	Super::NativeConstruct();
+    Super::NativeConstruct();
 	ClearAndPopulateTeamSelectionSlots();
+
+    // Cache our controller so we can call Server RPCs from the UI
+	LobbyPlayerController = GetOwningPlayer<ALobbyPlayerController>();
+    ConfigureGameState();
 }
 
 void ULobbyWidget::ClearAndPopulateTeamSelectionSlots()
@@ -43,13 +49,53 @@ void ULobbyWidget::ClearAndPopulateTeamSelectionSlots()
                 BoxSlot->SetPadding(FMargin(0.f, 15.f));
             }
 
+            // Subscribe to click events so we know when this slot is selected
             NewSelectionSlot->OnSlotClicked.AddUObject(this, &ULobbyWidget::SlotSelected);
             TeamSelectionSlots.Add(NewSelectionSlot);
         }
     }
 }
 
+// Called when any slot widget is clicked — sends the request to the server via RPC
 void ULobbyWidget::SlotSelected(uint8 NewSlotId)
 {
 	UE_LOG(LogTemp, Log, TEXT("Attempted to switch to slot: %d"), NewSlotId);
+    if(LobbyPlayerController)
+    {
+        LobbyPlayerController->Server_RequestSlotSelectionChange(NewSlotId);
+	}
+}
+
+// Attempts to find and subscribe to the GameState. Retries on a timer if not yet available (network delay).
+void ULobbyWidget::ConfigureGameState()
+{
+    UWorld* World = GetWorld();
+    if (!World) return;
+
+    ChrisGameState = World->GetGameState<AChrisGameState>();
+    if (!ChrisGameState)
+    {
+        World->GetTimerManager().SetTimer(ConfigureGameStateTimerHandle, this, &ULobbyWidget::ConfigureGameState, 1.f);
+    }
+    else
+    {
+        // Subscribe to future updates, then immediately display current state
+        ChrisGameState->OnPlayerSelectionUpdated.AddUObject(this, &ULobbyWidget::UpdatePlayerSelectionDisplay);
+        UpdatePlayerSelectionDisplay(ChrisGameState->GetPlayerSelection());
+    }
+}
+
+// Refreshes all slot widgets: resets to "Unoccupied", then fills in occupied slots with player names
+void ULobbyWidget::UpdatePlayerSelectionDisplay(const TArray<FPlayerSelection>& PlayerSelections)
+{
+    for (UTeamSelectionWidget* SelectionSlot : TeamSelectionSlots)
+    {
+        SelectionSlot->UpdateSlotInfo("Unoccupied");
+    }
+    for (const FPlayerSelection& PlayerSelection : PlayerSelections)
+    {
+        if (!PlayerSelection.IsValid()) continue;
+
+        TeamSelectionSlots[PlayerSelection.GetPlayerSlot()]->UpdateSlotInfo(PlayerSelection.GetPlayerNickname());
+    }
 }
