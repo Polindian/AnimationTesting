@@ -25,4 +25,10 @@ private:
 	UPROPERTY(meta=(BindWidget))
 	class UButton* ReadyUpButton;
 
+	UPROPERTY(meta = (BindWidget))
+	class UVerticalBox* RedTeamBox;
+
+	UPROPERTY(meta = (BindWidget))
+	class UVerticalBox* BlueTeamBox;
+
 };
