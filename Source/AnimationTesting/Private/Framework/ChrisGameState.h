@@ -28,6 +28,9 @@ public:
 
 	void RequestPlayerReadyChange(const APlayerState* RequestingPlayer, bool bReady);
 
+	// Returns true if all players are readied AND teams are balanced
+	bool CanStartHeroSelection() const;
+
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_PlayerSelectionArray)
 	TArray<FPlayerSelection> PlayerSelectionArray;

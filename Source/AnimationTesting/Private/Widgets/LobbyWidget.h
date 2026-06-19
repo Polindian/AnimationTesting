@@ -25,6 +25,10 @@ private:
 	UPROPERTY(meta=(BindWidget))
 	class UWidget* TeamSelectionRoot;
 
+	// Second page in MainSwitcher — hero selection
+	UPROPERTY(meta = (BindWidget))
+	class UWidget* HeroSelectionRoot;
+
 	UPROPERTY(meta=(BindWidget))
 	class UButton* ReadyUpButton;
 
@@ -76,5 +80,8 @@ private:
 	class AChrisGameState* ChrisGameState;
 
 	void UpdatePlayerSelectionDisplay(const TArray<FPlayerSelection>& PlayerSelection);
+
+	// Called by the controller's delegate when server triggers page switch
+	void SwitchToHeroSelection();
 
 };

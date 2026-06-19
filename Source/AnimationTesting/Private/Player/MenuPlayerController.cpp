@@ -8,14 +8,14 @@
 void AMenuPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
-	SetInputMode(FInputModeUIOnly());
 	SetShowMouseCursor(true);
-
+	
 	if (HasAuthority() && IsLocalPlayerController())
 	{
 		SpawnWidget();
 	}
 }
+
 
 void AMenuPlayerController::OnRep_PlayerState()
 {
@@ -31,9 +31,16 @@ void AMenuPlayerController::SpawnWidget()
 	if (MenuWidgetClass)
 	{
 		MenuWidget = CreateWidget<UUserWidget>(this, MenuWidgetClass);
-		if(MenuWidget)
+		if (MenuWidget)
 		{
 			MenuWidget->AddToViewport();
+			MenuWidget->SetIsFocusable(true);
+
+			FInputModeUIOnly InputMode;
+			InputMode.SetWidgetToFocus(MenuWidget->TakeWidget());
+			InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+			SetInputMode(InputMode);
+			SetShowMouseCursor(true);
 		}
 	}
 }

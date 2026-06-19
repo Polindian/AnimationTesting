@@ -37,3 +37,9 @@ bool ALobbyPlayerController::Server_RequestReadyStateChange_Validate(bool bNewRe
 {
 	return true;
 }
+
+// Runs on the owning client — fires the delegate so the widget switches page
+void ALobbyPlayerController::Client_StartHeroSelection_Implementation()
+{
+	OnSwitchToHeroSelection.ExecuteIfBound();
+}

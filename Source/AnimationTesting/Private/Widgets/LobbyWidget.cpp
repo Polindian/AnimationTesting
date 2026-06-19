@@ -7,6 +7,7 @@
 #include "Components/TextBlock.h"
 #include "Components/Button.h"
 #include "Components/RetainerBox.h" 
+#include "Components/WidgetSwitcher.h"
 #include "Framework/ChrisGameState.h"
 #include "Widgets/TeamSelectionWidget.h"
 #include "Network/ChrisNetStatics.h"
@@ -24,6 +25,11 @@ void ULobbyWidget::NativeConstruct()
     ReadyUpButton->OnClicked.AddDynamic(this, &ULobbyWidget::OnReadyUpClicked);
     ReadyUpButton->OnHovered.AddDynamic(this, &ULobbyWidget::OnReadyUpHovered);
     ReadyUpButton->OnUnhovered.AddDynamic(this, &ULobbyWidget::OnReadyUpUnhovered);
+
+    if (LobbyPlayerController)
+    {
+        LobbyPlayerController->OnSwitchToHeroSelection.BindUObject(this, &ULobbyWidget::SwitchToHeroSelection);
+    }
 }
 
 void ULobbyWidget::OnReadyUpHovered()
@@ -142,4 +148,10 @@ void ULobbyWidget::UpdatePlayerSelectionDisplay(const TArray<FPlayerSelection>& 
         TeamSelectionSlots[SlotIndex]->UpdateSlotInfo(PlayerSelection.GetPlayerNickname());
         TeamSelectionSlots[SlotIndex]->SetReadyVisual(PlayerSelection.GetIsReady());
     }
+}
+
+// Server told us to switch — change the widget switcher to hero selection page
+void ULobbyWidget::SwitchToHeroSelection()
+{
+    MainSwitcher->SetActiveWidget(HeroSelectionRoot);
 }

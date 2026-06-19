@@ -2,6 +2,8 @@
 
 
 #include "Framework/ChrisGameState.h"
+#include "Player/LobbyPlayerController.h"
+#include "Network/ChrisNetStatics.h"
 #include "Net/UnrealNetwork.h"
 
 void AChrisGameState::RequestPlayerSelectionChange(const APlayerState* RequestingPlayer, uint8 DesiredSlot)
@@ -71,12 +73,54 @@ void AChrisGameState::RequestPlayerReadyChange(const APlayerState* RequestingPla
 		Found->SetIsReady(bReady);
 		ForceNetUpdate();
 		OnPlayerSelectionUpdated.Broadcast(PlayerSelectionArray);
+
+		// Auto-transition: if all players readied and teams balanced, switch everyone
+		if (CanStartHeroSelection())
+		{
+			for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+			{
+				ALobbyPlayerController* LobbyPC = Cast<ALobbyPlayerController>(It->Get());
+				if (LobbyPC)
+				{
+					LobbyPC->Client_StartHeroSelection();
+				}
+			}
+		}
 	}
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Player tried to ready but has no slot!"));
 	}
 }
+
+bool AChrisGameState::CanStartHeroSelection() const
+{
+	if (PlayerSelectionArray.Num() == 0) return false;
+
+	int32 PlayersPerTeam = UChrisNetStatics::GetPlayerCountPerTeam();
+	int32 RedCount = 0;
+	int32 BlueCount = 0;
+
+	for (const FPlayerSelection& PS : PlayerSelectionArray)
+	{
+		// Every player must be readied
+		if (!PS.GetIsReady()) return false;
+
+		// Count team membership
+		if (PS.GetPlayerSlot() < PlayersPerTeam)
+		{
+			RedCount++;
+		}
+		else
+		{
+			BlueCount++;
+		}
+	}
+
+	// Teams must have equal players
+	return RedCount == BlueCount;
+}
+
 
 // Called automatically on clients when the server's PlayerSelectionArray replicates down
 void AChrisGameState::OnRep_PlayerSelectionArray()
