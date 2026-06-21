@@ -1,7 +1,8 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 
 #include "Framework/CAssetManager.h"
+#include "Character/PA_CharacterDefinition.h"
 
 UCAssetManager& UCAssetManager::Get()
 {
@@ -31,6 +32,27 @@ bool UCAssetManager::GetLoadedShopItems(TArray<const UPA_ShopItem*>& OutItems) c
 		for(UObject* ObjectLoaded : LoadedObjects)
 		{
 			OutItems.Add(Cast<UPA_ShopItem>(ObjectLoaded));
+		}
+	}
+
+	return bLoaded;
+}
+
+void UCAssetManager::LoadCharacterDefinitions(const FStreamableDelegate& LoadFinishedCallback)
+{
+	LoadPrimaryAssetsWithType(UPA_CharacterDefinition::GetCharacterDefinitionAssetType(), TArray<FName>(), LoadFinishedCallback);
+}
+
+bool UCAssetManager::GetLoadedCharacterDefinitions(TArray<UPA_CharacterDefinition*>& LoadedCharacterDefinitions) const
+{
+	TArray<UObject*> LoadedObjects;
+	bool bLoaded = GetPrimaryAssetObjectList(UPA_CharacterDefinition::GetCharacterDefinitionAssetType(), LoadedObjects);
+
+	if (bLoaded)
+	{
+		for (UObject* LoadedObject : LoadedObjects)
+		{
+			LoadedCharacterDefinitions.Add(Cast<UPA_CharacterDefinition>(LoadedObject));
 		}
 	}
 
