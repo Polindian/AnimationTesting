@@ -84,4 +84,6 @@ private:
 	// Called by the controller's delegate when server triggers page switch
 	void SwitchToHeroSelection();
 
+	void CharacterDefinitionsLoaded();
+
 };

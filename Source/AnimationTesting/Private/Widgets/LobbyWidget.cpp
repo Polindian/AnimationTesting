@@ -8,10 +8,13 @@
 #include "Components/Button.h"
 #include "Components/RetainerBox.h" 
 #include "Components/WidgetSwitcher.h"
+#include "Character/PA_CharacterDefinition.h"
 #include "Framework/ChrisGameState.h"
+#include "Framework/CAssetManager.h"
 #include "Widgets/TeamSelectionWidget.h"
 #include "Network/ChrisNetStatics.h"
 #include "Player/LobbyPlayerController.h"
+
 
 void ULobbyWidget::NativeConstruct()
 {
@@ -30,6 +33,8 @@ void ULobbyWidget::NativeConstruct()
     {
         LobbyPlayerController->OnSwitchToHeroSelection.BindUObject(this, &ULobbyWidget::SwitchToHeroSelection);
     }
+
+    UCAssetManager::Get().LoadCharacterDefinitions(FStreamableDelegate::CreateUObject(this, &ULobbyWidget::CharacterDefinitionsLoaded));
 }
 
 void ULobbyWidget::OnReadyUpHovered()
@@ -154,4 +159,16 @@ void ULobbyWidget::UpdatePlayerSelectionDisplay(const TArray<FPlayerSelection>& 
 void ULobbyWidget::SwitchToHeroSelection()
 {
     MainSwitcher->SetActiveWidget(HeroSelectionRoot);
+}
+
+void ULobbyWidget::CharacterDefinitionsLoaded()
+{
+    TArray<UPA_CharacterDefinition*> LoadedCharacterDefinitions;
+    if (UCAssetManager::Get().GetLoadedCharacterDefinitions(LoadedCharacterDefinitions))
+    {
+        for (UPA_CharacterDefinition* LoadedCharacterDefinition : LoadedCharacterDefinitions)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Loaded Character: %s"), *(LoadedCharacterDefinition->GetCharacterDisplayName()));
+        }
+    }
 }
