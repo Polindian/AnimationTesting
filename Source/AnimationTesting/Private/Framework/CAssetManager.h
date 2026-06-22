@@ -22,7 +22,12 @@ public:
 	void LoadShopItems(const FStreamableDelegate& LoadFinishedCallback);
 	bool GetLoadedShopItems(TArray<const UPA_ShopItem*>& OutItems) const;
 
+	// Kicks off async loading of all CharacterDefinition assets.
+	// The callback delegate fires once every asset of that type is in memory.
 	void LoadCharacterDefinitions(const FStreamableDelegate& LoadFinishedCallback);
+
+	// After LoadCharacterDefinitions has completed, this is called to fill the
+	// output array with pointers to all the loaded definitions.
 	bool GetLoadedCharacterDefinitions(TArray<UPA_CharacterDefinition*>& LoadedCharacterDefinitions) const;
 
 private:
