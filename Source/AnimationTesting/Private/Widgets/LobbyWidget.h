@@ -25,9 +25,7 @@ private:
 	UPROPERTY(meta=(BindWidget))
 	class UWidget* TeamSelectionRoot;
 
-	// Second page in MainSwitcher — hero selection
-	UPROPERTY(meta = (BindWidget))
-	class UWidget* HeroSelectionRoot;
+	
 
 	UPROPERTY(meta=(BindWidget))
 	class UButton* ReadyUpButton;
@@ -89,5 +87,13 @@ private:
 	// assets have finished async loading — this is where we'll populate
 	// the hero selection UI with icons, names, and preview data
 	void CharacterDefinitionsLoaded();
+
+	// Second page in MainSwitcher — hero selection
+	UPROPERTY(meta = (BindWidget))
+	class UWidget* HeroSelectionRoot;
+
+	// Second page in MainSwitcher — hero selection
+	UPROPERTY(meta = (BindWidget))
+	class UTileView* CharacterSelectionTileView;
 
 };
