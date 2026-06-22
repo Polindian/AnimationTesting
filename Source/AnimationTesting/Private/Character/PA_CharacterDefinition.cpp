@@ -6,6 +6,9 @@
 
 FPrimaryAssetId UPA_CharacterDefinition::GetPrimaryAssetId() const
 {
+	// Combines the type string ("Character Definition") with this asset's name
+	// to create a unique ID the Asset Manager uses to track and retrieve it
+
 	return FPrimaryAssetId(GetCharacterDefinitionAssetType(), GetFName());
 }
 

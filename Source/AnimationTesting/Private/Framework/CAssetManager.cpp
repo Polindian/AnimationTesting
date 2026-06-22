@@ -38,6 +38,9 @@ bool UCAssetManager::GetLoadedShopItems(TArray<const UPA_ShopItem*>& OutItems) c
 	return bLoaded;
 }
 
+
+	// Tells the Asset Manager to find and async-load every PrimaryDataAsset
+	// registered under the "Character Definition" type.
 void UCAssetManager::LoadCharacterDefinitions(const FStreamableDelegate& LoadFinishedCallback)
 {
 	LoadPrimaryAssetsWithType(UPA_CharacterDefinition::GetCharacterDefinitionAssetType(), TArray<FName>(), LoadFinishedCallback);
