@@ -13,8 +13,10 @@
 #include "Framework/ChrisGameState.h"
 #include "Framework/CAssetManager.h"
 #include "Widgets/TeamSelectionWidget.h"
+#include "Widgets/CharacterEntryWidget.h"
 #include "Network/ChrisNetStatics.h"
 #include "Player/LobbyPlayerController.h"
+#include "Player/ChrisPlayerState.h"
 
 
 void ULobbyWidget::NativeConstruct()
@@ -36,6 +38,10 @@ void ULobbyWidget::NativeConstruct()
     }
 
     UCAssetManager::Get().LoadCharacterDefinitions(FStreamableDelegate::CreateUObject(this, &ULobbyWidget::CharacterDefinitionsLoaded));
+    if (CharacterSelectionTileView)
+    {
+        CharacterSelectionTileView->OnItemSelectionChanged().AddUObject(this, &ULobbyWidget::CharacterSelected);
+    }
 }
 
 void ULobbyWidget::OnReadyUpHovered()
@@ -145,6 +151,16 @@ void ULobbyWidget::UpdatePlayerSelectionDisplay(const TArray<FPlayerSelection>& 
         SelectionSlot->UpdateSlotInfo("Unoccupied");
         SelectionSlot->SetReadyVisual(false);
     }
+
+    // Reset all character entry icons to deselected (desaturated)
+    for (UUserWidget* CharacterEntryAsWidget : CharacterSelectionTileView->GetDisplayedEntryWidgets())
+    {
+        if (UCharacterEntryWidget* CharacterEntryWidget = Cast<UCharacterEntryWidget>(CharacterEntryAsWidget))
+        {
+            CharacterEntryWidget->SetSelected(false);
+        }
+    }
+
     // Pass 2: fill occupied slots with name and ready state
     for (const FPlayerSelection& PlayerSelection : PlayerSelections)
     {
@@ -153,6 +169,13 @@ void ULobbyWidget::UpdatePlayerSelectionDisplay(const TArray<FPlayerSelection>& 
         uint8 SlotIndex = PlayerSelection.GetPlayerSlot();
         TeamSelectionSlots[SlotIndex]->UpdateSlotInfo(PlayerSelection.GetPlayerNickname());
         TeamSelectionSlots[SlotIndex]->SetReadyVisual(PlayerSelection.GetIsReady());
+
+        // Highlight the character this player has selected in the TileView
+        UCharacterEntryWidget* SelectedEntry = CharacterSelectionTileView->GetEntryWidgetFromItem<UCharacterEntryWidget>(PlayerSelection.GetCharacterDefinition());
+        if (SelectedEntry)
+        {
+            SelectedEntry->SetSelected(true);
+        }
     }
 }
 
@@ -169,7 +192,24 @@ void ULobbyWidget::CharacterDefinitionsLoaded()
     {
         for (UPA_CharacterDefinition* LoadedCharacterDefinition : LoadedCharacterDefinitions)
         {
+            UE_LOG(LogTemp, Warning, TEXT("Loaded Character: %s"), *(LoadedCharacterDefinition->GetCharacterDisplayName()));
             CharacterSelectionTileView->SetListItems(LoadedCharacterDefinitions);
         }
+    }
+}
+
+void ULobbyWidget::CharacterSelected(UObject* SelectedUObject)
+{
+    if (!ChrisPlayerState)
+    {
+        ChrisPlayerState = GetOwningPlayerState<AChrisPlayerState>();
+    }
+
+    if (!ChrisPlayerState)
+        return;
+
+    if (const UPA_CharacterDefinition* CharacterDefinition = Cast<UPA_CharacterDefinition>(SelectedUObject))
+    {
+        ChrisPlayerState->Server_SetSelectedCharacterDefinition(CharacterDefinition);
     }
 }

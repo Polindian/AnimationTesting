@@ -7,7 +7,9 @@
 #include "Player/PlayerInfoTypes.h"
 #include "ChrisGameState.generated.h"
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerSelectionUpdated, const TArray<FPlayerSelection>& /*NewPlayerSelection*/)
+class UPA_CharacterDefinition;
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerSelectionUpdated, const TArray<FPlayerSelection>& /*NewPlayerSelection*/);
 
 /**
  * 
@@ -19,6 +21,10 @@ class AChrisGameState : public AGameStateBase
 public:
 	void RequestPlayerSelectionChange(const APlayerState* RequestingPlayer, uint8 DesiredSlot);
 	bool IsSlotOccupied(uint8 SlotId) const;
+
+	void SetCharacterSelected(const APlayerState* SelectingPlayer, const UPA_CharacterDefinition* SelectedDefinition);
+	void SetCharacterDeselected(const APlayerState* RequestingPlayer);
+	void RequestPlayerLockIn(const APlayerState* RequestingPlayer, bool bLockIn);
 
 	FOnPlayerSelectionUpdated OnPlayerSelectionUpdated;
 

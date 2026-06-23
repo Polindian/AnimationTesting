@@ -32,6 +32,27 @@ void AChrisGameState::RequestPlayerSelectionChange(const APlayerState* Requestin
 	OnPlayerSelectionUpdated.Broadcast(PlayerSelectionArray);
 }
 
+
+// Assigns a character to the player. Duplicates allowed — multiple players can pick the same hero.
+// Blocked if the player is already locked in.
+void AChrisGameState::SetCharacterSelected(const APlayerState* SelectingPlayer, const UPA_CharacterDefinition* SelectedDefinition)
+{
+	if (!HasAuthority()) return;
+
+	FPlayerSelection* FoundPlayerSelection = PlayerSelectionArray.FindByPredicate([&](const FPlayerSelection& PlayerSelected)
+		{
+			return PlayerSelected.IsForPlayer(SelectingPlayer);
+		});
+
+	// Can't change character if already locked in
+	if (FoundPlayerSelection && !FoundPlayerSelection->GetIsLockedIn())
+	{
+		FoundPlayerSelection->SetCharacterDefinition(SelectedDefinition);
+		ForceNetUpdate();
+		OnPlayerSelectionUpdated.Broadcast(PlayerSelectionArray);
+	}
+}
+
 bool AChrisGameState::IsSlotOccupied(uint8 SlotId) const
 {
 	for(const FPlayerSelection& PlayerSelection : PlayerSelectionArray)
@@ -45,6 +66,41 @@ bool AChrisGameState::IsSlotOccupied(uint8 SlotId) const
 	return false;
 }
 
+void AChrisGameState::SetCharacterDeselected(const APlayerState* RequestingPlayer)
+{
+	if (!HasAuthority()) return;
+
+	FPlayerSelection* FoundPlayerSelection = PlayerSelectionArray.FindByPredicate([&](const FPlayerSelection& PlayerSelection)
+		{
+			return PlayerSelection.IsForPlayer(RequestingPlayer);
+		});
+
+	if (FoundPlayerSelection && !FoundPlayerSelection->GetIsLockedIn())
+	{
+		FoundPlayerSelection->SetCharacterDefinition(nullptr);
+		ForceNetUpdate();
+		OnPlayerSelectionUpdated.Broadcast(PlayerSelectionArray);
+	}
+}
+
+// Locks or unlocks the player's character selection (START MATCH / RETURN TO SELECTION)
+void AChrisGameState::RequestPlayerLockIn(const APlayerState* RequestingPlayer, bool bLockIn)
+{
+	if (!HasAuthority()) return;
+
+	FPlayerSelection* Found = PlayerSelectionArray.FindByPredicate([&](const FPlayerSelection& PS)
+		{
+			return PS.IsForPlayer(RequestingPlayer);
+		});
+
+	// Player must have a slot and a character selected before locking in
+	if (Found && Found->GetCharacterDefinition())
+	{
+		Found->SetIsLockedIn(bLockIn);
+		ForceNetUpdate();
+		OnPlayerSelectionUpdated.Broadcast(PlayerSelectionArray);
+	}
+}
 // Registers PlayerSelectionArray for replication — fires OnRep on every change
 void AChrisGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
