@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 
 #include "Player/LobbyPlayerController.h"
@@ -38,8 +38,38 @@ bool ALobbyPlayerController::Server_RequestReadyStateChange_Validate(bool bNewRe
 	return true;
 }
 
-// Runs on the owning client � fires the delegate so the widget switches page
+// Runs on the owning client — fires the delegate so the widget switches page
 void ALobbyPlayerController::Client_StartHeroSelection_Implementation()
 {
 	OnSwitchToHeroSelection.ExecuteIfBound();
+}
+
+// Forwards the character pick to the GameState (duplicates allowed, blocked if locked in)
+void ALobbyPlayerController::Server_RequestCharacterSelected_Implementation(const UPA_CharacterDefinition* SelectedDefinition)
+{
+	if (!GetWorld()) return;
+
+	AChrisGameState* GameState = GetWorld()->GetGameState<AChrisGameState>();
+	if (!GameState) return;
+	GameState->SetCharacterSelected(GetPlayerState<APlayerState>(), SelectedDefinition);
+}
+
+bool ALobbyPlayerController::Server_RequestCharacterSelected_Validate(const UPA_CharacterDefinition* SelectedDefinition)
+{
+	return true;
+}
+
+// Forwards lock-in / unlock request to the GameState
+void ALobbyPlayerController::Server_RequestLockIn_Implementation(bool bLockIn)
+{
+	if (!GetWorld()) return;
+
+	AChrisGameState* GameState = GetWorld()->GetGameState<AChrisGameState>();
+	if (!GameState) return;
+	GameState->RequestPlayerLockIn(GetPlayerState<APlayerState>(), bLockIn);
+}
+
+bool ALobbyPlayerController::Server_RequestLockIn_Validate(bool bLockIn)
+{
+	return true;
 }

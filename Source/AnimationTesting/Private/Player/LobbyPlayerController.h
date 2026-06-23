@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -33,8 +33,17 @@ public:
 	UFUNCTION(Client, Reliable)
 	void Client_StartHeroSelection();
 
-	// Delegate the widget binds to � fires when Client_StartHeroSelection executes
+	// Delegate the widget binds to — fires when Client_StartHeroSelection executes
 	FOnSwitchToHeroSelection OnSwitchToHeroSelection;
+
+	// Server RPC: client requests to select a character on the hero selection page
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_RequestCharacterSelected(const UPA_CharacterDefinition* SelectedDefinition);
+
+	// Server RPC: client requests to lock in / unlock their character selection
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_RequestLockIn(bool bLockIn);
+
 
 private:
 	

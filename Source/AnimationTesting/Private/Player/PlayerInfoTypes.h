@@ -6,6 +6,7 @@
 #include "PlayerInfoTypes.generated.h"
 
 class APlayerState;
+class UPA_CharacterDefinition;
 
 USTRUCT()
 struct FPlayerSelection
@@ -25,6 +26,13 @@ public:
 	FORCEINLINE bool GetIsReady() const { return bIsReady; }
 	FORCEINLINE void SetIsReady(bool bReady) { bIsReady = bReady; }
 
+	FORCEINLINE const UPA_CharacterDefinition* GetCharacterDefinition() const { return CharacterDefinition; }
+	FORCEINLINE void SetCharacterDefinition(const UPA_CharacterDefinition* NewCharacterDefinition) { CharacterDefinition = NewCharacterDefinition; }
+
+	// Lock-in state — once locked in, character selection cannot be changed
+	FORCEINLINE bool GetIsLockedIn() const { return bIsLockedIn; }
+	FORCEINLINE void SetIsLockedIn(bool bLocked) { bIsLockedIn = bLocked; }
+
 	bool IsForPlayer(const APlayerState* PlayerState) const;
 	bool IsValid() const;
 
@@ -42,4 +50,10 @@ private:
 
 	UPROPERTY()
 	bool bIsReady = false;
+
+	UPROPERTY()
+	const UPA_CharacterDefinition* CharacterDefinition;
+
+	UPROPERTY()
+	bool bIsLockedIn = false;
 };
