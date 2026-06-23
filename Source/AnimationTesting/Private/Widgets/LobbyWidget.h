@@ -71,6 +71,9 @@ private:
 	UPROPERTY()
 	class ALobbyPlayerController* LobbyPlayerController;
 
+	UPROPERTY()
+	class AChrisPlayerState* ChrisPlayerState;
+
 	FTimerHandle ConfigureGameStateTimerHandle;
 	void ConfigureGameState();
 
@@ -95,5 +98,7 @@ private:
 	// Second page in MainSwitcher — hero selection
 	UPROPERTY(meta = (BindWidget))
 	class UTileView* CharacterSelectionTileView;
+
+	void CharacterSelected(UObject* SelectedUObject);
 
 };
