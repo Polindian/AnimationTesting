@@ -169,6 +169,7 @@ void ULobbyWidget::CharacterDefinitionsLoaded()
     {
         for (UPA_CharacterDefinition* LoadedCharacterDefinition : LoadedCharacterDefinitions)
         {
+            UE_LOG(LogTemp, Warning, TEXT("Loaded Character: %s"), *(LoadedCharacterDefinition->GetCharacterDisplayName()));
             CharacterSelectionTileView->SetListItems(LoadedCharacterDefinitions);
         }
     }
