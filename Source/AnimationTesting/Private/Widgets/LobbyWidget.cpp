@@ -170,11 +170,14 @@ void ULobbyWidget::UpdatePlayerSelectionDisplay(const TArray<FPlayerSelection>& 
         TeamSelectionSlots[SlotIndex]->UpdateSlotInfo(PlayerSelection.GetPlayerNickname());
         TeamSelectionSlots[SlotIndex]->SetReadyVisual(PlayerSelection.GetIsReady());
 
-        // Highlight the character this player has selected in the TileView
-        UCharacterEntryWidget* SelectedEntry = CharacterSelectionTileView->GetEntryWidgetFromItem<UCharacterEntryWidget>(PlayerSelection.GetCharacterDefinition());
-        if (SelectedEntry)
+        // Only highlight the character icon for the LOCAL player's pick
+        if (PlayerSelection.IsForPlayer(GetOwningPlayerState()))
         {
-            SelectedEntry->SetSelected(true);
+            UCharacterEntryWidget* SelectedEntry = CharacterSelectionTileView->GetEntryWidgetFromItem<UCharacterEntryWidget>(PlayerSelection.GetCharacterDefinition());
+            if (SelectedEntry)
+            {
+                SelectedEntry->SetSelected(true);
+            }
         }
     }
 }
