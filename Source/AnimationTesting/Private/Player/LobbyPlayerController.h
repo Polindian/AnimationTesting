@@ -21,6 +21,8 @@ class ALobbyPlayerController : public AMenuPlayerController
 	GENERATED_BODY()
 public:
 
+	ALobbyPlayerController();
+
 	// Server RPC: client requests to move to a new team slot.
 	// Validated and executed on the server only.
 	UFUNCTION(Server, Reliable, WithValidation)

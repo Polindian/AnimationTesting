@@ -73,3 +73,8 @@ bool ALobbyPlayerController::Server_RequestLockIn_Validate(bool bLockIn)
 {
 	return true;
 }
+
+ALobbyPlayerController::ALobbyPlayerController()
+{
+	bAutoManageActiveCameraTarget = false;
+}
