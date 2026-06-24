@@ -108,6 +108,9 @@ private:
 	UPROPERTY()
 	class ACharacterDisplay* CharacterDisplay;
 
+	UPROPERTY(meta=(BindWidget))
+	class UPlayerTeamLayoutWidget* PlayerTeamLayoutWidget;
+
 	void SpawnCharacterDisplay();
 	void UpdateCharacterDisplay(const FPlayerSelection& PlayerSelection);
 };

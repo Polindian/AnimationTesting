@@ -17,6 +17,7 @@
 #include "Widgets/TeamSelectionWidget.h"
 #include "Widgets/CharacterEntryWidget.h"
 #include "Widgets/CharacterDisplay.h"
+#include "Widgets/PlayerTeamLayoutWidget.h"
 #include "Network/ChrisNetStatics.h"
 #include "Player/LobbyPlayerController.h"
 #include "Player/ChrisPlayerState.h"
@@ -186,6 +187,11 @@ void ULobbyWidget::UpdatePlayerSelectionDisplay(const TArray<FPlayerSelection>& 
 
             UpdateCharacterDisplay(PlayerSelection);
         }
+    }
+
+    if (PlayerTeamLayoutWidget)
+    {
+        PlayerTeamLayoutWidget->UpdatePlayerSelection(PlayerSelections);
     }
 }
 
