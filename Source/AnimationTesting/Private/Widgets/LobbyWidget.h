@@ -101,4 +101,16 @@ private:
 
 	void CharacterSelected(UObject* SelectedUObject);
 
+
+	UPROPERTY(EditDefaultsOnly, Category = "Character Display")
+	TSubclassOf<class ACharacterDisplay> CharacterDisplayClass;
+
+	UPROPERTY()
+	class ACharacterDisplay* CharacterDisplay;
+
+	UPROPERTY(meta=(BindWidget))
+	class UPlayerTeamLayoutWidget* PlayerTeamLayoutWidget;
+
+	void SpawnCharacterDisplay();
+	void UpdateCharacterDisplay(const FPlayerSelection& PlayerSelection);
 };

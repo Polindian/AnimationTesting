@@ -10,10 +10,14 @@
 #include "Components/TileView.h"
 #include "Components/WidgetSwitcher.h"
 #include "Character/PA_CharacterDefinition.h"
+#include "GameFramework/PlayerStart.h"
 #include "Framework/ChrisGameState.h"
 #include "Framework/CAssetManager.h"
+#include "Kismet/GameplayStatics.h"
 #include "Widgets/TeamSelectionWidget.h"
 #include "Widgets/CharacterEntryWidget.h"
+#include "Widgets/CharacterDisplay.h"
+#include "Widgets/PlayerTeamLayoutWidget.h"
 #include "Network/ChrisNetStatics.h"
 #include "Player/LobbyPlayerController.h"
 #include "Player/ChrisPlayerState.h"
@@ -42,6 +46,8 @@ void ULobbyWidget::NativeConstruct()
     {
         CharacterSelectionTileView->OnItemSelectionChanged().AddUObject(this, &ULobbyWidget::CharacterSelected);
     }
+
+    SpawnCharacterDisplay();
 }
 
 void ULobbyWidget::OnReadyUpHovered()
@@ -170,12 +176,22 @@ void ULobbyWidget::UpdatePlayerSelectionDisplay(const TArray<FPlayerSelection>& 
         TeamSelectionSlots[SlotIndex]->UpdateSlotInfo(PlayerSelection.GetPlayerNickname());
         TeamSelectionSlots[SlotIndex]->SetReadyVisual(PlayerSelection.GetIsReady());
 
-        // Highlight the character this player has selected in the TileView
-        UCharacterEntryWidget* SelectedEntry = CharacterSelectionTileView->GetEntryWidgetFromItem<UCharacterEntryWidget>(PlayerSelection.GetCharacterDefinition());
-        if (SelectedEntry)
+        // Only highlight the character icon for the LOCAL player's pick
+        if (PlayerSelection.IsForPlayer(GetOwningPlayerState()))
         {
-            SelectedEntry->SetSelected(true);
+            UCharacterEntryWidget* SelectedEntry = CharacterSelectionTileView->GetEntryWidgetFromItem<UCharacterEntryWidget>(PlayerSelection.GetCharacterDefinition());
+            if (SelectedEntry)
+            {
+                SelectedEntry->SetSelected(true);
+            }
+
+            UpdateCharacterDisplay(PlayerSelection);
         }
+    }
+
+    if (PlayerTeamLayoutWidget)
+    {
+        PlayerTeamLayoutWidget->UpdatePlayerSelection(PlayerSelections);
     }
 }
 
@@ -183,6 +199,14 @@ void ULobbyWidget::UpdatePlayerSelectionDisplay(const TArray<FPlayerSelection>& 
 void ULobbyWidget::SwitchToHeroSelection()
 {
     MainSwitcher->SetActiveWidget(HeroSelectionRoot);
+
+    // Turn on the character spotlight — starts with Visible=false in the level
+    TArray<AActor*> FoundActors;
+    UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("HeroSelectionSpotLight"), FoundActors);
+    for (AActor* Actor : FoundActors)
+    {
+        Actor->GetRootComponent()->SetVisibility(true, true);
+    }
 }
 
 void ULobbyWidget::CharacterDefinitionsLoaded()
@@ -212,4 +236,33 @@ void ULobbyWidget::CharacterSelected(UObject* SelectedUObject)
     {
         ChrisPlayerState->Server_SetSelectedCharacterDefinition(CharacterDefinition);
     }
+}
+
+void ULobbyWidget::SpawnCharacterDisplay()
+{
+    if (CharacterDisplay)
+        return;
+
+    if (!CharacterDisplayClass)
+        return;
+
+    FTransform CharacterDisplayTransform = FTransform::Identity;
+    AActor* PlayerStart = UGameplayStatics::GetActorOfClass(GetWorld(), APlayerStart::StaticClass());
+    if (PlayerStart)
+    {
+        CharacterDisplayTransform = PlayerStart->GetActorTransform();
+    }
+
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    CharacterDisplay = GetWorld()->SpawnActor<ACharacterDisplay>(CharacterDisplayClass, SpawnParams);
+    GetOwningPlayer()->SetViewTarget(CharacterDisplay);
+}
+
+void ULobbyWidget::UpdateCharacterDisplay(const FPlayerSelection& PlayerSelection)
+{
+    if (!PlayerSelection.GetCharacterDefinition())
+        return;
+
+    CharacterDisplay->ConfigureWithCharacterDefinition(PlayerSelection.GetCharacterDefinition());
 }
