@@ -193,6 +193,14 @@ void ULobbyWidget::UpdatePlayerSelectionDisplay(const TArray<FPlayerSelection>& 
 void ULobbyWidget::SwitchToHeroSelection()
 {
     MainSwitcher->SetActiveWidget(HeroSelectionRoot);
+
+    // Turn on the character spotlight — starts with Visible=false in the level
+    TArray<AActor*> FoundActors;
+    UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("HeroSelectionSpotLight"), FoundActors);
+    for (AActor* Actor : FoundActors)
+    {
+        Actor->GetRootComponent()->SetVisibility(true, true);
+    }
 }
 
 void ULobbyWidget::CharacterDefinitionsLoaded()
