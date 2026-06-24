@@ -24,4 +24,18 @@ private:
 
 	UPROPERTY(VisibleDefaultsOnly, Category = "Character Display")
 	class UCameraComponent* ViewCameraComponent;
+
+	// Dynamically spawned costume pieces 
+	UPROPERTY()
+	TArray<USkeletalMeshComponent*> CostumeMeshComponents;
+
+	// Dynamically spawned weapon meshes 
+	UPROPERTY()
+	TArray<UStaticMeshComponent*> WeaponMeshComponents;
+
+	UPROPERTY()
+	TArray<class UGroomComponent*> GroomComponents;
+
+	// Destroys all previously spawned costume and weapon components
+	void ClearDisplayComponents();
 };
