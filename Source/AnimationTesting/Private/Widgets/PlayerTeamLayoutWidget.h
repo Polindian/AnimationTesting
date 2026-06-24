@@ -25,7 +25,7 @@ public:
 private:
     // Padding between each player slot in the horizontal box
     UPROPERTY(EditDefaultsOnly, Category = "Visual")
-    float PlayerTeamWidgetSlotMargin = 3.f;
+    float PlayerTeamWidgetSlotMargin = 5.f;
 
     // The widget class to spawn for each individual player slot
     UPROPERTY(EditDefaultsOnly, Category = "Visual")
