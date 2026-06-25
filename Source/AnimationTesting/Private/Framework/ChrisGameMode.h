@@ -32,6 +32,8 @@ class AChrisGameMode : public AGameModeBase
 
 public:
     virtual APlayerController* SpawnPlayerController(ENetRole InRemoteRole, const FString& Options) override;
+    virtual UClass* GetDefaultPawnClassForController_Implementation(AController* Controller) override;
+    virtual APawn* SpawnDefaultPawnFor_Implementation(AController* NewPlayer, AActor* StartSpot) override;
 
     // Called by the engine every time a player successfully joins, detects enough players to start game
     virtual void PostLogin(APlayerController* NewPlayer) override;
@@ -46,8 +48,11 @@ public:
     bool IsInShopPhase() const { return CurrentPhase == EMatchPhase::ShopPhase; }
 
 private:
-    FGenericTeamId GetTeamIDForPlayer(const APlayerController* PlayerController) const;
+    FGenericTeamId GetTeamIDForPlayer(const AController* InController) const;
     AActor* FindNextStartSpotForTeam(const FGenericTeamId& TeamID);
+
+    UPROPERTY(EditDefaultsOnly, Category = "Team")
+    TSubclassOf<APawn> BackupPawn;
 
     // ---- Phase transition functions ----
     void StartCountdown();

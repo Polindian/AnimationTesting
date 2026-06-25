@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
 #include "Player/PlayerInfoTypes.h"
+#include "GenericTeamAgentInterface.h"
 #include "ChrisPlayerState.generated.h"
 
 class UPA_CharacterDefinition;
@@ -21,6 +22,10 @@ public:
 	AChrisPlayerState();
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void BeginPlay() override;
+
+	virtual void CopyProperties(APlayerState* PlayerState) override;
+	TSubclassOf<APawn> GetSelectedPawnClass() const;
+	FGenericTeamId GetTeamIdBasedOnSlot() const;
 
 
 	// Server RPC: client tells the server which character they've picked.

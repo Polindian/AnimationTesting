@@ -6,12 +6,12 @@
 #include "Network/ChrisNetStatics.h"
 
 // Sets the members to default empty/invalid values
-FPlayerSelection::FPlayerSelection() :Slot{ GetInvalidSlot() }, PlayerUniqueId{ FUniqueNetIdRepl::Invalid() }, PlayerNickname{}
+FPlayerSelection::FPlayerSelection() :Slot{ GetInvalidSlot() }, PlayerUniqueId{ FUniqueNetIdRepl::Invalid() }, PlayerNickname{}, CharacterDefinition{nullptr}
 {
 }
 
 // Stores the slot, then grab player's unique ID and name from their PlayerState
-FPlayerSelection::FPlayerSelection(uint8 InSlot, const APlayerState* InPlayerState):Slot {InSlot}
+FPlayerSelection::FPlayerSelection(uint8 InSlot, const APlayerState* InPlayerState):Slot {InSlot}, CharacterDefinition{nullptr}
 {
 	if (InPlayerState)
 	{
