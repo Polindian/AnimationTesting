@@ -48,6 +48,25 @@ void ULobbyWidget::NativeConstruct()
     }
 
     SpawnCharacterDisplay();
+
+    if (StartMatchButton)
+    {
+        StartMatchButton->OnClicked.AddDynamic(this, &ULobbyWidget::OnStartMatchButtonClicked);
+        StartMatchButton->OnHovered.AddDynamic(this, &ULobbyWidget::OnStartMatchButtonHovered);
+        StartMatchButton->OnUnhovered.AddDynamic(this, &ULobbyWidget::OnStartMatchButtonUnhovered);
+    }
+}
+
+void ULobbyWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+    Super::NativeTick(MyGeometry, InDeltaTime);
+
+    // Update the hero selection countdown display from the server's replicated timer
+    if (ChrisGameState && HeroSelectionTimerText)
+    {
+        int32 TimeLeft = FMath::CeilToInt(ChrisGameState->GetHeroSelectionTimeRemaining());
+        HeroSelectionTimerText->SetText(FText::FromString(FString::Printf(TEXT("%d"), FMath::Max(0, TimeLeft))));
+    }
 }
 
 void ULobbyWidget::OnReadyUpHovered()
@@ -186,6 +205,21 @@ void ULobbyWidget::UpdatePlayerSelectionDisplay(const TArray<FPlayerSelection>& 
             }
 
             UpdateCharacterDisplay(PlayerSelection);
+
+            // Sync local lock-in state with what the server says (handles force-lock from timer expiry)
+            bIsLockedIn = PlayerSelection.GetIsLockedIn();
+
+            // When locked in, disable the character selection so they can't change picks
+            if (CharacterSelectionTileView)
+            {
+                CharacterSelectionTileView->SetIsEnabled(!bIsLockedIn);
+            }
+
+            // Update the button text to reflect current state
+            if (StartMatchButtonText)
+            {
+                StartMatchButtonText->SetText(FText::FromString(bIsLockedIn ? TEXT("RETURN") : TEXT("START MATCH")));
+            }
         }
     }
 
@@ -222,8 +256,12 @@ void ULobbyWidget::CharacterDefinitionsLoaded()
     }
 }
 
+
 void ULobbyWidget::CharacterSelected(UObject* SelectedUObject)
 {
+    // If we're locked in, ignore character selection attempts
+    if (bIsLockedIn) return;
+
     if (!ChrisPlayerState)
     {
         ChrisPlayerState = GetOwningPlayerState<AChrisPlayerState>();
@@ -265,4 +303,26 @@ void ULobbyWidget::UpdateCharacterDisplay(const FPlayerSelection& PlayerSelectio
         return;
 
     CharacterDisplay->ConfigureWithCharacterDefinition(PlayerSelection.GetCharacterDefinition());
+}
+
+void ULobbyWidget::OnStartMatchButtonHovered()
+{
+    if (StartMatchRetainerDefault)
+        StartMatchRetainerDefault->SetEffectMaterial(HoverGradientMaterial);
+}
+
+void ULobbyWidget::OnStartMatchButtonUnhovered()
+{
+    if (StartMatchRetainerDefault)
+        StartMatchRetainerDefault->SetEffectMaterial(nullptr);
+}
+
+// Toggles lock-in state: START MATCH → locks in, RETURN → unlocks
+void ULobbyWidget::OnStartMatchButtonClicked()
+{
+    if (!LobbyPlayerController) return;
+
+    bIsLockedIn = !bIsLockedIn;
+
+    LobbyPlayerController->Server_RequestLockIn(bIsLockedIn);
 }

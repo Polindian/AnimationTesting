@@ -17,6 +17,7 @@ class ULobbyWidget : public UUserWidget
 	GENERATED_BODY()
 public:
 	virtual void NativeConstruct() override;
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 private:
 	UPROPERTY(meta=(BindWidget))
@@ -113,4 +114,27 @@ private:
 
 	void SpawnCharacterDisplay();
 	void UpdateCharacterDisplay(const FPlayerSelection& PlayerSelection);
+
+	UPROPERTY(meta = (BindWidget))
+	class URetainerBox* StartMatchRetainerDefault;
+
+	UFUNCTION()
+	void OnStartMatchButtonHovered();
+	UFUNCTION()
+	void OnStartMatchButtonUnhovered();
+
+	UPROPERTY(meta = (BindWidget))
+	class UButton* StartMatchButton;
+
+	UPROPERTY(meta = (BindWidget))
+	class UTextBlock* StartMatchButtonText;
+
+	// Local tracking of whether this client is locked in
+	bool bIsLockedIn = false;
+
+	UFUNCTION()
+	void OnStartMatchButtonClicked();
+
+	UPROPERTY(meta = (BindWidget))
+	class UTextBlock* HeroSelectionTimerText;
 };
