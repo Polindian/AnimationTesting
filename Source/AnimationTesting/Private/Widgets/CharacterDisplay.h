@@ -38,4 +38,8 @@ private:
 
 	// Destroys all previously spawned costume and weapon components
 	void ClearDisplayComponents();
+
+	UPROPERTY()
+	class UDisplaySwordEquipComponent* DisplaySwordEquip;
+
 };

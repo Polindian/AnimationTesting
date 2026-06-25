@@ -30,7 +30,7 @@ void AChrisGameState::RequestPlayerSelectionChange(const APlayerState* Requestin
 		PlayerSelectionArray.Add(FPlayerSelection(DesiredSlot, RequestingPlayer));
 	}
 
-	ForceNetUpdate();
+	
 	OnPlayerSelectionUpdated.Broadcast(PlayerSelectionArray);
 }
 
@@ -50,7 +50,7 @@ void AChrisGameState::SetCharacterSelected(const APlayerState* SelectingPlayer, 
 	if (FoundPlayerSelection && !FoundPlayerSelection->GetIsLockedIn())
 	{
 		FoundPlayerSelection->SetCharacterDefinition(SelectedDefinition);
-		ForceNetUpdate();
+		
 		OnPlayerSelectionUpdated.Broadcast(PlayerSelectionArray);
 	}
 }
@@ -80,7 +80,7 @@ void AChrisGameState::SetCharacterDeselected(const APlayerState* RequestingPlaye
 	if (FoundPlayerSelection && !FoundPlayerSelection->GetIsLockedIn())
 	{
 		FoundPlayerSelection->SetCharacterDefinition(nullptr);
-		ForceNetUpdate();
+		
 		OnPlayerSelectionUpdated.Broadcast(PlayerSelectionArray);
 	}
 }
@@ -99,7 +99,7 @@ void AChrisGameState::RequestPlayerLockIn(const APlayerState* RequestingPlayer, 
 	if (Found && Found->GetCharacterDefinition())
 	{
 		Found->SetIsLockedIn(bLockIn);
-		ForceNetUpdate();
+		
 		OnPlayerSelectionUpdated.Broadcast(PlayerSelectionArray);
 	}
 
@@ -137,7 +137,7 @@ void AChrisGameState::RequestPlayerReadyChange(const APlayerState* RequestingPla
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Player tried to ready up!"));
 		Found->SetIsReady(bReady);
-		ForceNetUpdate();
+		
 		OnPlayerSelectionUpdated.Broadcast(PlayerSelectionArray);
 
 		// Auto-transition: if all players readied and teams balanced, switch everyone
@@ -235,7 +235,7 @@ void AChrisGameState::StartHeroSelectionTimer()
 void AChrisGameState::TickHeroSelectionTimer()
 {
 	HeroSelectionTimeRemaining -= 1.f;
-	ForceNetUpdate();
+	
 
 	if (HeroSelectionTimeRemaining <= 0.f)
 	{
@@ -274,7 +274,7 @@ void AChrisGameState::AssignRandomCharactersToEmptySlots()
 		}
 	}
 
-	ForceNetUpdate();
+	
 	OnPlayerSelectionUpdated.Broadcast(PlayerSelectionArray);
 }
 

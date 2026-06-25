@@ -7,6 +7,7 @@
 #include "Character/PA_CharacterDefinition.h"
 #include "Components/StaticMeshComponent.h"
 #include "GroomComponent.h"
+#include "Weapon/DisplaySwordEquipComponent.h"
 
 // Sets default values
 ACharacterDisplay::ACharacterDisplay()
@@ -19,21 +20,31 @@ ACharacterDisplay::ACharacterDisplay()
 	MeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>("Mesh Comp");
 	MeshComponent->SetupAttachment(GetRootComponent());
 
+
 	ViewCameraComponent = CreateDefaultSubobject<UCameraComponent>("View Camera Comp");
 	ViewCameraComponent->SetupAttachment(GetRootComponent());
 }
+
+
 
 void ACharacterDisplay::ConfigureWithCharacterDefinition(const UPA_CharacterDefinition* CharacterDefinition)
 {
 	if (!CharacterDefinition)
 		return;
 
-	ClearDisplayComponents();
+    UE_LOG(LogTemp, Warning, TEXT("Mesh: %s | AnimBP: %s"),
+        *GetNameSafe(CharacterDefinition->LoadDisplayMesh()),
+        *GetNameSafe(CharacterDefinition->LoadDisplayAnimationBP()));
 
-	MeshComponent->SetSkeletalMesh(CharacterDefinition->LoadDisplayMesh());
-	MeshComponent->SetAnimationMode(EAnimationMode::AnimationBlueprint);
-	MeshComponent->SetAnimInstanceClass(CharacterDefinition->LoadDisplayAnimationBP());
+    MeshComponent->SetSkeletalMesh(CharacterDefinition->LoadDisplayMesh());
+    MeshComponent->SetAnimationMode(EAnimationMode::AnimationBlueprint);
+    MeshComponent->SetAnimClass(CharacterDefinition->LoadDisplayAnimationBP());
+    
 
+    ClearDisplayComponents();
+
+    
+   
     // Spawn costume pieces — each follows the main body's animation via SetLeaderPoseComponent
     for (const FDisplayCostumePiece& Piece : CharacterDefinition->GetDisplayCostumePieces())
     {
@@ -90,10 +101,25 @@ void ACharacterDisplay::ConfigureWithCharacterDefinition(const UPA_CharacterDefi
         NewGroom->RegisterComponent();
         GroomComponents.Add(NewGroom);
     }
+
+    if (WeaponMeshComponents.Num() >= 2)
+    {
+        if (!DisplaySwordEquip)
+        {
+            DisplaySwordEquip = NewObject<UDisplaySwordEquipComponent>(this);
+            DisplaySwordEquip->RegisterComponent();
+        }
+
+        // Index 0 = left sword, Index 1 = right sword
+        DisplaySwordEquip->Initialize(MeshComponent, WeaponMeshComponents[0], WeaponMeshComponents[1]);
+    }
 }
+
+
 
 void ACharacterDisplay::ClearDisplayComponents()
 {
+    
     // Destroy old costume pieces so switching characters doesn't stack meshes
     for (USkeletalMeshComponent* Comp : CostumeMeshComponents)
     {
@@ -124,3 +150,4 @@ void ACharacterDisplay::ClearDisplayComponents()
     }
     GroomComponents.Empty();
 }
+

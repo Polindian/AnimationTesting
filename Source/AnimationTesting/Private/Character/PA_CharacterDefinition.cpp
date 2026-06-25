@@ -58,3 +58,13 @@ USkeletalMesh* UPA_CharacterDefinition::LoadDisplayMesh() const
 
 	return Character->GetMesh()->GetSkeletalMeshAsset();
 }
+
+UAnimSequenceBase* UPA_CharacterDefinition::LoadDisplayAnimation() const
+{
+	DisplayAnimation.LoadSynchronous();
+	if (DisplayAnimation.IsValid())
+	{
+		return DisplayAnimation.Get();
+	}
+	return nullptr;
+}

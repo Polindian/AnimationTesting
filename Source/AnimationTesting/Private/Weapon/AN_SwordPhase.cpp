@@ -2,6 +2,7 @@
 
 
 #include "Weapon/AN_SwordPhase.h"
+#include "Weapon/DisplaySwordEquipComponent.h"
 
 void UAN_SwordPhase::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
     const FAnimNotifyEventReference& EventReference)
@@ -10,11 +11,20 @@ void UAN_SwordPhase::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase*
 
     if (!MeshComp || !MeshComp->GetOwner()) return;
 
-    // Find the SwordEquipComponent on the owning actor
+    // Try gameplay component first (ACharacter in-match)
     USwordEquipComponent* SwordComp = MeshComp->GetOwner()->FindComponentByClass<USwordEquipComponent>();
-    if (!SwordComp) return;
+    if (SwordComp)
+    {
+        SwordComp->ExecutePhaseAction(Action);
+        return;
+    }
 
-    SwordComp->ExecutePhaseAction(Action);
+    // Fall back to display component (CharacterDisplay in lobby)
+    UDisplaySwordEquipComponent* DisplayComp = MeshComp->GetOwner()->FindComponentByClass<UDisplaySwordEquipComponent>();
+    if (DisplayComp)
+    {
+        DisplayComp->ExecutePhaseAction(Action);
+    }
 }
 
 FString UAN_SwordPhase::GetNotifyName_Implementation() const
