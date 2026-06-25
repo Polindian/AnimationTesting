@@ -4,6 +4,8 @@
 #include "Framework/ChrisGameState.h"
 #include "Player/LobbyPlayerController.h"
 #include "Network/ChrisNetStatics.h"
+#include "Framework/ChrisGameInstance.h"
+#include "Framework/CAssetManager.h"
 #include "Net/UnrealNetwork.h"
 
 void AChrisGameState::RequestPlayerSelectionChange(const APlayerState* RequestingPlayer, uint8 DesiredSlot)
@@ -28,7 +30,7 @@ void AChrisGameState::RequestPlayerSelectionChange(const APlayerState* Requestin
 		PlayerSelectionArray.Add(FPlayerSelection(DesiredSlot, RequestingPlayer));
 	}
 
-	ForceNetUpdate();
+	
 	OnPlayerSelectionUpdated.Broadcast(PlayerSelectionArray);
 }
 
@@ -48,7 +50,7 @@ void AChrisGameState::SetCharacterSelected(const APlayerState* SelectingPlayer, 
 	if (FoundPlayerSelection && !FoundPlayerSelection->GetIsLockedIn())
 	{
 		FoundPlayerSelection->SetCharacterDefinition(SelectedDefinition);
-		ForceNetUpdate();
+		
 		OnPlayerSelectionUpdated.Broadcast(PlayerSelectionArray);
 	}
 }
@@ -78,7 +80,7 @@ void AChrisGameState::SetCharacterDeselected(const APlayerState* RequestingPlaye
 	if (FoundPlayerSelection && !FoundPlayerSelection->GetIsLockedIn())
 	{
 		FoundPlayerSelection->SetCharacterDefinition(nullptr);
-		ForceNetUpdate();
+		
 		OnPlayerSelectionUpdated.Broadcast(PlayerSelectionArray);
 	}
 }
@@ -97,15 +99,23 @@ void AChrisGameState::RequestPlayerLockIn(const APlayerState* RequestingPlayer, 
 	if (Found && Found->GetCharacterDefinition())
 	{
 		Found->SetIsLockedIn(bLockIn);
-		ForceNetUpdate();
+		
 		OnPlayerSelectionUpdated.Broadcast(PlayerSelectionArray);
 	}
+
+	// Check if all players are now locked in — if so, start the match immediately
+	if (CanStartMatch())
+	{
+		StartMatch();
+	}
 }
+
 // Registers PlayerSelectionArray for replication — fires OnRep on every change
 void AChrisGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME_CONDITION_NOTIFY(AChrisGameState, PlayerSelectionArray, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME(AChrisGameState, HeroSelectionTimeRemaining);
 }
 
 const TArray<FPlayerSelection>& AChrisGameState::GetPlayerSelection() const
@@ -127,12 +137,14 @@ void AChrisGameState::RequestPlayerReadyChange(const APlayerState* RequestingPla
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Player tried to ready up!"));
 		Found->SetIsReady(bReady);
-		ForceNetUpdate();
+		
 		OnPlayerSelectionUpdated.Broadcast(PlayerSelectionArray);
 
 		// Auto-transition: if all players readied and teams balanced, switch everyone
-		if (CanStartHeroSelection())
+		if (CanStartHeroSelection())	
 		{
+			StartHeroSelectionTimer();
+
 			for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
 			{
 				ALobbyPlayerController* LobbyPC = Cast<ALobbyPlayerController>(It->Get());
@@ -177,6 +189,94 @@ bool AChrisGameState::CanStartHeroSelection() const
 	return RedCount == BlueCount;
 }
 
+
+
+
+// Returns true when every player in the lobby has locked in their character
+bool AChrisGameState::CanStartMatch() const
+{
+	if (PlayerSelectionArray.Num() == 0) return false;
+
+	for (const FPlayerSelection& PS : PlayerSelectionArray)
+	{
+		if (!PS.GetIsLockedIn()) return false;
+	}
+
+	return true;
+}
+
+void AChrisGameState::StartMatch()
+{
+	if (!HasAuthority()) return;
+
+	GetWorld()->GetTimerManager().ClearTimer(HeroSelectionTimerHandle);
+
+	// Ensure every player has a character assigned
+	AssignRandomCharactersToEmptySlots();
+
+	// Travel to the game level via GameInstance
+	UChrisGameInstance* GameInstance = GetGameInstance<UChrisGameInstance>();
+	if (GameInstance)
+	{
+		GameInstance->StartMatch();
+	}
+}
+
+void AChrisGameState::StartHeroSelectionTimer()
+{
+	if (!HasAuthority()) return;
+
+	HeroSelectionTimeRemaining = HeroSelectionDuration;
+	GetWorld()->GetTimerManager().SetTimer(HeroSelectionTimerHandle, this, &AChrisGameState::TickHeroSelectionTimer, 1.f, true);
+}
+
+
+// Called every second on the server and replicates to clients.When time runs out: force-lock everyone and start the match.
+void AChrisGameState::TickHeroSelectionTimer()
+{
+	HeroSelectionTimeRemaining -= 1.f;
+	
+
+	if (HeroSelectionTimeRemaining <= 0.f)
+	{
+		HeroSelectionTimeRemaining = 0.f;
+
+		// Force-lock every player who hasn't locked in yet
+		for (FPlayerSelection& PS : PlayerSelectionArray)
+		{
+			if (!PS.GetIsLockedIn())
+			{
+				PS.SetIsLockedIn(true);
+			}
+		}
+
+		OnPlayerSelectionUpdated.Broadcast(PlayerSelectionArray);
+		StartMatch();
+	}
+}
+
+// Goes through all player slots and assigns a random character to anyone who hasn't picked one.
+// Uses the loaded character definitions from the asset manager.
+void AChrisGameState::AssignRandomCharactersToEmptySlots()
+{
+	TArray<UPA_CharacterDefinition*> AllDefinitions;
+	UCAssetManager::Get().GetLoadedCharacterDefinitions(AllDefinitions);
+
+	if (AllDefinitions.Num() == 0) return;
+
+	for (FPlayerSelection& PS : PlayerSelectionArray)
+	{
+		if (!PS.GetCharacterDefinition())
+		{
+			// Pick a random character from the loaded definitions
+			int32 RandomIndex = FMath::RandRange(0, AllDefinitions.Num() - 1);
+			PS.SetCharacterDefinition(AllDefinitions[RandomIndex]);
+		}
+	}
+
+	
+	OnPlayerSelectionUpdated.Broadcast(PlayerSelectionArray);
+}
 
 // Called automatically on clients when the server's PlayerSelectionArray replicates down
 void AChrisGameState::OnRep_PlayerSelectionArray()

@@ -1,0 +1,26 @@
+﻿// Christopher Naglik All Rights Reserved
+
+
+#include "Framework/ChrisGameInstance.h"
+#include "ChrisGameInstance.h"
+
+// Only the server (dedicated or listen) should initiate a map travel
+void UChrisGameInstance::StartMatch()
+{
+	if (GetWorld()->GetNetMode() == ENetMode::NM_DedicatedServer || GetWorld()->GetNetMode() == ENetMode::NM_ListenServer)
+	{
+		LoadLevelAndListen(Lvl_ThirdPerson);
+	}
+}
+
+void UChrisGameInstance::LoadLevelAndListen(TSoftObjectPtr<UWorld> Level)
+{
+	// Convert the soft object path into a mappable package name 
+	const FName LevelURL = FName(*FPackageName::ObjectPathToPackageName(Level.ToString()));
+
+	// ServerTravel with "?listen" so the server accepts client connections on the new map
+	if (LevelURL != "")
+	{
+		GetWorld()->ServerTravel(LevelURL.ToString() + "?listen");
+	}
+}

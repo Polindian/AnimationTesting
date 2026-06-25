@@ -79,6 +79,8 @@ public:
 	const TArray<FDisplayWeaponPiece>& GetDisplayWeapons() const { return DisplayWeapons; }
 	const TArray<FDisplayGroomPiece>& GetDisplayGrooms() const { return DisplayGrooms; }
 
+	UAnimSequenceBase* LoadDisplayAnimation() const;
+
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "Character")
 	FString CharacterName;
@@ -103,4 +105,9 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Display")
 	TArray<FDisplayGroomPiece> DisplayGrooms;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Character")
+	TSoftObjectPtr<UAnimSequenceBase> DisplayAnimation;
+
+
 };
