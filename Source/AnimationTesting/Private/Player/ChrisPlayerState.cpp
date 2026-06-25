@@ -4,7 +4,10 @@
 #include "Player/ChrisPlayerState.h"
 #include "Net/UnrealNetwork.h"
 #include "Framework/ChrisGameState.h"
+#include "Character/PA_CharacterDefinition.h"
+#include "Character/ChrisCharacter.h"
 #include "Kismet/GameplayStatics.h"
+#include "Network/ChrisNetStatics.h"
 
 AChrisPlayerState::AChrisPlayerState()
 {
@@ -30,6 +33,35 @@ void AChrisPlayerState::BeginPlay()
 		// When any player's selection changes, we check if ours changed too
 		ChrisGameState->OnPlayerSelectionUpdated.AddUObject(this, &AChrisPlayerState::PlayerSelectionUpdated);
 	}
+}
+
+// Called by the engine during seamless/server travel to copy this PlayerState's data into the new PlayerState created on the destination level
+void AChrisPlayerState::CopyProperties(APlayerState* PlayerState)
+{
+	Super::CopyProperties(PlayerState);
+
+	AChrisPlayerState* NewPlayerState = Cast<AChrisPlayerState>(PlayerState);
+	if (NewPlayerState)
+	{
+		NewPlayerState->PlayerSelection = PlayerSelection;
+	}
+}
+
+// Returns the character blueprint class the arena GameMode should spawn for this player.
+TSubclassOf<APawn> AChrisPlayerState::GetSelectedPawnClass() const
+{
+	if (PlayerSelection.GetCharacterDefinition())
+	{
+		return PlayerSelection.GetCharacterDefinition()->LoadCharacterClass();
+	}
+
+	return nullptr;
+}
+
+// Derives team assignment from slot index
+FGenericTeamId AChrisPlayerState::GetTeamIdBasedOnSlot() const
+{
+	return PlayerSelection.GetPlayerSlot() < UChrisNetStatics::GetPlayerCountPerTeam() ? FGenericTeamId{ 0 } : FGenericTeamId{ 1 };
 }
 
 
