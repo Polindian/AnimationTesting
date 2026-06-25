@@ -9,12 +9,14 @@
 #include "Player/ChrisPlayerController.h"
 #include "Player/ChrisPlayerCharacter.h"
 #include "GameFramework/PlayerStart.h"
+#include "GameFramework/Controller.h"
 #include "GAS/ChrisAbilitySystemComponent.h"
 #include "GAS/CHeroAttributeSet.h"
 #include "EngineUtils.h"
 #include "Framework/Flag.h"
 #include "AI/SkeletonBarrack.h"
 #include "Weapon/SwordEquipComponent.h" 
+#include "Player/ChrisPlayerState.h"
 
 
 APlayerController* AChrisGameMode::SpawnPlayerController(ENetRole InRemoteRole, const FString& Options)
@@ -32,8 +34,41 @@ APlayerController* AChrisGameMode::SpawnPlayerController(ENetRole InRemoteRole, 
 	return NewPlayerController;
 }
 
-FGenericTeamId AChrisGameMode::GetTeamIDForPlayer(const APlayerController* PlayerController) const
+UClass* AChrisGameMode::GetDefaultPawnClassForController_Implementation(AController* Controller)
 {
+	AChrisPlayerState* ChrisPlayerState = Controller->GetPlayerState<AChrisPlayerState>();
+	if (ChrisPlayerState && ChrisPlayerState->GetSelectedPawnClass())
+	{
+		return ChrisPlayerState->GetSelectedPawnClass();
+	}
+
+	return BackupPawn;
+}
+
+APawn* AChrisGameMode::SpawnDefaultPawnFor_Implementation(AController* NewPlayer, AActor* StartSpot)
+{
+	IGenericTeamAgentInterface* NewPlayerTeamInterface = Cast<IGenericTeamAgentInterface>(NewPlayer);
+	FGenericTeamId TeamId = GetTeamIDForPlayer(NewPlayer);
+
+	if (NewPlayerTeamInterface)
+	{
+		NewPlayerTeamInterface->SetGenericTeamId(TeamId);
+	}
+
+	StartSpot = FindNextStartSpotForTeam(TeamId);
+	NewPlayer->StartSpot = StartSpot;
+
+	return Super::SpawnDefaultPawnFor_Implementation(NewPlayer, StartSpot);
+}
+
+FGenericTeamId AChrisGameMode::GetTeamIDForPlayer(const AController* InController) const
+{
+	AChrisPlayerState* ChrisPlayerState = InController->GetPlayerState<AChrisPlayerState>();
+	if (ChrisPlayerState && ChrisPlayerState->GetSelectedPawnClass())
+	{
+		return ChrisPlayerState->GetTeamIdBasedOnSlot();
+	}
+	
 	static int PlayerCount = 0;
 	++PlayerCount;
 	return FGenericTeamId(PlayerCount % 2);
