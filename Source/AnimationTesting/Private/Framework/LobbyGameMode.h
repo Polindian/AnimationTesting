@@ -11,7 +11,7 @@
  * Enables seamless travel for server-to-game transitions.
  */
 UCLASS()
-class ALobbyGameMode : public AGameMode
+class ALobbyGameMode : public AGameModeBase
 {
 	GENERATED_BODY()
 public:

@@ -28,6 +28,8 @@ public:
     void BeginEquip();
     void FinalizeEquip();
 
+    void FinalizeUnequip();
+
 private:
     // Socket names (same defaults as SwordEquipComponent)
     UPROPERTY(EditDefaultsOnly, Category = "Swords|Sockets")
@@ -42,18 +44,31 @@ private:
     UPROPERTY(EditDefaultsOnly, Category = "Swords|Sockets")
     FName RightSheathSocket = "RightCover";
 
-    // Equip apex settings (copied from SwordEquipComponent defaults)
+    // ---------- EQUIP apex ----------
     UPROPERTY(EditDefaultsOnly, Category = "Swords|Equip Apex")
-    FVector EquipApexLeftSword = FVector(-10.f, 15.f, 80.f);
+    FVector EquipApexLeftSword = FVector(0.f, -15.f, 200.f);
 
     UPROPERTY(EditDefaultsOnly, Category = "Swords|Equip Apex")
-    FRotator EquipApexRotationLeft = FRotator(0.f, 30.f, 90.f);
+    FRotator EquipApexRotationLeft = FRotator(10.f, 0.f, 90.f);
 
     UPROPERTY(EditDefaultsOnly, Category = "Swords|Equip Apex")
-    FVector EquipApexRightSword = FVector(-10.f, -15.f, 80.f);
+    FVector EquipApexRightSword = FVector(0.f, -15.f, 200.f);
 
     UPROPERTY(EditDefaultsOnly, Category = "Swords|Equip Apex")
-    FRotator EquipApexRotationRight = FRotator(0.f, -30.f, -90.f);
+    FRotator EquipApexRotationRight = FRotator(-10.f, 0.f, 90.f);
+
+    // ---------- UNEQUIP apex ----------
+    UPROPERTY(EditDefaultsOnly, Category = "Swords|Unequip Apex")
+    FVector UnequipApexLeftSword = FVector(0.f, -15.f, 200.f);
+
+    UPROPERTY(EditDefaultsOnly, Category = "Swords|Unequip Apex")
+    FRotator UnequipApexRotationLeft = FRotator(10.f, 0.f, 90.f);
+
+    UPROPERTY(EditDefaultsOnly, Category = "Swords|Unequip Apex")
+    FVector UnequipApexRightSword = FVector(0.f, -15.f, 200.f);
+
+    UPROPERTY(EditDefaultsOnly, Category = "Swords|Unequip Apex")
+    FRotator UnequipApexRotationRight = FRotator(10.f, 0.f, 90.f);
 
     UPROPERTY(EditDefaultsOnly, Category = "Swords|Equip Timing")
     float EquipThrowDuration = 0.7f;
@@ -63,6 +78,8 @@ private:
 
     UPROPERTY(EditDefaultsOnly, Category = "Swords|Equip Timing")
     float EquipSnapDuration = 0.3f;
+
+    bool IsTransitioning() const;
 
     // State
     ESwordEquipState EquipState = ESwordEquipState::Unequipped;

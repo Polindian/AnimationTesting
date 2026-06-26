@@ -35,20 +35,33 @@ void UDisplaySwordEquipComponent::ExecutePhaseAction(ESwordPhaseAction Action)
     switch (Action)
     {
     case ESwordPhaseAction::DetachAndThrow:
-        if (EquipState == ESwordEquipState::Unequipped)
-            EquipState = ESwordEquipState::Equipping;
+        // Infer transition direction from resting state, matching SwordEquipComponent.
+      // Needed because the anim notify fires without knowing which ability triggered it.
+        if (!IsTransitioning())
+        {
+            if (EquipState == ESwordEquipState::Unequipped)
+                EquipState = ESwordEquipState::Equipping;
+            else if (EquipState == ESwordEquipState::Equipped)
+                EquipState = ESwordEquipState::Unequipping;
+            else
+                return;
+        }
         DetachSwordsToActorRoot();
         StartPhase(ESwordFlyPhase::Throw);
         break;
 
     case ESwordPhaseAction::BeginSnap:
-        if (EquipState != ESwordEquipState::Equipping) return;
+        // Allow snap during either transition direction
+        if (!IsTransitioning()) return;
         StartPhase(ESwordFlyPhase::Snap);
         break;
 
     case ESwordPhaseAction::AttachToTarget:
+        // Handle both equip and unequip finalization
         if (EquipState == ESwordEquipState::Equipping)
             FinalizeEquip();
+        else if (EquipState == ESwordEquipState::Unequipping)
+            FinalizeUnequip();
         break;
     }
 }
@@ -72,11 +85,15 @@ void UDisplaySwordEquipComponent::AttachSwordsToSockets(FName LeftSocket, FName 
 
 void UDisplaySwordEquipComponent::DetachSwordsToActorRoot()
 {
-    USceneComponent* Root = GetOwner()->GetRootComponent();
+    // Parent swords to the mesh instead of root — CharacterDisplay's root is
+     // at the camera position (far from the character), so using it would put
+     // all transform math in a distant coordinate space and cause drift
+    USceneComponent* StableParent = OwnerMesh ? (USceneComponent*)OwnerMesh : GetOwner()->GetRootComponent();
+
     if (LeftSword)
-        LeftSword->AttachToComponent(Root, FAttachmentTransformRules::KeepWorldTransform);
+        LeftSword->AttachToComponent(StableParent, FAttachmentTransformRules::KeepWorldTransform);
     if (RightSword)
-        RightSword->AttachToComponent(Root, FAttachmentTransformRules::KeepWorldTransform);
+        RightSword->AttachToComponent(StableParent, FAttachmentTransformRules::KeepWorldTransform);
 }
 
 void UDisplaySwordEquipComponent::StartPhase(ESwordFlyPhase Phase)
@@ -86,6 +103,8 @@ void UDisplaySwordEquipComponent::StartPhase(ESwordFlyPhase Phase)
 
     if (LeftSword) LeftPhaseStartTransform = LeftSword->GetRelativeTransform();
     if (RightSword) RightPhaseStartTransform = RightSword->GetRelativeTransform();
+
+    bool bIsEquipping = (EquipState == ESwordEquipState::Equipping);
 
     switch (Phase)
     {
@@ -103,8 +122,17 @@ void UDisplaySwordEquipComponent::StartPhase(ESwordFlyPhase Phase)
 
     case ESwordFlyPhase::Snap:
         CurrentPhaseDuration = EquipSnapDuration;
-        LeftPhaseEndTransform = GetSocketRelativeToRoot(LeftHandSocket);
-        RightPhaseEndTransform = GetSocketRelativeToRoot(RightHandSocket);
+        // Snap to hand sockets when equipping, sheath sockets when unequipping
+        if (bIsEquipping)
+        {
+            LeftPhaseEndTransform = GetSocketRelativeToRoot(LeftHandSocket);
+            RightPhaseEndTransform = GetSocketRelativeToRoot(RightHandSocket);
+        }
+        else
+        {
+            LeftPhaseEndTransform = GetSocketRelativeToRoot(LeftSheathSocket);
+            RightPhaseEndTransform = GetSocketRelativeToRoot(RightSheathSocket);
+        }
         break;
 
     default: break;
@@ -124,14 +152,17 @@ void UDisplaySwordEquipComponent::AdvanceToNextPhase()
         StartPhase(ESwordFlyPhase::Snap);
         break;
     case ESwordFlyPhase::Snap:
-        FinalizeEquip();
+        // Finalize in the correct direction
+        if (EquipState == ESwordEquipState::Equipping)
+            FinalizeEquip();
+        else if (EquipState == ESwordEquipState::Unequipping)
+            FinalizeUnequip();
         break;
     default:
         SetComponentTickEnabled(false);
         break;
     }
 }
-
 void UDisplaySwordEquipComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -189,19 +220,52 @@ void UDisplaySwordEquipComponent::UpdateSwordTransforms(float EasedAlpha)
     }
 }
 
+
+// Transform calculations are relative to the mesh component, not root.
+// CharacterDisplay's root sits at the camera (far from the character),
+// so mesh-relative math keeps everything in the right coordinate space.
 FTransform UDisplaySwordEquipComponent::GetSocketRelativeToRoot(FName SocketName) const
 {
-    if (!OwnerMesh || !GetOwner()) return FTransform::Identity;
+    if (!OwnerMesh) return FTransform::Identity;
 
     FTransform SocketWorldTransform = OwnerMesh->GetSocketTransform(SocketName, RTS_World);
-    FTransform RootWorldTransform = GetOwner()->GetRootComponent()->GetComponentTransform();
+    FTransform MeshWorldTransform = OwnerMesh->GetComponentTransform();
 
-    return SocketWorldTransform.GetRelativeTransform(RootWorldTransform);
+    return SocketWorldTransform.GetRelativeTransform(MeshWorldTransform);
 }
 
+// Returns the over-the-head apex position where swords hover mid-flight.
+// Uses different offsets for equip vs unequip so the Y values can cross.
 FTransform UDisplaySwordEquipComponent::GetApexRelativeTransform(bool bIsLeft) const
 {
-    FVector Offset = bIsLeft ? EquipApexLeftSword : EquipApexRightSword;
-    FRotator Rotation = bIsLeft ? EquipApexRotationLeft : EquipApexRotationRight;
+    bool bIsEquipping = (EquipState == ESwordEquipState::Equipping);
+
+    FVector Offset;
+    FRotator Rotation;
+
+    if (bIsEquipping)
+    {
+        Offset = bIsLeft ? EquipApexLeftSword : EquipApexRightSword;
+        Rotation = bIsLeft ? EquipApexRotationLeft : EquipApexRotationRight;
+    }
+    else
+    {
+        Offset = bIsLeft ? UnequipApexLeftSword : UnequipApexRightSword;
+        Rotation = bIsLeft ? UnequipApexRotationLeft : UnequipApexRotationRight;
+    }
+
     return FTransform(Rotation.Quaternion(), Offset, FVector::OneVector);
+}
+
+bool UDisplaySwordEquipComponent::IsTransitioning() const
+{
+    return (EquipState == ESwordEquipState::Equipping || EquipState == ESwordEquipState::Unequipping);
+}
+
+void UDisplaySwordEquipComponent::FinalizeUnequip()
+{
+    CurrentPhase = ESwordFlyPhase::None;
+    SetComponentTickEnabled(false);
+    AttachSwordsToSockets(LeftSheathSocket, RightSheathSocket);
+    EquipState = ESwordEquipState::Unequipped;
 }
