@@ -34,6 +34,7 @@ public:
     virtual APlayerController* SpawnPlayerController(ENetRole InRemoteRole, const FString& Options) override;
     virtual UClass* GetDefaultPawnClassForController_Implementation(AController* Controller) override;
     virtual APawn* SpawnDefaultPawnFor_Implementation(AController* NewPlayer, AActor* StartSpot) override;
+    virtual void HandleSeamlessTravelPlayer(AController*& C) override;
 
     // Called by the engine every time a player successfully joins, detects enough players to start game
     virtual void PostLogin(APlayerController* NewPlayer) override;
