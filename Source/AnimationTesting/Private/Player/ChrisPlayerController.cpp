@@ -234,11 +234,15 @@ void AChrisPlayerController::Client_OnRoundStart_Implementation(float Duration)
 {
 	bIsRoundActive = true;
 
-	// Only re-enable input if the gameplay menu is NOT open
 	if (!bIsGameplayMenuOpen && ChrisPlayerCharacter)
 	{
 		ChrisPlayerCharacter->EnableInput(this);
+		UE_LOG(LogTemp, Warning, TEXT("[Client] Input ENABLED"));
 	}
+
+	// Force keyboard/mouse focus back to the game viewport
+	SetInputMode(FInputModeGameOnly());
+	SetShowMouseCursor(false);
 
 	// Remove the countdown widget — it's no longer needed.
 	// RemoveFromParent() removes it from the viewport and allows garbage collection.

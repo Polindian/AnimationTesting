@@ -61,6 +61,42 @@ APawn* AChrisGameMode::SpawnDefaultPawnFor_Implementation(AController* NewPlayer
 	return Super::SpawnDefaultPawnFor_Implementation(NewPlayer, StartSpot);
 }
 
+void AChrisGameMode::HandleSeamlessTravelPlayer(AController*& C)
+{
+	APlayerController* PC = Cast<APlayerController>(C);
+
+	if (PC && PC->GetClass() != PlayerControllerClass)
+	{
+		APlayerController* NewPC = Super::SpawnPlayerController(PC->GetRemoteRole(), TEXT(""));
+
+		if (NewPC)
+		{
+			PC->SeamlessTravelTo(NewPC);
+			NewPC->SeamlessTravelFrom(PC);
+			SwapPlayerControllers(PC, NewPC);
+
+			C = NewPC;
+			PC = NewPC;
+		}
+	}
+
+	// Assign team and start spot
+	IGenericTeamAgentInterface* TeamInterface = Cast<IGenericTeamAgentInterface>(PC);
+	FGenericTeamId TeamId = GetTeamIDForPlayer(PC);
+	if (TeamInterface)
+	{
+		TeamInterface->SetGenericTeamId(TeamId);
+	}
+	PC->StartSpot = FindNextStartSpotForTeam(TeamId);
+
+	// Explicitly call PostLogin — AGameModeBase::HandleSeamlessTravelPlayer
+	// does NOT call it automatically (unlike AGameMode)
+	if (PC)
+	{
+		PostLogin(PC);
+	}
+}
+
 FGenericTeamId AChrisGameMode::GetTeamIDForPlayer(const AController* InController) const
 {
 	AChrisPlayerState* ChrisPlayerState = InController->GetPlayerState<AChrisPlayerState>();
@@ -113,7 +149,9 @@ void AChrisGameMode::PostLogin(APlayerController* NewPlayer)
 	Super::PostLogin(NewPlayer);
 
 	int32 CurrentPlayerCount = GetNumPlayers();
-	UE_LOG(LogTemp, Log, TEXT("[MatchFlow] Player joined. Count: %d / %d"), CurrentPlayerCount, ExpectedPlayerCount);
+
+	UE_LOG(LogTemp, Warning, TEXT("[MatchFlow] PostLogin fired for %s. CurrentPhase: %d, NumPlayers: %d, Expected: %d"),
+		*NewPlayer->GetName(), (int32)CurrentPhase, GetNumPlayers(), ExpectedPlayerCount);
 
 	// Only start if we have enough players AND we haven't started yet.
 	if (CurrentPlayerCount >= ExpectedPlayerCount && CurrentPhase == EMatchPhase::WaitingForPlayers)

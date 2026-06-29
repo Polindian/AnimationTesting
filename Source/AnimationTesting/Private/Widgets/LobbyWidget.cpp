@@ -170,6 +170,9 @@ void ULobbyWidget::ConfigureGameState()
 // Refreshes all slot widgets: resets to "Unoccupied", then fills in occupied slots with player names
 void ULobbyWidget::UpdatePlayerSelectionDisplay(const TArray<FPlayerSelection>& PlayerSelections)
 {
+    if (!CharacterSelectionTileView || !IsValid(CharacterSelectionTileView))
+        return;
+
     // Pass 1: reset all slots
     for (UTeamSelectionWidget* SelectionSlot : TeamSelectionSlots)
     {
@@ -299,6 +302,9 @@ void ULobbyWidget::SpawnCharacterDisplay()
 
 void ULobbyWidget::UpdateCharacterDisplay(const FPlayerSelection& PlayerSelection)
 {
+    if (!CharacterDisplay || !IsValid(CharacterDisplay))
+        return;
+
     if (!PlayerSelection.GetCharacterDefinition())
         return;
 
