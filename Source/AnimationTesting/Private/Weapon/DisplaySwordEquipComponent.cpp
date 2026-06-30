@@ -11,6 +11,12 @@ UDisplaySwordEquipComponent::UDisplaySwordEquipComponent()
 
 void UDisplaySwordEquipComponent::Initialize(USkeletalMeshComponent* InOwnerMesh, UStaticMeshComponent* InLeftSword, UStaticMeshComponent* InRightSword)
 {
+    // Cancel any in-progress flying transition from the previous character.
+    // Without this, switching characters mid-flight leaves the tick running
+    CurrentPhase = ESwordFlyPhase::None;
+    PhaseAlpha = 0.f;
+    SetComponentTickEnabled(false);
+
     OwnerMesh = InOwnerMesh;
     LeftSword = InLeftSword;
     RightSword = InRightSword;

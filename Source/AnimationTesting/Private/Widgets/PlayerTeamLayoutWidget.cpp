@@ -51,6 +51,10 @@ void UPlayerTeamLayoutWidget::UpdatePlayerSelection(const TArray<FPlayerSelectio
 		if (!PlayerSelection.IsValid())
 			continue;
 
+		uint8 SlotIndex = PlayerSelection.GetPlayerSlot();
 		TeamSlotWidgets[PlayerSelection.GetPlayerSlot()]->UpdateSlot(PlayerSelection.GetPlayerNickname(), PlayerSelection.GetCharacterDefinition());
+
+		// Drive the green/white name color based on whether this player has locked in
+		TeamSlotWidgets[SlotIndex]->SetLockedInVisual(PlayerSelection.GetIsLockedIn());
 	}
 }

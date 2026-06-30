@@ -308,7 +308,11 @@ void ULobbyWidget::UpdateCharacterDisplay(const FPlayerSelection& PlayerSelectio
     if (!PlayerSelection.GetCharacterDefinition())
         return;
 
-    CharacterDisplay->ConfigureWithCharacterDefinition(PlayerSelection.GetCharacterDefinition());
+    if (PlayerSelection.GetCharacterDefinition() == CurrentDisplayedDefinition)
+        return;
+
+    CurrentDisplayedDefinition = PlayerSelection.GetCharacterDefinition();
+    CharacterDisplay->ConfigureWithCharacterDefinition(CurrentDisplayedDefinition);
 }
 
 void ULobbyWidget::OnStartMatchButtonHovered()

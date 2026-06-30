@@ -52,7 +52,6 @@ void AChrisPlayerCharacter::PawnClientRestart()
 		{
 			InputSubsystem->RemoveMappingContext(GameplayInputMappingContext);
 			InputSubsystem->AddMappingContext(GameplayInputMappingContext, 0);
-			UE_LOG(LogTemp, Warning, TEXT("[Input] GameplayIMC added: %s"), GameplayInputMappingContext ? TEXT("VALID") : TEXT("NULL"));
 		}
 	}
 }
