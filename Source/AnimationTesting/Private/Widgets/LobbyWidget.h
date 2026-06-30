@@ -26,8 +26,6 @@ private:
 	UPROPERTY(meta=(BindWidget))
 	class UWidget* TeamSelectionRoot;
 
-	
-
 	UPROPERTY(meta=(BindWidget))
 	class UButton* ReadyUpButton;
 
@@ -137,4 +135,7 @@ private:
 
 	UPROPERTY(meta = (BindWidget))
 	class UTextBlock* HeroSelectionTimerText;
+
+	UPROPERTY()
+	const UPA_CharacterDefinition* CurrentDisplayedDefinition = nullptr;
 };
