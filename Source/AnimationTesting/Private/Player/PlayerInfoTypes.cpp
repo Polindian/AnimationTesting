@@ -46,7 +46,7 @@ bool FPlayerSelection::IsValid() const
 
 	if (Slot == GetInvalidSlot()) return false;
 
-	if (Slot >= ChrisNetStatics::GetPlayerCountPerTeam()*2) return false;
+	if (Slot >= UChrisNetStatics::GetPlayerCountPerTeam()*2) return false;
 
 	return true;
 
