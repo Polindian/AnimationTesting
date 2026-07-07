@@ -38,14 +38,68 @@ void UChrisGameInstance::CreateSession()
 		SessionServerPort = UChrisNetStatics::GetSessionPort();
 
 		FOnlineSessionSettings OnlineSessionSetting = UChrisNetStatics::GenerateOnlineSessionSettings(FName(ServerSessionName), *SessionSearchId, SessionServerPort);
+
+		SessionPtr->OnCreateSessionCompleteDelegates.RemoveAll(this);
+		SessionPtr->OnCreateSessionCompleteDelegates.AddUObject(this, &UChrisGameInstance::OnSessionCreated);
+
 		if (!SessionPtr->CreateSession(0, FName(ServerSessionName), OnlineSessionSetting))
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Session Creation FAILED right away!"));
+			SessionPtr->OnCreateSessionCompleteDelegates.RemoveAll(this);
+			TerminateSessionServer();
 		}
 
 		UE_LOG(LogTemp, Warning, TEXT("Creating Session with Name: %s, SearchId: %s, Port: %d"), *ServerSessionName, *SessionSearchId, SessionServerPort);
 	}
 }
+void UChrisGameInstance::OnSessionCreated(FName SessionName, bool bWasSuccessful)
+{
+	if (bWasSuccessful)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Session Creation SUCCESSFUL!"));
+		GetWorld()->GetTimerManager().SetTimer(WaitPlayerJoinTimeout, this, &UChrisGameInstance::WaitPlayerJoinTimeoutReached, WaitPlayerJoinTimeoutDuration);
+		LoadLevelAndListen(LobbyLevel);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Session Creation FAILED!"));
+		TerminateSessionServer();
+	}
+
+	if (IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr())
+	{
+		SessionPtr->OnCreateSessionCompleteDelegates.RemoveAll(this);
+	}
+}
+
+void UChrisGameInstance::TerminateSessionServer()
+{
+	if (IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr())
+	{
+		SessionPtr->OnEndSessionCompleteDelegates.RemoveAll(this);
+		SessionPtr->OnEndSessionCompleteDelegates.AddUObject(this, &UChrisGameInstance::EndSessionCompleted);
+		if (!SessionPtr->EndSession(FName{ ServerSessionName }))
+		{
+			FGenericPlatformMisc::RequestExit(false);
+		}
+	}
+	else
+	{
+		FGenericPlatformMisc::RequestExit(false);
+	}
+}
+
+void UChrisGameInstance::EndSessionCompleted(FName SessionName, bool bWasSuccessful)
+{
+	FGenericPlatformMisc::RequestExit(false);
+}
+
+void UChrisGameInstance::WaitPlayerJoinTimeoutReached()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Session Server Shutdown after %f without player joining!"), WaitPlayerJoinTimeoutDuration);
+	TerminateSessionServer();
+}
+
 
 void UChrisGameInstance::LoadLevelAndListen(TSoftObjectPtr<UWorld> Level)
 {
@@ -55,6 +109,8 @@ void UChrisGameInstance::LoadLevelAndListen(TSoftObjectPtr<UWorld> Level)
 	// ServerTravel with "?listen" so the server accepts client connections on the new map
 	if (LevelURL != "")
 	{
-		GetWorld()->ServerTravel(LevelURL.ToString() + "?listen");
+		FString TravelString = FString::Printf(TEXT("%s?listen?port=%d"), *LevelURL.ToString(), SessionServerPort);
+		UE_LOG(LogTemp, Warning, TEXT("Server travelling to: %s"), *(TravelString));
+		GetWorld()->ServerTravel(TravelString);
 	}
 }

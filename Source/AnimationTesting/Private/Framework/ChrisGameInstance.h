@@ -23,9 +23,21 @@ public:
 /*********************************/
 private:
 	void CreateSession();
+	void OnSessionCreated(FName SessionName, bool bWasSuccessful);
+
 	FString ServerSessionName;
 	int SessionServerPort;
-	
+
+	void TerminateSessionServer();
+	void EndSessionCompleted(FName SessionName, bool bWasSuccessful);
+
+	FTimerHandle WaitPlayerJoinTimeout;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Session")
+	float WaitPlayerJoinTimeoutDuration = 300.f;
+
+	void WaitPlayerJoinTimeoutReached();
+
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "Map")
 	TSoftObjectPtr<UWorld> MainMenuLevel;
