@@ -21,6 +21,10 @@ public:
 /*********************************/
 /*          Session Server       */
 /*********************************/
+public:
+	void PlayerJoined(const FUniqueNetIdRepl& UniqueId);
+	void PlayerLeft(const FUniqueNetIdRepl& UniqueId);
+
 private:
 	void CreateSession();
 	void OnSessionCreated(FName SessionName, bool bWasSuccessful);
@@ -31,12 +35,14 @@ private:
 	void TerminateSessionServer();
 	void EndSessionCompleted(FName SessionName, bool bWasSuccessful);
 
-	FTimerHandle WaitPlayerJoinTimeout;
+	FTimerHandle WaitPlayerJoinTimeoutHandle;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Session")
 	float WaitPlayerJoinTimeoutDuration = 300.f;
 
 	void WaitPlayerJoinTimeoutReached();
+
+	TSet<FUniqueNetIdRepl> PlayerRecord;
 
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "Map")

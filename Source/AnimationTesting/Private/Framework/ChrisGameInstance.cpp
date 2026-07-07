@@ -28,6 +28,25 @@ void UChrisGameInstance::Init()
 	}
 }
 
+void UChrisGameInstance::PlayerJoined(const FUniqueNetIdRepl& UniqueId)
+{
+	if (WaitPlayerJoinTimeoutHandle.IsValid())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(WaitPlayerJoinTimeoutHandle);
+	}
+	PlayerRecord.Add(UniqueId);
+}
+
+void UChrisGameInstance::PlayerLeft(const FUniqueNetIdRepl& UniqueId)
+{
+	PlayerRecord.Remove(UniqueId);
+	if (PlayerRecord.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Session Server Shutdown after all players left!"));
+		TerminateSessionServer();
+	}
+}
+
 void UChrisGameInstance::CreateSession()
 {
 	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
@@ -51,13 +70,18 @@ void UChrisGameInstance::CreateSession()
 
 		UE_LOG(LogTemp, Warning, TEXT("Creating Session with Name: %s, SearchId: %s, Port: %d"), *ServerSessionName, *SessionSearchId, SessionServerPort);
 	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Cannot find session pointer, terminating session!"));
+		TerminateSessionServer();
+	}
 }
 void UChrisGameInstance::OnSessionCreated(FName SessionName, bool bWasSuccessful)
 {
 	if (bWasSuccessful)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Session Creation SUCCESSFUL!"));
-		GetWorld()->GetTimerManager().SetTimer(WaitPlayerJoinTimeout, this, &UChrisGameInstance::WaitPlayerJoinTimeoutReached, WaitPlayerJoinTimeoutDuration);
+		GetWorld()->GetTimerManager().SetTimer(WaitPlayerJoinTimeoutHandle, this, &UChrisGameInstance::WaitPlayerJoinTimeoutReached, WaitPlayerJoinTimeoutDuration);
 		LoadLevelAndListen(LobbyLevel);
 	}
 	else
