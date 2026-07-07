@@ -28,8 +28,10 @@ void UChrisGameInstance::Init()
 	}
 }
 
+// TSet used so a duplicate register/unregister can't corrupt the count
 void UChrisGameInstance::PlayerJoined(const FUniqueNetIdRepl& UniqueId)
 {
+	// Clears the timer handle once there is a player connection
 	if (WaitPlayerJoinTimeoutHandle.IsValid())
 	{
 		GetWorld()->GetTimerManager().ClearTimer(WaitPlayerJoinTimeoutHandle);
@@ -43,7 +45,7 @@ void UChrisGameInstance::PlayerLeft(const FUniqueNetIdRepl& UniqueId)
 	if (PlayerRecord.Num() == 0)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Session Server Shutdown after all players left!"));
-		TerminateSessionServer();
+		TerminateSessionServer(); // New termination path instead of timer handle
 	}
 }
 
