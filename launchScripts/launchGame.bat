@@ -1,0 +1,1 @@
+"C:/Kingdom of Monsters/UnrealSrce/UnrealEngine/Engine/Binaries/Win64/UnrealEditor.exe" "%~dp0..\AnimationTesting.uproject" -game -log -epicapp=GameClient
