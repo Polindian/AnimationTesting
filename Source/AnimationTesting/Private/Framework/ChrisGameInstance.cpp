@@ -3,6 +3,7 @@
 
 #include "Framework/ChrisGameInstance.h"
 #include "ChrisGameInstance.h"
+#include "Network/ChrisNetStatics.h"
 
 // Only the server (dedicated or listen) should initiate a map travel
 void UChrisGameInstance::StartMatch()
@@ -11,6 +12,27 @@ void UChrisGameInstance::StartMatch()
 	{
 		LoadLevelAndListen(Lvl_ThirdPerson);
 	}
+}
+
+void UChrisGameInstance::Init()
+{
+	Super::Init();
+	if (GetWorld()->IsEditorWorld())
+		return;
+
+	if (UChrisNetStatics::IsSessionServer(this))
+	{
+		CreateSession();
+	}
+}
+
+void UChrisGameInstance::CreateSession()
+{
+	ServerSessionName = UChrisNetStatics::GetSessionNameString();
+	FString SessionSearchId = UChrisNetStatics::GetSessionSearchIdString();
+	SessionServerPort = UChrisNetStatics::GetSessionPort();
+
+	UE_LOG(LogTemp, Warning, TEXT("Creating Session with Name: %s, SearchId: %s, Port: %d"), *ServerSessionName, *SessionSearchId, SessionServerPort);
 }
 
 void UChrisGameInstance::LoadLevelAndListen(TSoftObjectPtr<UWorld> Level)

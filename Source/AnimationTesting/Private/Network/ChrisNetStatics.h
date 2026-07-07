@@ -15,4 +15,17 @@ class UChrisNetStatics : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 public:
 	static uint8 GetPlayerCountPerTeam();
+	static bool IsSessionServer(const UObject* WorldContextObject);
+
+	static FName GetSessionNameKey();
+	static FString GetSessionNameString();
+
+	static FString GetSessionSearchIdString();
+	static FName GetSessionSearchIdKey();
+
+	static int GetSessionPort();
+	static FName GetPortKey();
+
+	static FString GetCommandLineArgsAsString(const FName& ParamName);
+	static int GetCommandLineArgsAsInt(const FName& ParamName);
 };

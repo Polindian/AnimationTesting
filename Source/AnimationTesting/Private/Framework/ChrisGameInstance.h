@@ -16,6 +16,15 @@ class UChrisGameInstance : public UGameInstance
 
 public:
 	void StartMatch();
+	virtual void Init() override;
+
+/*********************************/
+/*          Session Server       */
+/*********************************/
+private:
+	void CreateSession();
+	FString ServerSessionName;
+	int SessionServerPort;
 	
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "Map")
