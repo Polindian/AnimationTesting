@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
+#include "OnlineSubsystem.h"
+#include "OnlineSessionSettings.h"
 #include "ChrisNetStatics.generated.h"
 
 /**
@@ -14,6 +16,11 @@ class UChrisNetStatics : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 public:
+	static FOnlineSessionSettings GenerateOnlineSessionSettings(const FName& SessionName, const FString SessionSearchId, int Port);
+
+	static IOnlineSessionPtr GetSessionPtr();
+	static IOnlineIdentityPtr GetIdentityPtr();
+
 	static uint8 GetPlayerCountPerTeam();
 	static bool IsSessionServer(const UObject* WorldContextObject);
 

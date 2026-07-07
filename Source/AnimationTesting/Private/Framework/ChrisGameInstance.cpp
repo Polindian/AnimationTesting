@@ -4,6 +4,8 @@
 #include "Framework/ChrisGameInstance.h"
 #include "ChrisGameInstance.h"
 #include "Network/ChrisNetStatics.h"
+#include "Interfaces/OnlineSessionInterface.h"
+#include "Interfaces/OnlineIdentityInterface.h"
 
 // Only the server (dedicated or listen) should initiate a map travel
 void UChrisGameInstance::StartMatch()
@@ -28,11 +30,21 @@ void UChrisGameInstance::Init()
 
 void UChrisGameInstance::CreateSession()
 {
-	ServerSessionName = UChrisNetStatics::GetSessionNameString();
-	FString SessionSearchId = UChrisNetStatics::GetSessionSearchIdString();
-	SessionServerPort = UChrisNetStatics::GetSessionPort();
+	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
+	if (SessionPtr)
+	{
+		ServerSessionName = UChrisNetStatics::GetSessionNameString();
+		FString SessionSearchId = UChrisNetStatics::GetSessionSearchIdString();
+		SessionServerPort = UChrisNetStatics::GetSessionPort();
 
-	UE_LOG(LogTemp, Warning, TEXT("Creating Session with Name: %s, SearchId: %s, Port: %d"), *ServerSessionName, *SessionSearchId, SessionServerPort);
+		FOnlineSessionSettings OnlineSessionSetting = UChrisNetStatics::GenerateOnlineSessionSettings(FName(ServerSessionName), *SessionSearchId, SessionServerPort);
+		if (!SessionPtr->CreateSession(0, FName(ServerSessionName), OnlineSessionSetting))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Session Creation FAILED right away!"));
+		}
+
+		UE_LOG(LogTemp, Warning, TEXT("Creating Session with Name: %s, SearchId: %s, Port: %d"), *ServerSessionName, *SessionSearchId, SessionServerPort);
+	}
 }
 
 void UChrisGameInstance::LoadLevelAndListen(TSoftObjectPtr<UWorld> Level)

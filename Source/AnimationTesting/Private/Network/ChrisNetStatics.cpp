@@ -4,6 +4,54 @@
 #include "Network/ChrisNetStatics.h"
 #include "ChrisNetStatics.h"
 
+FOnlineSessionSettings UChrisNetStatics::GenerateOnlineSessionSettings(const FName& SessionName, const FString SessionSearchId, int Port)
+{
+	FOnlineSessionSettings OnlineSessionSettings{};
+	OnlineSessionSettings.bIsLANMatch = false;
+	OnlineSessionSettings.NumPublicConnections = GetPlayerCountPerTeam() * 2;
+	OnlineSessionSettings.bShouldAdvertise = true;
+	OnlineSessionSettings.bUsesPresence = false;
+	OnlineSessionSettings.bAllowJoinViaPresence = false;
+	OnlineSessionSettings.bAllowJoinViaPresenceFriendsOnly = false;
+	OnlineSessionSettings.bAllowInvites = true;
+	OnlineSessionSettings.bAllowJoinInProgress = false;
+	OnlineSessionSettings.bUseLobbiesIfAvailable = false;
+	OnlineSessionSettings.bUseLobbiesVoiceChatIfAvailable = false;
+	OnlineSessionSettings.bUsesStats = true;
+
+
+	// Attach our launch-time identity as SEARCHABLE metadata. This closes the loop: the backend launched us with -SESSION_SEARCH_ID=X, we advertise X, and a client searching for SESSION_SEARCH_ID == X finds
+	// exactly this instance - plus the PORT it needs to connect to.
+	OnlineSessionSettings.Set(GetSessionNameKey(), SessionName.ToString(), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	OnlineSessionSettings.Set(GetSessionSearchIdKey(), SessionSearchId, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	OnlineSessionSettings.Set(GetPortKey(), Port, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+
+
+	return OnlineSessionSettings;
+}
+
+IOnlineSessionPtr UChrisNetStatics::GetSessionPtr()
+{
+	IOnlineSubsystem* OnlineSubsystem = IOnlineSubsystem::Get();
+	if (OnlineSubsystem)
+	{
+		return OnlineSubsystem->GetSessionInterface();
+	}
+
+	return nullptr;
+}
+
+IOnlineIdentityPtr UChrisNetStatics::GetIdentityPtr()
+{
+	IOnlineSubsystem* OnlineSubsystem = IOnlineSubsystem::Get();
+	if (OnlineSubsystem)
+	{
+		return OnlineSubsystem->GetIdentityInterface();
+	}
+
+	return nullptr;
+}
+
 uint8 UChrisNetStatics::GetPlayerCountPerTeam()
 {
 	return 5;
