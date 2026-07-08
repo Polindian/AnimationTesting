@@ -6,6 +6,9 @@
 #include "Engine/GameInstance.h"
 #include "ChrisGameInstance.generated.h"
 
+
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnLoginCompleted, bool /*bWasSuccessful*/, const FString& /*PlayerNickname*/, const FString& /*ErrorMessage*/);
+
 /**
  * 
  */
@@ -17,6 +20,22 @@ class UChrisGameInstance : public UGameInstance
 public:
 	void StartMatch();
 	virtual void Init() override;
+
+
+/*********************************/
+/*             Login             */
+/*********************************/
+public:
+	bool IsLoggedIn() const;
+	bool IsLoggingIn() const;
+	void ClientAccountPortalLogin();
+	FOnLoginCompleted OnLoginCompleted;
+
+private:
+	void ClientLogin(const FString& Type, const FString& Id, const FString& Token);
+	void LoginCompleted(int NumOfLocalPlayers, bool bWasSuccessful, const FUniqueNetId& UserId, const FString& ErrorMessage);
+
+	FDelegateHandle LoggingInDelegateHandle;
 
 /*********************************/
 /*          Session Server       */

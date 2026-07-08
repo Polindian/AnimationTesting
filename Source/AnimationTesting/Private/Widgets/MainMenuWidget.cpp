@@ -13,15 +13,19 @@ void UMainMenuWidget::NativeConstruct()
 	ChrisGameInstance = GetGameInstance<UChrisGameInstance>();
 	if (ChrisGameInstance)
 	{
-
+		ChrisGameInstance->OnLoginCompleted.AddUObject(this, &UMainMenuWidget::LoginCompleted);
 	}
-
 	LoginButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::LoginButtonClicked);
 }
 
+// Widget trigger login UI
 void UMainMenuWidget::LoginButtonClicked()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Logging in..."));	
+	if (ChrisGameInstance)
+	{
+		ChrisGameInstance->ClientAccountPortalLogin();
+	}
 }
 
 void UMainMenuWidget::LoginCompleted(bool bWasSuccessful, const FString& PlayerNickname, const FString& ErrorMessage)
@@ -34,7 +38,6 @@ void UMainMenuWidget::LoginCompleted(bool bWasSuccessful, const FString& PlayerN
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Login Failed"));
 	}
-
 }
 
 
