@@ -114,6 +114,16 @@ void UChrisGameInstance::LoginCompleted(int NumOfLocalPlayers, bool bWasSuccessf
 	}
 }
 
+void UChrisGameInstance::RequestCreateAndJoinSession(const FName& NewSessionName)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Requesting create and join session: %s"), *(NewSessionName.ToString()));
+}
+
+void UChrisGameInstance::CancelSessionCreation()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Cancelling session creation"));
+}
+
 // TSet used so a duplicate register/unregister can't corrupt the count
 void UChrisGameInstance::PlayerJoined(const FUniqueNetIdRepl& UniqueId)
 {

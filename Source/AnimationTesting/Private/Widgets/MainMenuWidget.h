@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -60,6 +60,8 @@ private:
 
 	FOnButtonClickedEvent& SwitchToWaitingWidget(const FText& WaitInfo, bool bAllowCancel = false);
 
+	void HideWaitingWidget();
+
  /*****************************/
  /*      Page Navigation      */
  /*****************************/
@@ -103,7 +105,7 @@ private:
 	UPROPERTY()
 	UWidget* PendingPage;
 
-	// One entry point for ALL page changes � the mini state machine
+	// One entry point for ALL page changes — the mini state machine
 	void GoToPage(UWidget* TargetPage);
 
 
@@ -132,4 +134,30 @@ private:
 
 	UFUNCTION()
 	void ExitGameClicked();
+
+/*****************************/
+/*      Multiplayer Page     */
+/*****************************/
+
+private:
+	UPROPERTY(meta = (BindWidget))
+	class UMenuButtonWidget* CreateSessionButton;
+
+	UPROPERTY(meta = (BindWidget))
+	class UEditableText* NewSessionNameText;
+
+	UFUNCTION()
+	void CreateSessionButtonClicked();
+
+	UFUNCTION()
+	void NewSessionNameTextChanged(const FText& NewText);
+
+	UFUNCTION()
+	void CancelSessionCreation();
+
+	void SwitchToMultiplayerPage();
+
+	UPROPERTY(meta = (BindWidget))
+	class USizeBox* SessionNameContainer;
+
 };

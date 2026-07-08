@@ -7,7 +7,6 @@
 void UWaitingWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
-
 }
 
 // Wipe previous context's cancel behaviour, let the new caller bind its own
