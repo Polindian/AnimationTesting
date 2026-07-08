@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Components/Button.h"
 #include "MainMenuWidget.generated.h"
 
 /**
@@ -29,8 +30,13 @@ private:
 	UPROPERTY()
 	class UChrisGameInstance* ChrisGameInstance;
 
+	void SwitchToMainWidget();
+
+	UPROPERTY(meta = (BindWidget))
+	class UWidget* MainWidgetRoot;
+
 	/*****************************/
-	/*          Main             */
+	/*          Login            */
 	/*****************************/
 private:
 	UPROPERTY(meta = (BindWidget))
@@ -43,4 +49,87 @@ private:
 	void LoginButtonClicked();
 
 	void LoginCompleted(bool bWasSuccessful, const FString& PlayerNickname, const FString& ErrorMessage);
+
+	/*****************************/
+	/*          Waiting          */
+	/*****************************/
+
+private:
+	UPROPERTY(meta = (BindWidget))
+	class UWaitingWidget* WaitingWidget;
+
+	FOnButtonClickedEvent& SwitchToWaitingWidget(const FText& WaitInfo, bool bAllowCancel = false);
+
+ /*****************************/
+ /*      Page Navigation      */
+ /*****************************/
+
+ // The main menu buttons
+	UPROPERTY(meta = (BindWidget)) 
+	class UMenuButtonWidget* StoryModeButton;
+
+	UPROPERTY(meta = (BindWidget))
+	class UMenuButtonWidget* MultiplayerButton;
+
+	UPROPERTY(meta = (BindWidget)) 
+	class UMenuButtonWidget* ExitGameButton;
+
+	// Page roots inside MainSwitcher
+	UPROPERTY(meta = (BindWidget))
+	class UWidget* StoryModeRoot;
+
+	UPROPERTY(meta = (BindWidget))
+	class UWidget* MultiplayerPageRoot;
+
+	// Back buttons living inside the pages
+	UPROPERTY(meta = (BindWidget))
+	class UMenuButtonWidget* StoryBackButton;
+
+	UPROPERTY(meta = (BindWidget)) 
+	class UMenuButtonWidget* MultiplayerBackButton;
+
+	// Full-screen black image used for transitions; blocks clicks while fading
+	UPROPERTY(meta = (BindWidget))
+	class UImage* FadeImage;
+
+	// BindWidgetAnim links these to animations of the same name in the WBP.
+	UPROPERTY(Transient, meta = (BindWidgetAnim))
+	class UWidgetAnimation* FadeOut;
+
+	UPROPERTY(Transient, meta = (BindWidgetAnim)) 
+	class UWidgetAnimation* FadeIn;
+
+	// The page we'll switch to once the screen is fully black
+	UPROPERTY()
+	UWidget* PendingPage;
+
+	// One entry point for ALL page changes — the mini state machine
+	void GoToPage(UWidget* TargetPage);
+
+
+	FTimerHandle FadeHoldTimerHandle;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Transitions")
+	float FadeHoldDuration = 0.35f;   
+
+	UFUNCTION() void HideFadeImage();
+
+	UFUNCTION() 
+	void OnFadeHoldFinished();
+
+	UFUNCTION()
+	void OnFadeOutFinished();
+
+	// Button handlers
+	UFUNCTION()
+	void StoryModeClicked();
+
+	UFUNCTION() 
+	void MultiplayerClicked();
+
+	UFUNCTION() 
+	void BackToMainClicked();
+
+	UFUNCTION()
+	void ExitGameClicked();
 };

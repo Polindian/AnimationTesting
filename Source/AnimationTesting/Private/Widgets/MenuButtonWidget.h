@@ -45,4 +45,17 @@ private:
     void HandleHovered();
     UFUNCTION()
     void HandleUnhovered();
+
+    UPROPERTY(meta = (BindWidget))
+    class USizeBox* RootSizeBox;  
+
+    UPROPERTY(EditAnywhere, Category = "Menu Button")
+    float ButtonWidth = 300.f;
+
+    UPROPERTY(EditAnywhere, Category = "Menu Button")
+    float ButtonHeight = 80.f;
+
+    // Full font control per instance: family, typeface, size, outline, spacing
+    UPROPERTY(EditAnywhere, Category = "Menu Button")
+    FSlateFontInfo ButtonFont;
 };
