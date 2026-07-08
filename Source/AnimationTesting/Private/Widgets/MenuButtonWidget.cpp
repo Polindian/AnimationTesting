@@ -4,6 +4,7 @@
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
 #include "Components/RetainerBox.h"
+#include "Components/SizeBox.h"
 
 void UMenuButtonWidget::NativeConstruct()
 {
@@ -18,9 +19,22 @@ void UMenuButtonWidget::NativeConstruct()
 void UMenuButtonWidget::SynchronizeProperties()
 {
     Super::SynchronizeProperties();
+
     if (ButtonText)
     {
         ButtonText->SetText(ButtonLabel);
+        if (ButtonFont.FontObject)
+        {
+            ButtonText->SetFont(ButtonFont);
+        }
+    }
+
+    // Apply per-instance size to the internal SizeBox — this is why external
+    // resizing "didn't work": the override always wins, so we drive the override
+    if (RootSizeBox)
+    {
+        RootSizeBox->SetWidthOverride(ButtonWidth);
+        RootSizeBox->SetHeightOverride(ButtonHeight);
     }
 }
 
