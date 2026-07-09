@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
+#include "Interfaces/IHttpResponse.h"
+#include "Interfaces/IHttpRequest.h"
 #include "ChrisGameInstance.generated.h"
 
 
@@ -45,6 +47,9 @@ public:
 	void RequestCreateAndJoinSession(const FName& NewSessionName);
 
 	void CancelSessionCreation();
+
+private:
+	void SessionCreationRequestCompleted(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bConnectedSuccessfully, FGuid SessionSearchId);
 
 
 /*********************************/

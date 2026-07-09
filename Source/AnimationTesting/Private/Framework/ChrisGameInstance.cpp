@@ -127,12 +127,50 @@ void UChrisGameInstance::RequestCreateAndJoinSession(const FName& NewSessionName
 
 	// Local 
 	FString CoordinatorURL = UChrisNetStatics::GetCoordinatorURLString();
+
+	// POST {base}/Session = "create a session" in web API convention
+	FString URL = FString::Printf(TEXT("%s/Session"), *CoordinatorURL);
 	UE_LOG(LogTemp, Warning, TEXT("Sending request session creation to URL: %s"), *CoordinatorURL);
+	Request->SetURL(URL);
+	Request->SetVerb("POST");
+
+	// Declares the body format
+	Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+
+	// Build {"SESSION_NAME": ..., "SESSION_SEARCH_ID": ...} — same key strings the coordinator turns into the server's launch args 
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
+	JsonObject->SetStringField(UChrisNetStatics::GetSessionNameKey().ToString(), NewSessionName.ToString());
+	JsonObject->SetStringField(UChrisNetStatics::GetSessionSearchIdKey().ToString(), SessionSearchId.ToString());
+
+	// Serialize: in-memory JSON object -> text form for the body
+	FString RequestBody;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&RequestBody);
+	FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
+
+	// Async Completion
+	Request->SetContentAsString(RequestBody);
+	Request->OnProcessRequestComplete().BindUObject(this, &UChrisGameInstance::SessionCreationRequestCompleted, SessionSearchId);
+
+	if(!Request->ProcessRequest())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Session Creation Request failed right away!"));
+	}
 }
 
 void UChrisGameInstance::CancelSessionCreation()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Cancelling session creation"));
+}
+
+void UChrisGameInstance::SessionCreationRequestCompleted(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bConnectedSuccessfully, FGuid SessionSearchId)
+{
+	if(!bConnectedSuccessfully)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Connection failedl!"));
+		return;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Connection was successful!"));
 }
 
 // TSet used so a duplicate register/unregister can't corrupt the count
