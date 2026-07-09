@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
+#include "Interfaces/IHttpResponse.h"
+#include "Interfaces/IHttpRequest.h"
 #include "ChrisGameInstance.generated.h"
 
 
@@ -45,6 +47,26 @@ public:
 	void RequestCreateAndJoinSession(const FName& NewSessionName);
 
 	void CancelSessionCreation();
+
+private:
+	void SessionCreationRequestCompleted(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bConnectedSuccessfully, FGuid SessionSearchId);
+	void StartFindingCreatedSession(const FGuid& SessionSearchId);
+	void StopAllSessionFindings();
+	void StopFindingCreatedSession();
+	void StopGlobalSessionSearch();
+
+	FTimerHandle FindCreatedSessionTimerHandle;
+	FTimerHandle FindCreatedSessionTimeoutTimerHandle;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Session Search")
+	float FindCreatedSessionSearchInterval = 1.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Session Search")
+	float FindCreatedSessionTimeoutDuration = 120;
+
+	void FindCreatedSession(FGuid SessionSearchId);
+	void FindCreatedSessionTimeout();
+
 
 
 /*********************************/

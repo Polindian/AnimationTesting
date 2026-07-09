@@ -6,6 +6,7 @@
 #include "Network/ChrisNetStatics.h"
 #include "Interfaces/OnlineSessionInterface.h"
 #include "Interfaces/OnlineIdentityInterface.h"
+#include "HttpModule.h"
 
 // Only the server (dedicated or listen) should initiate a map travel
 void UChrisGameInstance::StartMatch()
@@ -117,11 +118,136 @@ void UChrisGameInstance::LoginCompleted(int NumOfLocalPlayers, bool bWasSuccessf
 void UChrisGameInstance::RequestCreateAndJoinSession(const FName& NewSessionName)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Requesting create and join session: %s"), *(NewSessionName.ToString()));
+
+	// Coordinator is our own web service (not EOS) so it is talked to over HTTP
+	FHttpRequestRef Request = FHttpModule::Get().CreateRequest();
+
+	// Client invents the search id up front: coordinator passes it to the launched server, server advertises it, and we search EOS for it to find OUR server
+	FGuid SessionSearchId = FGuid::NewGuid();
+
+	// Local 
+	FString CoordinatorURL = UChrisNetStatics::GetCoordinatorURLString();
+
+	// POST {base}/Session = "create a session" in web API convention
+	FString URL = FString::Printf(TEXT("%s/Session"), *CoordinatorURL);
+	UE_LOG(LogTemp, Warning, TEXT("Sending request session creation to URL: %s"), *CoordinatorURL);
+	Request->SetURL(URL);
+	Request->SetVerb("POST");
+
+	// Declares the body format
+	Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+
+	// Build {"SESSION_NAME": ..., "SESSION_SEARCH_ID": ...} — same key strings the coordinator turns into the server's launch args 
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
+	JsonObject->SetStringField(UChrisNetStatics::GetSessionNameKey().ToString(), NewSessionName.ToString());
+	JsonObject->SetStringField(UChrisNetStatics::GetSessionSearchIdKey().ToString(), SessionSearchId.ToString());
+
+	// Serialize: in-memory JSON object -> text form for the body
+	FString RequestBody;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&RequestBody);
+	FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
+
+	// Async Completion
+	Request->SetContentAsString(RequestBody);
+	Request->OnProcessRequestComplete().BindUObject(this, &UChrisGameInstance::SessionCreationRequestCompleted, SessionSearchId);
+
+	if(!Request->ProcessRequest())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Session Creation Request failed right away!"));
+	}
 }
 
 void UChrisGameInstance::CancelSessionCreation()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Cancelling session creation"));
+}
+
+void UChrisGameInstance::SessionCreationRequestCompleted(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bConnectedSuccessfully, FGuid SessionSearchId)
+{
+	if(!bConnectedSuccessfully)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Connection failedl!"));
+		return;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Connection was successful!"));
+
+	// 200 = coordinator says OK
+	int32 ResponseCode = Response->GetResponseCode();
+	if (ResponseCode != 200)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Session Creation Failed with code: %d"), ResponseCode);
+		return;
+	}
+
+	FString ResponseString = Response->GetContentAsString();
+
+	TSharedPtr<FJsonObject> JsonObject;
+	TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseString);
+	int32 Port = 0;
+
+	// Deserialize: response text -> JSON object -> port field
+	if (FJsonSerializer::Deserialize(Reader, JsonObject) && JsonObject.IsValid())
+	{
+		Port = JsonObject->GetIntegerField(*(UChrisNetStatics::GetPortKey().ToString()));
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Connected to Coordinator Successfully and new session created is on port: %d"), Port);
+
+	// Server was LAUNCHED, not yet READY — poll EOS until its session appears
+	StartFindingCreatedSession(SessionSearchId);
+}
+
+void UChrisGameInstance::StartFindingCreatedSession(const FGuid& SessionSearchId)
+{
+	if (!SessionSearchId.IsValid())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Session search ID is invalid, cannot start finding!"));
+		return;
+	}
+
+	// Only one search may run at a time — clear anything in flight first
+	StopAllSessionFindings();
+	UE_LOG(LogTemp, Warning, TEXT("Start finding create session with Id: %s!"), *(SessionSearchId.ToString()));
+
+	// Poller: every interval, ask EOS for the session 
+	GetWorld()->GetTimerManager().SetTimer(FindCreatedSessionTimerHandle, FTimerDelegate::CreateUObject(this, &UChrisGameInstance::FindCreatedSession, SessionSearchId), FindCreatedSessionSearchInterval, true, 0.f);
+
+	// Timeout: one-shot deadline so a dead server can't leave us searching forever
+	GetWorld()->GetTimerManager().SetTimer(FindCreatedSessionTimeoutTimerHandle, this, &UChrisGameInstance::FindCreatedSessionTimeout, FindCreatedSessionTimeoutDuration);
+}
+
+
+// StopAllSessionFindings: searches are mutually exclusive — targeted find and (future) server-browser search must never overlap on the session interface
+void UChrisGameInstance::StopAllSessionFindings()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Stopping all session search"));
+
+	StopFindingCreatedSession();
+	StopGlobalSessionSearch();
+}
+
+void UChrisGameInstance::StopFindingCreatedSession()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Stop finding Created Session!"));
+}
+
+
+void UChrisGameInstance::StopGlobalSessionSearch()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Stop global session search!"));
+}
+
+
+void UChrisGameInstance::FindCreatedSession(FGuid SessionSearchId)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Trying to find created session!"));
+}
+
+void UChrisGameInstance::FindCreatedSessionTimeout()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Created session timeout reached!"));
+	StopFindingCreatedSession();
 }
 
 // TSet used so a duplicate register/unregister can't corrupt the count
