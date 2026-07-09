@@ -33,6 +33,10 @@ public:
 	static int GetSessionPort();
 	static FName GetPortKey();
 
+	static FName GetCoordinatorURLKey();
+	static FString GetCoordinatorURLString();
+	static FString GetDefaultCoordinatorURLString();
+
 	static FString GetCommandLineArgsAsString(const FName& ParamName);
 	static int GetCommandLineArgsAsInt(const FName& ParamName);
 };

@@ -92,6 +92,31 @@ FName UChrisNetStatics::GetPortKey()
 	return FName("PORT");
 }
 
+// Command line (-COORDINATOR_URL=) wins; falls back to DefaultGame.ini — lets any build target any coordinator without recompiling
+FName UChrisNetStatics::GetCoordinatorURLKey()
+{
+	return FName("COORDINATOR_URL");
+}
+
+FString UChrisNetStatics::GetCoordinatorURLString()
+{
+	FString CoordinatorURL = GetCommandLineArgsAsString(GetCoordinatorURLKey());
+	if (CoordinatorURL != "")
+	{
+		return CoordinatorURL;
+	}
+
+	return GetDefaultCoordinatorURLString();
+}
+
+FString UChrisNetStatics::GetDefaultCoordinatorURLString()
+{
+	FString CoordinatorURL = "";
+	GConfig->GetString(TEXT("Chris.Net"), TEXT("CoordinatorURL"), CoordinatorURL, GGameIni);
+	UE_LOG(LogTemp, Warning, TEXT("Getting Default CoordinatorURL as: %s"), *CoordinatorURL);
+	return CoordinatorURL;
+}
+
 FString UChrisNetStatics::GetCommandLineArgsAsString(const FName& ParamName)
 {
 	FString OutValue = "";

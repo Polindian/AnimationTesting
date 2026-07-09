@@ -6,6 +6,7 @@
 #include "Network/ChrisNetStatics.h"
 #include "Interfaces/OnlineSessionInterface.h"
 #include "Interfaces/OnlineIdentityInterface.h"
+#include "HttpModule.h"
 
 // Only the server (dedicated or listen) should initiate a map travel
 void UChrisGameInstance::StartMatch()
@@ -117,6 +118,16 @@ void UChrisGameInstance::LoginCompleted(int NumOfLocalPlayers, bool bWasSuccessf
 void UChrisGameInstance::RequestCreateAndJoinSession(const FName& NewSessionName)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Requesting create and join session: %s"), *(NewSessionName.ToString()));
+
+	// Coordinator is our own web service (not EOS) so it is talked to over HTTP
+	FHttpRequestRef Request = FHttpModule::Get().CreateRequest();
+
+	// Client invents the search id up front: coordinator passes it to the launched server, server advertises it, and we search EOS for it to find OUR server
+	FGuid SessionSearchId = FGuid::NewGuid();
+
+	// Local 
+	FString CoordinatorURL = UChrisNetStatics::GetCoordinatorURLString();
+	UE_LOG(LogTemp, Warning, TEXT("Sending request session creation to URL: %s"), *CoordinatorURL);
 }
 
 void UChrisGameInstance::CancelSessionCreation()
