@@ -6,10 +6,12 @@
 #include "Engine/GameInstance.h"
 #include "Interfaces/IHttpResponse.h"
 #include "Interfaces/IHttpRequest.h"
+#include "Interfaces/OnlineSessionInterface.h"
 #include "ChrisGameInstance.generated.h"
 
 
 DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnLoginCompleted, bool /*bWasSuccessful*/, const FString& /*PlayerNickname*/, const FString& /*ErrorMessage*/);
+DECLARE_MULTICAST_DELEGATE(FOnJoinSessionFailed);
 
 /**
  * 
@@ -48,6 +50,8 @@ public:
 	void CancelSessionCreation();
 	void StartGlobalSessionSearch();
 
+	FOnJoinSessionFailed OnJoinSessionFailed;
+
 private:
 	void SessionCreationRequestCompleted(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bConnectedSuccessfully, FGuid SessionSearchId);
 	void StartFindingCreatedSession(const FGuid& SessionSearchId);
@@ -69,6 +73,7 @@ private:
 	void FindCreateSessionCompleted(bool bWasSuccessful);
 
 	void JoinSessionWithSearchResult(const class FOnlineSessionSearchResult& SearchResult);
+	void JoinSessionCompleted(FName SessionName, EOnJoinSessionCompleteResult::Type JoinResult, int Port);
 
 	TSharedPtr<class FOnlineSessionSearch> SessionSearch;
 

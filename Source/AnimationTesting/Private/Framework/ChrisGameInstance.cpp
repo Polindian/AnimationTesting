@@ -157,6 +157,7 @@ void UChrisGameInstance::RequestCreateAndJoinSession(const FName& NewSessionName
 	}
 }
 
+// CANCEL pressed: tear down the targeted find, resume the global browse. The launched server keeps booting — WaitPlayerJoin timeout executes
 void UChrisGameInstance::CancelSessionCreation()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Cancelling session creation"));
@@ -241,6 +242,7 @@ void UChrisGameInstance::StopAllSessionFindings()
 	StopGlobalSessionSearch();
 }
 
+// Mirror of StartFindingCreatedSession: clear BOTH timers, unsubscribe find + (preemptively) join 
 void UChrisGameInstance::StopFindingCreatedSession()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Stop finding Created Session!"));
@@ -314,6 +316,7 @@ void UChrisGameInstance::FindCreateSessionCompleted(bool bWasSuccessful)
 	JoinSessionWithSearchResult(SessionSearch->SearchResults[0]);
 }
 
+// Read side of GenerateOnlineSessionSettings: pull the advertised name and port back out of the found session's metadata
 void UChrisGameInstance::JoinSessionWithSearchResult(const FOnlineSessionSearchResult& SearchResult)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Joining session with search result!"));
@@ -335,6 +338,53 @@ void UChrisGameInstance::JoinSessionWithSearchResult(const FOnlineSessionSearchR
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("Trying to join session: %s, at port: %lld"), *(SessionName), Port);
+
+	SessionPtr->OnJoinSessionCompleteDelegates.RemoveAll(this);
+	SessionPtr->OnJoinSessionCompleteDelegates.AddUObject(this, &UChrisGameInstance::JoinSessionCompleted, (int) Port);
+	if (!SessionPtr->JoinSession(0, FName(SessionName), SearchResult))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Joining session failed right away!"));
+		SessionPtr->OnJoinSessionCompleteDelegates.RemoveAll(this);
+		OnJoinSessionFailed.Broadcast();
+	}
+}
+
+void UChrisGameInstance::JoinSessionCompleted(FName SessionName, EOnJoinSessionCompleteResult::Type JoinResult, int Port)
+{
+	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
+	if (!SessionPtr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Joining session completed, but cannot find session pointer!"));
+		OnJoinSessionFailed.Broadcast();
+		return;
+	}
+
+	if (JoinResult == EOnJoinSessionCompleteResult::Success)
+	{
+		StopAllSessionFindings();
+		UE_LOG(LogTemp, Warning, TEXT("Joining session: %s successful, the port is: %lld!"), *(SessionName.ToString()), Port);
+
+		FString TravelURL = "";
+		SessionPtr->GetResolvedConnectString(SessionName, TravelURL);
+
+		FString TestingURL = UChrisNetStatics::GetTestingURL();
+		if (!TestingURL.IsEmpty())
+		{
+			TravelURL = TestingURL;
+		}
+
+		UChrisNetStatics::ReplacePort(TravelURL, Port);
+
+		UE_LOG(LogTemp, Warning, TEXT("Travelling to session at: %s!"), *TravelURL);
+
+		GetFirstLocalPlayerController(GetWorld())->ClientTravel(TravelURL, ETravelType::TRAVEL_Absolute);
+	}
+	else
+	{
+		OnJoinSessionFailed.Broadcast();
+	}
+
+	SessionPtr->OnJoinSessionCompleteDelegates.RemoveAll(this);
 }
 
 // TSet used so a duplicate register/unregister can't corrupt the count

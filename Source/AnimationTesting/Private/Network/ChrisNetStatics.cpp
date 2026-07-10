@@ -132,3 +132,22 @@ int UChrisNetStatics::GetCommandLineArgsAsInt(const FName& ParamName)
 	FParse::Value(FCommandLine::Get(), *CommandLineArg, OutValue);
 	return OutValue;
 }
+
+FString UChrisNetStatics::GetTestingURL()
+{
+	FString TestURL = GetCommandLineArgsAsString(GetTestingURLKey());
+	UE_LOG(LogTemp, Display, TEXT("Got Testing URL: %s"), *TestURL); 
+	return TestURL;
+}
+
+FName UChrisNetStatics::GetTestingURLKey()
+{
+	return FName("TESTING_URL");
+}
+
+void UChrisNetStatics::ReplacePort(FString& OutURLStr, int NewPort)
+{
+	FURL URL(nullptr, *OutURLStr, ETravelType::TRAVEL_Absolute);
+	URL.Port = NewPort;
+	OutURLStr = URL.ToString();
+}
