@@ -160,6 +160,20 @@ void UChrisGameInstance::RequestCreateAndJoinSession(const FName& NewSessionName
 void UChrisGameInstance::CancelSessionCreation()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Cancelling session creation"));
+	StopAllSessionFindings();
+
+	if (IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr())
+	{
+		SessionPtr->OnFindSessionsCompleteDelegates.RemoveAll(this);
+		SessionPtr->OnJoinSessionCompleteDelegates.RemoveAll(this);
+	}
+
+	StartGlobalSessionSearch();
+}
+
+void UChrisGameInstance::StartGlobalSessionSearch()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Starting Global Session Search!"));
 }
 
 void UChrisGameInstance::SessionCreationRequestCompleted(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bConnectedSuccessfully, FGuid SessionSearchId)
@@ -230,6 +244,14 @@ void UChrisGameInstance::StopAllSessionFindings()
 void UChrisGameInstance::StopFindingCreatedSession()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Stop finding Created Session!"));
+	GetWorld()->GetTimerManager().ClearTimer(FindCreatedSessionTimerHandle);
+	GetWorld()->GetTimerManager().ClearTimer(FindCreatedSessionTimeoutTimerHandle);
+
+	if (IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr())
+	{
+		SessionPtr->OnFindSessionsCompleteDelegates.RemoveAll(this);
+		SessionPtr->OnJoinSessionCompleteDelegates.RemoveAll(this);
+	}
 }
 
 
@@ -295,6 +317,24 @@ void UChrisGameInstance::FindCreateSessionCompleted(bool bWasSuccessful)
 void UChrisGameInstance::JoinSessionWithSearchResult(const FOnlineSessionSearchResult& SearchResult)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Joining session with search result!"));
+	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
+	if (!SessionPtr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Cannot find session ptr, cancel joining"));
+		return;
+	}
+
+	FString SessionName = "";
+	SearchResult.Session.SessionSettings.Get<FString>(UChrisNetStatics::GetSessionNameKey(), SessionName);
+
+	const FOnlineSessionSetting* PortSetting = SearchResult.Session.SessionSettings.Settings.Find(UChrisNetStatics::GetPortKey());
+	int64 Port = 7777;
+	if (PortSetting)
+	{
+		PortSetting->Data.GetValue(Port);
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Trying to join session: %s, at port: %lld"), *(SessionName), Port);
 }
 
 // TSet used so a duplicate register/unregister can't corrupt the count
