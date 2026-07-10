@@ -239,15 +239,62 @@ void UChrisGameInstance::StopGlobalSessionSearch()
 }
 
 
+// One poll: build a targeted query and fire an async EOS search
 void UChrisGameInstance::FindCreatedSession(FGuid SessionSearchId)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Trying to find created session!"));
+	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
+	if (!SessionPtr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Cannot find session ptr, cancelling session search!"));
+		return;
+	}
+
+	// Member (not local): must outlive the async FindSessions call
+	SessionSearch = MakeShareable(new FOnlineSessionSearch);
+	if (!SessionSearch)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Cannot create session search, cancelling session search!"));
+		return;
+	}
+
+	SessionSearch->bIsLanQuery = false;
+	SessionSearch->MaxSearchResults = 1;
+
+	// Match exactly OUR GUID (advertised by the server as searchable metadata in GenerateOnlineSessionSettings)
+	SessionSearch->QuerySettings.Set(UChrisNetStatics::GetSessionSearchIdKey(), SessionSearchId.ToString(), EOnlineComparisonOp::Equals);
+
+	SessionPtr->OnFindSessionsCompleteDelegates.RemoveAll(this);
+	SessionPtr->OnFindSessionsCompleteDelegates.AddUObject(this, &UChrisGameInstance::FindCreateSessionCompleted);
+	if (!SessionPtr->FindSessions(0, SessionSearch.ToSharedRef()))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Find session failed right away!"));
+		SessionPtr->OnFindSessionsCompleteDelegates.RemoveAll(this);
+	}
+
 }
 
 void UChrisGameInstance::FindCreatedSessionTimeout()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Created session timeout reached!"));
 	StopFindingCreatedSession();
+}
+
+// 'Not Found' expected while the server boots; the poll timer retries. 'Found' means stop polling and join
+void UChrisGameInstance::FindCreateSessionCompleted(bool bWasSuccessful)
+{
+	if (!bWasSuccessful || SessionSearch->SearchResults.Num() == 0)
+	{
+		return;
+	}
+
+	StopFindingCreatedSession();
+	JoinSessionWithSearchResult(SessionSearch->SearchResults[0]);
+}
+
+void UChrisGameInstance::JoinSessionWithSearchResult(const FOnlineSessionSearchResult& SearchResult)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Joining session with search result!"));
 }
 
 // TSet used so a duplicate register/unregister can't corrupt the count

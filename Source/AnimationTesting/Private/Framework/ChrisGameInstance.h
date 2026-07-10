@@ -66,6 +66,11 @@ private:
 
 	void FindCreatedSession(FGuid SessionSearchId);
 	void FindCreatedSessionTimeout();
+	void FindCreateSessionCompleted(bool bWasSuccessful);
+
+	void JoinSessionWithSearchResult(const class FOnlineSessionSearchResult& SearchResult);
+
+	TSharedPtr<class FOnlineSessionSearch> SessionSearch;
 
 
 
