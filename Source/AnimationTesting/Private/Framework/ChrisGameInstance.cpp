@@ -175,6 +175,7 @@ void UChrisGameInstance::CancelSessionCreation()
 void UChrisGameInstance::StartGlobalSessionSearch()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Starting Global Session Search!"));
+	GetWorld()->GetTimerManager().SetTimer(GlobalSessionSearchTimerHandle, this, &UChrisGameInstance::FindGlobalSessions, GlobalSessionSearchInterval, 0.f);
 }
 
 void UChrisGameInstance::SessionCreationRequestCompleted(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bConnectedSuccessfully, FGuid SessionSearchId)
@@ -260,6 +261,65 @@ void UChrisGameInstance::StopFindingCreatedSession()
 void UChrisGameInstance::StopGlobalSessionSearch()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Stop global session search!"));
+	if (GlobalSessionSearchTimerHandle.IsValid())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(GlobalSessionSearchTimerHandle);
+	}
+
+	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
+	if (SessionPtr)
+	{
+		SessionPtr->OnFindSessionsCompleteDelegates.RemoveAll(this);
+	}
+}
+
+void UChrisGameInstance::FindGlobalSessions()
+{
+	UE_LOG(LogTemp, Warning, TEXT("---- Retrying Global Session Search -----"));
+
+	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
+	if (!SessionPtr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Cannotfind Session Interface, wait for the next Global Session Search!"));
+		return;
+	}
+
+	SessionSearch = MakeShareable(new FOnlineSessionSearch);
+	SessionSearch->bIsLanQuery = false;
+	SessionSearch->MaxSearchResults = 30;
+
+	SessionPtr->OnFindSessionsCompleteDelegates.RemoveAll(this);
+	SessionPtr->OnFindSessionsCompleteDelegates.AddUObject(this, &UChrisGameInstance::GlobalSessionSearchCompleted);
+
+	if (!SessionPtr->FindSessions(0, SessionSearch.ToSharedRef()))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Find global session failed right away!"));
+		SessionPtr->OnFindSessionsCompleteDelegates.RemoveAll(this);
+	}
+}
+
+void UChrisGameInstance::GlobalSessionSearchCompleted(bool bWasSuccessful)
+{
+	if (bWasSuccessful)
+	{
+		OnGlobalSessionSearchCompleted.Broadcast(SessionSearch->SearchResults);
+		for (const FOnlineSessionSearchResult& OnlineSessionSearchResult : SessionSearch->SearchResults)
+		{
+			FString SessionName = "Name_None";
+			OnlineSessionSearchResult.Session.SessionSettings.Get<FString>(UChrisNetStatics::GetSessionNameKey(), SessionName);
+			UE_LOG(LogTemp, Warning, TEXT("Found session: %s after global session search!"), *SessionName);
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Global Session Search completed unsuccessfully!"));
+	}
+
+	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
+	if (SessionPtr)
+	{
+		SessionPtr->OnFindSessionsCompleteDelegates.RemoveAll(this);
+	}
 }
 
 
