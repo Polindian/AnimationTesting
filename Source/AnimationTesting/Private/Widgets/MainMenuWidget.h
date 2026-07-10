@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/Button.h"
+#include "Widgets/MenuButtonWidget.h"
+#include "OnlineSessionSettings.h"
 #include "MainMenuWidget.generated.h"
 
 /**
@@ -159,5 +161,24 @@ private:
 
 	UPROPERTY(meta = (BindWidget))
 	class USizeBox* SessionNameContainer;
+
+	void JoinSessionFailed();
+	void UpdateLobbyList(const TArray<FOnlineSessionSearchResult>& SearchResults);
+
+	UPROPERTY(meta=(BindWidget))
+	class UScrollBox* SessionScrollBox;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Session")
+	TSubclassOf<class USessionEntryWidget> SessionEntryWidgetClass;
+
+	FString CurrentSelectedSessionId = "";
+
+	UPROPERTY(meta = (BindWidget))
+	class UMenuButtonWidget* JoinSessionButton;
+
+	UFUNCTION()
+	void JoinSessionButtonClicked();
+
+	void SessionEntrySelected(const FString& SelectedEntryIdString);
 
 };

@@ -4,11 +4,14 @@
 #include "Widgets/MainMenuWidget.h"
 #include "Framework/ChrisGameInstance.h"
 #include "Widgets/MenuButtonWidget.h"
-#include "Components/WidgetSwitcher.h"
 #include "Widgets/WaitingWidget.h"
+#include "Widgets/SessionEntryWidget.h"
+#include "Components/WidgetSwitcher.h"
 #include "Components/Image.h"
 #include "Components/EditableText.h"
 #include "Components/SizeBox.h"
+#include "Components/ScrollBox.h"
+#include "Network/ChrisNetStatics.h"
 #include "Animation/WidgetAnimation.h"
 #include "Kismet/KismetSystemLibrary.h"
 
@@ -27,6 +30,10 @@ void UMainMenuWidget::NativeConstruct()
 		{
 			SwitchToMainWidget();
 		}
+
+		ChrisGameInstance->OnJoinSessionFailed.AddUObject(this, &UMainMenuWidget::JoinSessionFailed);
+		ChrisGameInstance->OnGlobalSessionSearchCompleted.AddUObject(this, &UMainMenuWidget::UpdateLobbyList);
+		ChrisGameInstance->StartGlobalSessionSearch();
 	}
 
 	LoginButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::LoginButtonClicked);
@@ -54,6 +61,9 @@ void UMainMenuWidget::NativeConstruct()
 
 	// Stage 1 state: button fully active, name field hidden until first press
 	SessionNameContainer->SetVisibility(ESlateVisibility::Collapsed);
+
+	JoinSessionButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::JoinSessionButtonClicked);
+	JoinSessionButton->SetIsEnabled(false);
 	
 }
 
@@ -110,6 +120,58 @@ void UMainMenuWidget::SwitchToMultiplayerPage()
 	{
 		MainSwitcher->SetActiveWidget(MultiplayerPageRoot);
 	}
+}
+
+void UMainMenuWidget::JoinSessionFailed()
+{
+	SwitchToMultiplayerPage();
+}
+
+void UMainMenuWidget::UpdateLobbyList(const TArray<FOnlineSessionSearchResult>& SearchResults)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Updating Session Search Results"));
+	SessionScrollBox->ClearChildren();
+
+	bool bCurrentSelectedSessionValid = false;
+	for (const FOnlineSessionSearchResult& SearchResult : SearchResults)
+	{
+		USessionEntryWidget* NewSessionWidget = CreateWidget<USessionEntryWidget>(GetOwningPlayer(), SessionEntryWidgetClass);
+		if (NewSessionWidget)
+		{
+			FString SessionName = "Name_None";
+			SearchResult.Session.SessionSettings.Get<FString>(UChrisNetStatics::GetSessionNameKey(), SessionName);
+
+			FString SessionIdString = SearchResult.Session.GetSessionIdStr();
+			NewSessionWidget->InitializeEntry(SessionName, SessionIdString);
+			NewSessionWidget->OnSessionEntrySelected.AddUObject(this, &UMainMenuWidget::SessionEntrySelected);
+
+			SessionScrollBox->AddChild(NewSessionWidget);
+			if (CurrentSelectedSessionId == SessionIdString)
+			{
+				bCurrentSelectedSessionValid = true;
+			}
+		}
+	}
+
+	CurrentSelectedSessionId = bCurrentSelectedSessionValid ? CurrentSelectedSessionId : "";
+	JoinSessionButton->SetIsEnabled(bCurrentSelectedSessionValid);
+}
+
+void UMainMenuWidget::JoinSessionButtonClicked()
+{
+	if(!CurrentSelectedSessionId.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Trying to join session with ID: %s"), *CurrentSelectedSessionId);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Cannot join session, no session selected"));
+	}
+}
+
+void UMainMenuWidget::SessionEntrySelected(const FString& SelectedEntryIdString)
+{
+	CurrentSelectedSessionId = SelectedEntryIdString;
 }
 
 

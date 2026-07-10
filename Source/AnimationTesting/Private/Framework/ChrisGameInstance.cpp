@@ -157,9 +157,25 @@ void UChrisGameInstance::RequestCreateAndJoinSession(const FName& NewSessionName
 	}
 }
 
+// CANCEL pressed: tear down the targeted find, resume the global browse. The launched server keeps booting — WaitPlayerJoin timeout executes
 void UChrisGameInstance::CancelSessionCreation()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Cancelling session creation"));
+	StopAllSessionFindings();
+
+	if (IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr())
+	{
+		SessionPtr->OnFindSessionsCompleteDelegates.RemoveAll(this);
+		SessionPtr->OnJoinSessionCompleteDelegates.RemoveAll(this);
+	}
+
+	StartGlobalSessionSearch();
+}
+
+void UChrisGameInstance::StartGlobalSessionSearch()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Starting Global Session Search!"));
+	GetWorld()->GetTimerManager().SetTimer(GlobalSessionSearchTimerHandle, this, &UChrisGameInstance::FindGlobalSessions, GlobalSessionSearchInterval, true, 0.f);
 }
 
 void UChrisGameInstance::SessionCreationRequestCompleted(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bConnectedSuccessfully, FGuid SessionSearchId)
@@ -227,27 +243,208 @@ void UChrisGameInstance::StopAllSessionFindings()
 	StopGlobalSessionSearch();
 }
 
+// Mirror of StartFindingCreatedSession: clear BOTH timers, unsubscribe find + (preemptively) join 
 void UChrisGameInstance::StopFindingCreatedSession()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Stop finding Created Session!"));
+	GetWorld()->GetTimerManager().ClearTimer(FindCreatedSessionTimerHandle);
+	GetWorld()->GetTimerManager().ClearTimer(FindCreatedSessionTimeoutTimerHandle);
+
+	if (IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr())
+	{
+		SessionPtr->OnFindSessionsCompleteDelegates.RemoveAll(this);
+		SessionPtr->OnJoinSessionCompleteDelegates.RemoveAll(this);
+	}
 }
 
 
 void UChrisGameInstance::StopGlobalSessionSearch()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Stop global session search!"));
+	if (GlobalSessionSearchTimerHandle.IsValid())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(GlobalSessionSearchTimerHandle);
+	}
+
+	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
+	if (SessionPtr)
+	{
+		SessionPtr->OnFindSessionsCompleteDelegates.RemoveAll(this);
+	}
+}
+
+void UChrisGameInstance::FindGlobalSessions()
+{
+	UE_LOG(LogTemp, Warning, TEXT("---- Retrying Global Session Search -----"));
+
+	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
+	if (!SessionPtr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Cannotfind Session Interface, wait for the next Global Session Search!"));
+		return;
+	}
+
+	SessionSearch = MakeShareable(new FOnlineSessionSearch);
+	SessionSearch->bIsLanQuery = false;
+	SessionSearch->MaxSearchResults = 30;
+
+	SessionPtr->OnFindSessionsCompleteDelegates.RemoveAll(this);
+	SessionPtr->OnFindSessionsCompleteDelegates.AddUObject(this, &UChrisGameInstance::GlobalSessionSearchCompleted);
+
+	if (!SessionPtr->FindSessions(0, SessionSearch.ToSharedRef()))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Find global session failed right away!"));
+		SessionPtr->OnFindSessionsCompleteDelegates.RemoveAll(this);
+	}
+}
+
+void UChrisGameInstance::GlobalSessionSearchCompleted(bool bWasSuccessful)
+{
+	if (bWasSuccessful)
+	{
+		OnGlobalSessionSearchCompleted.Broadcast(SessionSearch->SearchResults);
+		for (const FOnlineSessionSearchResult& OnlineSessionSearchResult : SessionSearch->SearchResults)
+		{
+			FString SessionName = "Name_None";
+			OnlineSessionSearchResult.Session.SessionSettings.Get<FString>(UChrisNetStatics::GetSessionNameKey(), SessionName);
+			UE_LOG(LogTemp, Warning, TEXT("Found session: %s after global session search!"), *SessionName);
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Global Session Search completed unsuccessfully!"));
+	}
+
+	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
+	if (SessionPtr)
+	{
+		SessionPtr->OnFindSessionsCompleteDelegates.RemoveAll(this);
+	}
 }
 
 
+// One poll: build a targeted query and fire an async EOS search
 void UChrisGameInstance::FindCreatedSession(FGuid SessionSearchId)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Trying to find created session!"));
+	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
+	if (!SessionPtr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Cannot find session ptr, cancelling session search!"));
+		return;
+	}
+
+	// Member (not local): must outlive the async FindSessions call
+	SessionSearch = MakeShareable(new FOnlineSessionSearch);
+	if (!SessionSearch)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Cannot create session search, cancelling session search!"));
+		return;
+	}
+
+	SessionSearch->bIsLanQuery = false;
+	SessionSearch->MaxSearchResults = 1;
+
+	// Match exactly OUR GUID (advertised by the server as searchable metadata in GenerateOnlineSessionSettings)
+	SessionSearch->QuerySettings.Set(UChrisNetStatics::GetSessionSearchIdKey(), SessionSearchId.ToString(), EOnlineComparisonOp::Equals);
+
+	SessionPtr->OnFindSessionsCompleteDelegates.RemoveAll(this);
+	SessionPtr->OnFindSessionsCompleteDelegates.AddUObject(this, &UChrisGameInstance::FindCreateSessionCompleted);
+	if (!SessionPtr->FindSessions(0, SessionSearch.ToSharedRef()))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Find session failed right away!"));
+		SessionPtr->OnFindSessionsCompleteDelegates.RemoveAll(this);
+	}
+
 }
 
 void UChrisGameInstance::FindCreatedSessionTimeout()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Created session timeout reached!"));
 	StopFindingCreatedSession();
+}
+
+// 'Not Found' expected while the server boots; the poll timer retries. 'Found' means stop polling and join
+void UChrisGameInstance::FindCreateSessionCompleted(bool bWasSuccessful)
+{
+	if (!bWasSuccessful || SessionSearch->SearchResults.Num() == 0)
+	{
+		return;
+	}
+
+	StopFindingCreatedSession();
+	JoinSessionWithSearchResult(SessionSearch->SearchResults[0]);
+}
+
+// Read side of GenerateOnlineSessionSettings: pull the advertised name and port back out of the found session's metadata
+void UChrisGameInstance::JoinSessionWithSearchResult(const FOnlineSessionSearchResult& SearchResult)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Joining session with search result!"));
+	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
+	if (!SessionPtr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Cannot find session ptr, cancel joining"));
+		return;
+	}
+
+	FString SessionName = "";
+	SearchResult.Session.SessionSettings.Get<FString>(UChrisNetStatics::GetSessionNameKey(), SessionName);
+
+	const FOnlineSessionSetting* PortSetting = SearchResult.Session.SessionSettings.Settings.Find(UChrisNetStatics::GetPortKey());
+	int64 Port = 7777;
+	if (PortSetting)
+	{
+		PortSetting->Data.GetValue(Port);
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Trying to join session: %s, at port: %lld"), *(SessionName), Port);
+
+	SessionPtr->OnJoinSessionCompleteDelegates.RemoveAll(this);
+	SessionPtr->OnJoinSessionCompleteDelegates.AddUObject(this, &UChrisGameInstance::JoinSessionCompleted, (int) Port);
+	if (!SessionPtr->JoinSession(0, FName(SessionName), SearchResult))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Joining session failed right away!"));
+		SessionPtr->OnJoinSessionCompleteDelegates.RemoveAll(this);
+		OnJoinSessionFailed.Broadcast();
+	}
+}
+
+void UChrisGameInstance::JoinSessionCompleted(FName SessionName, EOnJoinSessionCompleteResult::Type JoinResult, int Port)
+{
+	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
+	if (!SessionPtr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Joining session completed, but cannot find session pointer!"));
+		OnJoinSessionFailed.Broadcast();
+		return;
+	}
+
+	if (JoinResult == EOnJoinSessionCompleteResult::Success)
+	{
+		StopAllSessionFindings();
+		UE_LOG(LogTemp, Warning, TEXT("Joining session: %s successful, the port is: %lld!"), *(SessionName.ToString()), Port);
+
+		FString TravelURL = "";
+		SessionPtr->GetResolvedConnectString(SessionName, TravelURL);
+
+		FString TestingURL = UChrisNetStatics::GetTestingURL();
+		if (!TestingURL.IsEmpty())
+		{
+			TravelURL = TestingURL;
+		}
+
+		UChrisNetStatics::ReplacePort(TravelURL, Port);
+
+		UE_LOG(LogTemp, Warning, TEXT("Travelling to session at: %s!"), *TravelURL);
+
+		GetFirstLocalPlayerController(GetWorld())->ClientTravel(TravelURL, ETravelType::TRAVEL_Absolute);
+	}
+	else
+	{
+		OnJoinSessionFailed.Broadcast();
+	}
+
+	SessionPtr->OnJoinSessionCompleteDelegates.RemoveAll(this);
 }
 
 // TSet used so a duplicate register/unregister can't corrupt the count

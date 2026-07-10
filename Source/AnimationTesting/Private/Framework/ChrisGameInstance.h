@@ -6,10 +6,14 @@
 #include "Engine/GameInstance.h"
 #include "Interfaces/IHttpResponse.h"
 #include "Interfaces/IHttpRequest.h"
+#include "Interfaces/OnlineSessionInterface.h"
+#include "OnlineSessionSettings.h"
 #include "ChrisGameInstance.generated.h"
 
 
 DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnLoginCompleted, bool /*bWasSuccessful*/, const FString& /*PlayerNickname*/, const FString& /*ErrorMessage*/);
+DECLARE_MULTICAST_DELEGATE(FOnJoinSessionFailed);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnGlobalSessionSearchCompleted, const TArray<FOnlineSessionSearchResult>& /*SearchResults*/)
 
 /**
  * 
@@ -45,8 +49,11 @@ private:
 
 public:
 	void RequestCreateAndJoinSession(const FName& NewSessionName);
-
 	void CancelSessionCreation();
+	void StartGlobalSessionSearch();
+
+	FOnJoinSessionFailed OnJoinSessionFailed;
+	FOnGlobalSessionSearchCompleted OnGlobalSessionSearchCompleted;
 
 private:
 	void SessionCreationRequestCompleted(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bConnectedSuccessfully, FGuid SessionSearchId);
@@ -54,6 +61,8 @@ private:
 	void StopAllSessionFindings();
 	void StopFindingCreatedSession();
 	void StopGlobalSessionSearch();
+	void FindGlobalSessions();
+	void GlobalSessionSearchCompleted(bool bWasSuccessful);
 
 	FTimerHandle FindCreatedSessionTimerHandle;
 	FTimerHandle FindCreatedSessionTimeoutTimerHandle;
@@ -64,8 +73,21 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Session Search")
 	float FindCreatedSessionTimeoutDuration = 120;
 
+	FTimerHandle GlobalSessionSearchTimerHandle;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Session Search")
+	float GlobalSessionSearchInterval = 3.f;
+
+	
+
 	void FindCreatedSession(FGuid SessionSearchId);
 	void FindCreatedSessionTimeout();
+	void FindCreateSessionCompleted(bool bWasSuccessful);
+
+	void JoinSessionWithSearchResult(const class FOnlineSessionSearchResult& SearchResult);
+	void JoinSessionCompleted(FName SessionName, EOnJoinSessionCompleteResult::Type JoinResult, int Port);
+
+	TSharedPtr<class FOnlineSessionSearch> SessionSearch;
 
 
 
