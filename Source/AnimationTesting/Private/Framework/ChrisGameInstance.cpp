@@ -175,7 +175,7 @@ void UChrisGameInstance::CancelSessionCreation()
 void UChrisGameInstance::StartGlobalSessionSearch()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Starting Global Session Search!"));
-	GetWorld()->GetTimerManager().SetTimer(GlobalSessionSearchTimerHandle, this, &UChrisGameInstance::FindGlobalSessions, GlobalSessionSearchInterval, 0.f);
+	GetWorld()->GetTimerManager().SetTimer(GlobalSessionSearchTimerHandle, this, &UChrisGameInstance::FindGlobalSessions, GlobalSessionSearchInterval, true, 0.f);
 }
 
 void UChrisGameInstance::SessionCreationRequestCompleted(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bConnectedSuccessfully, FGuid SessionSearchId)
