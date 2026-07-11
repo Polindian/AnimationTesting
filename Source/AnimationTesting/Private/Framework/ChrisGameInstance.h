@@ -37,6 +37,8 @@ public:
 	void ClientAccountPortalLogin();
 	FOnLoginCompleted OnLoginCompleted;
 
+	void ClientDevAuthLogin(const FString& CredentialName);
+
 private:
 	void ClientLogin(const FString& Type, const FString& Id, const FString& Token);
 	void LoginCompleted(int NumOfLocalPlayers, bool bWasSuccessful, const FUniqueNetId& UserId, const FString& ErrorMessage);

@@ -51,6 +51,11 @@ void UChrisGameInstance::ClientAccountPortalLogin()
 	ClientLogin("AccountPortal", "", "");
 }
 
+void UChrisGameInstance::ClientDevAuthLogin(const FString& CredentialName)
+{
+	ClientLogin("Developer", "localhost:6547", CredentialName);
+}
+
 void UChrisGameInstance::ClientLogin(const FString& Type, const FString& Id, const FString& Token)
 {
 	if (IOnlineIdentityPtr IdentityPtr = UChrisNetStatics::GetIdentityPtr())
