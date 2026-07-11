@@ -101,6 +101,7 @@ Plugins/**/Intermediate/*
 DerivedDataCache/*
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 ############ PYTHON ###############
 =======
@@ -108,6 +109,11 @@ DerivedDataCache/*
 #                     PYTHON                      #
 ###################################################
 >>>>>>> server-management
+=======
+###################################################
+#                     PYTHON                      #
+###################################################
+>>>>>>> a0e56952439a11a1babcb9e3375dbf4037db0f78
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
