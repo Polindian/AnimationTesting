@@ -100,8 +100,9 @@ Plugins/**/Intermediate/*
 # Cache files for the editor to use
 DerivedDataCache/*
 
-
-############ PYTHON ###############
+###################################################
+#                     PYTHON                      #
+###################################################
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -322,6 +323,3 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
-
-__pycache__/
-*.pyc

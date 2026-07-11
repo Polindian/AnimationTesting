@@ -31,6 +31,7 @@ class AChrisGameMode : public AGameModeBase
     GENERATED_BODY()
 
 public:
+	AChrisGameMode();
     virtual APlayerController* SpawnPlayerController(ENetRole InRemoteRole, const FString& Options) override;
     virtual UClass* GetDefaultPawnClassForController_Implementation(AController* Controller) override;
     virtual APawn* SpawnDefaultPawnFor_Implementation(AController* NewPlayer, AActor* StartSpot) override;
