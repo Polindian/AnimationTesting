@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
+#include "OnlineSubsystem.h"
+#include "OnlineSessionSettings.h"
 #include "ChrisNetStatics.generated.h"
 
 /**
@@ -14,5 +16,31 @@ class UChrisNetStatics : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 public:
+	static FOnlineSessionSettings GenerateOnlineSessionSettings(const FName& SessionName, const FString SessionSearchId, int Port);
+
+	static IOnlineSessionPtr GetSessionPtr();
+	static IOnlineIdentityPtr GetIdentityPtr();
+
 	static uint8 GetPlayerCountPerTeam();
+	static bool IsSessionServer(const UObject* WorldContextObject);
+
+	static FName GetSessionNameKey();
+	static FString GetSessionNameString();
+
+	static FString GetSessionSearchIdString();
+	static FName GetSessionSearchIdKey();
+
+	static int GetSessionPort();
+	static FName GetPortKey();
+
+	static FName GetCoordinatorURLKey();
+	static FString GetCoordinatorURLString();
+	static FString GetDefaultCoordinatorURLString();
+
+	static FString GetCommandLineArgsAsString(const FName& ParamName);
+	static int GetCommandLineArgsAsInt(const FName& ParamName);
+
+	static FString GetTestingURL();
+	static FName GetTestingURLKey();
+	static void ReplacePort(FString& OutURLStr, int NewPort);
 };

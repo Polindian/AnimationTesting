@@ -17,7 +17,13 @@
 #include "AI/SkeletonBarrack.h"
 #include "Weapon/SwordEquipComponent.h" 
 #include "Player/ChrisPlayerState.h"
+#include "Network/ChrisGameSession.h"
 
+
+AChrisGameMode::AChrisGameMode()
+{
+	GameSessionClass = AChrisGameSession::StaticClass();
+}
 
 APlayerController* AChrisGameMode::SpawnPlayerController(ENetRole InRemoteRole, const FString& Options)
 {
