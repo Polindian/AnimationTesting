@@ -178,6 +178,27 @@ void UChrisGameInstance::StartGlobalSessionSearch()
 	GetWorld()->GetTimerManager().SetTimer(GlobalSessionSearchTimerHandle, this, &UChrisGameInstance::FindGlobalSessions, GlobalSessionSearchInterval, true, 0.f);
 }
 
+bool UChrisGameInstance::JoinSessionWithId(const FString& SessionIdString)
+{
+	if (SessionSearch.IsValid())
+	{
+		const FOnlineSessionSearchResult* SessionSearchResult = SessionSearch->SearchResults.FindByPredicate(
+			[=](const FOnlineSessionSearchResult& Result)
+			{
+				return Result.GetSessionIdStr() == SessionIdString;
+			}
+		);
+
+		if (SessionSearchResult)
+		{
+			JoinSessionWithSearchResult(*SessionSearchResult);
+			return true;
+		}
+	}
+
+	return false;
+}
+
 void UChrisGameInstance::SessionCreationRequestCompleted(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bConnectedSuccessfully, FGuid SessionSearchId)
 {
 	if(!bConnectedSuccessfully)

@@ -52,6 +52,8 @@ public:
 	void CancelSessionCreation();
 	void StartGlobalSessionSearch();
 
+	bool JoinSessionWithId(const FString& SessionIdString);
+
 	FOnJoinSessionFailed OnJoinSessionFailed;
 	FOnGlobalSessionSearchCompleted OnGlobalSessionSearchCompleted;
 

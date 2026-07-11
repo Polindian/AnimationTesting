@@ -159,9 +159,14 @@ void UMainMenuWidget::UpdateLobbyList(const TArray<FOnlineSessionSearchResult>& 
 
 void UMainMenuWidget::JoinSessionButtonClicked()
 {
-	if(!CurrentSelectedSessionId.IsEmpty())
+	if (ChrisGameInstance && !CurrentSelectedSessionId.IsEmpty())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Trying to join session with ID: %s"), *CurrentSelectedSessionId);
+		if (ChrisGameInstance->JoinSessionWithId(CurrentSelectedSessionId))
+		{
+			SwitchToWaitingWidget(FText::FromString("JOINING SESSION"), false);
+		}
+
 	}
 	else
 	{
