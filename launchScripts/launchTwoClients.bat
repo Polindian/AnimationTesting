@@ -1,0 +1,2 @@
+  start "" "C:/Kingdom of Monsters/UnrealSrce/UnrealEngine/Engine/Binaries/Win64/UnrealEditor.exe" "%~dp0..\AnimationTesting.uproject" -game -log -epicapp=GameClient -TESTING_URL="127.0.0.1:7777" -DevAuthCred=Chris1
+  start "" "C:/Kingdom of Monsters/UnrealSrce/UnrealEngine/Engine/Binaries/Win64/UnrealEditor.exe" "%~dp0..\AnimationTesting.uproject" -game -log -epicapp=GameClient -TESTING_URL="127.0.0.1:7777" -DevAuthCred=Chris2

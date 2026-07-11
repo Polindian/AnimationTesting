@@ -194,7 +194,16 @@ void UMainMenuWidget::LoginButtonClicked()
 	UE_LOG(LogTemp, Warning, TEXT("Logging in..."));	
 	if (ChrisGameInstance && !ChrisGameInstance->IsLoggingIn() && !ChrisGameInstance->IsLoggedIn())
 	{
-		ChrisGameInstance->ClientAccountPortalLogin();
+		// -DevAuthCred=Name on the command line -> DevAuth tool; absent -> normal Account Portal
+		FString DevAuthCred;
+		if (FParse::Value(FCommandLine::Get(), TEXT("DevAuthCred="), DevAuthCred))
+		{
+			ChrisGameInstance->ClientDevAuthLogin(DevAuthCred);
+		}
+		else
+		{
+			ChrisGameInstance->ClientAccountPortalLogin();
+		}
 		SwitchToWaitingWidget(FText::FromString("LOGGING IN"));
 	}
 }
