@@ -6,6 +6,7 @@
 #include "Widgets/MenuButtonWidget.h"
 #include "Widgets/WaitingWidget.h"
 #include "Widgets/SessionEntryWidget.h"
+#include "Widgets/TutorialBookWidget.h"
 #include "Components/WidgetSwitcher.h"
 #include "Components/Image.h"
 #include "Components/EditableText.h"
@@ -64,6 +65,8 @@ void UMainMenuWidget::NativeConstruct()
 
 	JoinSessionButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::JoinSessionButtonClicked);
 	JoinSessionButton->SetIsEnabled(false);
+
+	TutorialBookButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::TutorialBookButtonClicked);
 	
 }
 
@@ -177,6 +180,16 @@ void UMainMenuWidget::JoinSessionButtonClicked()
 void UMainMenuWidget::SessionEntrySelected(const FString& SelectedEntryIdString)
 {
 	CurrentSelectedSessionId = SelectedEntryIdString;
+}
+
+void UMainMenuWidget::TutorialBookButtonClicked()
+{
+	if (!TutorialBook)
+	{
+		TutorialBook = CreateWidget<UTutorialBookWidget>(GetOwningPlayer(), TutorialBookClass);
+	}
+	TutorialBook->AddToViewport(10);
+	TutorialBook->OpenBook();
 }
 
 

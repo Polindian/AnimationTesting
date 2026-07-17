@@ -9,6 +9,7 @@
 #include "OnlineSessionSettings.h"
 #include "MainMenuWidget.generated.h"
 
+
 /**
  * 
  */
@@ -181,4 +182,15 @@ private:
 
 	void SessionEntrySelected(const FString& SelectedEntryIdString);
 
+	UPROPERTY(meta = (BindWidget))
+	class UMenuButtonWidget* TutorialBookButton;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Tutorial Book")
+	TSubclassOf<class UTutorialBookWidget> TutorialBookClass;
+
+	UPROPERTY()
+	class UTutorialBookWidget* TutorialBook;
+
+	UFUNCTION()
+	void TutorialBookButtonClicked();
 };
