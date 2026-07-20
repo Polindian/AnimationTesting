@@ -4,6 +4,7 @@
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Components/Button.h"
+#include "Widgets/MenuButtonWidget.h"
 
 void UTutorialBookWidget::NativeOnInitialized()
 {
@@ -14,6 +15,8 @@ void UTutorialBookWidget::NativeOnInitialized()
 
 	Button_LeftArrow->OnClicked.AddDynamic(this, &UTutorialBookWidget::HandleLeftArrow);
 	Button_RightArrow->OnClicked.AddDynamic(this, &UTutorialBookWidget::HandleRightArrow);
+
+	ReturnButton->OnMenuButtonClicked.AddDynamic(this, &UTutorialBookWidget::HandleReturnClicked);
 
 	// Bound in OnInitialized (runs once per lifetime) instead of Construct —
 	// BindToAnimationFinished stacks duplicates if bound repeatedly
@@ -49,6 +52,14 @@ void UTutorialBookWidget::HandleBookAnimFinished()
 		PageContent->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 	}
 }
+
+
+void UTutorialBookWidget::HandleReturnClicked()
+{
+	// Same path as the back keys — CloseBook already guards against double-triggering
+	CloseBook();
+}
+
 
 void UTutorialBookWidget::CloseBook()
 {
