@@ -44,6 +44,10 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> Button_RightArrow;
 
+	// Visible close button — same action as Esc/Backspace/gamepad B
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<class UMenuButtonWidget> ReturnButton;
+
 	// Panel holding pages/arrows/counter — hidden while the book is animating so
 	// content only appears once the book is at full size
 	UPROPERTY(meta = (BindWidget))
@@ -67,6 +71,7 @@ private:
 	UFUNCTION() void HandleLeftArrow();
 	UFUNCTION() void HandleRightArrow();
 	UFUNCTION() void HandleBookAnimFinished();
+	UFUNCTION() void HandleReturnClicked();
 
 	void ChangeSpread(int32 Delta);
 	void RefreshSpread();
