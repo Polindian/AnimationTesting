@@ -58,4 +58,11 @@ private:
     // Full font control per instance: family, typeface, size, outline, spacing
     UPROPERTY(EditAnywhere, Category = "Menu Button")
     FSlateFontInfo ButtonFont;
+
+    // Optional: for other buttons - defaults stay the same 
+    UPROPERTY(EditAnywhere, Category = "Menu Button")
+    FLinearColor HoverBackgroundColor = FLinearColor(0, 0, 0, 0);
+
+    UPROPERTY(EditAnywhere, Category = "Menu Button")
+    FLinearColor DefaultBackgroundColor = FLinearColor(0, 0, 0, 0);
 };

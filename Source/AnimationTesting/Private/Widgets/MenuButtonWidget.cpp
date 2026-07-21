@@ -58,6 +58,11 @@ void UMenuButtonWidget::HandleHovered()
     {
         ButtonRetainer->SetEffectMaterial(HoverGradientMaterial);
     }
+
+    if (HoverBackgroundColor.A > 0.f)
+    {
+        MainButton->SetBackgroundColor(HoverBackgroundColor);
+    }
 }
 
 void UMenuButtonWidget::HandleUnhovered()
@@ -65,5 +70,10 @@ void UMenuButtonWidget::HandleUnhovered()
     if (ButtonRetainer)
     {
         ButtonRetainer->SetEffectMaterial(nullptr);
+    }
+
+    if (HoverBackgroundColor.A > 0.f)
+    {
+        MainButton->SetBackgroundColor(DefaultBackgroundColor);
     }
 }
