@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -7,6 +7,8 @@
 #include "MenuButtonWidget.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnMenuButtonClicked);
+
+class UButton;
 
 UCLASS()
 class UMenuButtonWidget : public UUserWidget
@@ -21,6 +23,8 @@ public:
     FOnMenuButtonClicked OnMenuButtonClicked;
 
     void SetButtonText(const FText& InText);
+
+    UButton* GetMainButton() const { return MainButton; }
 
 private:
     UPROPERTY(meta = (BindWidget))
@@ -59,10 +63,4 @@ private:
     UPROPERTY(EditAnywhere, Category = "Menu Button")
     FSlateFontInfo ButtonFont;
 
-    // Optional: for other buttons - defaults stay the same 
-    UPROPERTY(EditAnywhere, Category = "Menu Button")
-    FLinearColor HoverBackgroundColor = FLinearColor(0, 0, 0, 0);
-
-    UPROPERTY(EditAnywhere, Category = "Menu Button")
-    FLinearColor DefaultBackgroundColor = FLinearColor(0, 0, 0, 0);
 };

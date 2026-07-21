@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -8,6 +8,7 @@
 
 class UWidgetSwitcher;
 class UWidgetAnimation;
+class UBorder;
 
 /**
  * Full-screen settings overlay. Slides in from the right over a background blur,
@@ -40,6 +41,17 @@ protected:
     UPROPERTY(meta = (BindWidget))
     TObjectPtr<class UMenuButtonWidget> AVTabButton;
 
+    // One border per tab — parents each tab button in the WBP. The border of the
+    // ACTIVE tab stays filled; hovering any tab fills its border too.
+    UPROPERTY(meta = (BindWidget))
+    TObjectPtr<UBorder> KeyboardTabBorder;
+
+    UPROPERTY(meta = (BindWidget))
+    TObjectPtr<UBorder> ControllerTabBorder;
+
+    UPROPERTY(meta = (BindWidget))
+    TObjectPtr<UBorder> AVTabBorder;
+
     // Tab content roots inside TabSwitcher
     UPROPERTY(meta = (BindWidget))
     TObjectPtr<UWidget> KeyboardTabRoot;
@@ -58,26 +70,52 @@ protected:
     UPROPERTY(Transient, meta = (BindWidgetAnim))
     TObjectPtr<UWidgetAnimation> Anim_SlideOut;
 
+    // Fill colour for the active tab AND any hovered tab
+    UPROPERTY(EditDefaultsOnly, Category = "Settings|Tabs")
+    FLinearColor TabActiveColor = FLinearColor(0.55f, 0.35f, 0.05f, 1.f);
+
+    // Colour of inactive, unhovered tabs — fully transparent by default
+    UPROPERTY(EditDefaultsOnly, Category = "Settings|Tabs")
+    FLinearColor TabInactiveColor = FLinearColor(0, 0, 0, 0);
+
+
+/*****************************/
+/*            Tabs           */
+/*****************************/
+
+
 private:
     // Guards Backspace/B being spammed mid-close
     bool bClosing = false;
 
-    // Ordered list of tab roots so arrow keys / LB / RB can cycle through them by index
+    // Ordered lists so arrow keys / LB / RB can cycle by index.
+    // TabBorders[i] pairs with TabOrder[i].
     TArray<UWidget*> TabOrder;
+    TArray<UBorder*> TabBorders;
 
     // Which tab is currently active (index into TabOrder)
     int32 CurrentTabIndex = 0;
 
-    // Switches the TabSwitcher to the tab at the given index and retakes focus
+    // Switches the TabSwitcher to the tab at the given index and refreshes borders
     void SwitchToTab(int32 NewIndex);
 
     // Moves to the next or previous tab, wrapping around at the edges
     void ChangeTab(int32 Delta);
 
+    // Single source of truth: active tab filled, all others transparent
+    void RefreshTabBorders();
+
     UFUNCTION() void HandleKeyboardTab();
     UFUNCTION() void HandleControllerTab();
     UFUNCTION() void HandleAVTab();
     UFUNCTION() void HandleSlideOutFinished();
+
+    // Hover fills that tab's border; unhover restores via RefreshTabBorders,
+    // so the ACTIVE tab keeps its fill after the mouse leaves
+    UFUNCTION() void HandleKeyboardTabHovered();
+    UFUNCTION() void HandleControllerTabHovered();
+    UFUNCTION() void HandleAVTabHovered();
+    UFUNCTION() void HandleTabUnhovered();
 
     void CloseSettings();
 };

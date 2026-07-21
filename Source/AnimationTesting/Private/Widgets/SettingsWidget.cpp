@@ -1,7 +1,9 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #include "Widgets/SettingsWidget.h"
 #include "Components/WidgetSwitcher.h"
+#include "Components/Border.h"
+#include "Components/Button.h"
 #include "Widgets/MenuButtonWidget.h"
 
 void USettingsWidget::NativeOnInitialized()
@@ -15,13 +17,25 @@ void USettingsWidget::NativeOnInitialized()
     ControllerTabButton->OnMenuButtonClicked.AddDynamic(this, &USettingsWidget::HandleControllerTab);
     AVTabButton->OnMenuButtonClicked.AddDynamic(this, &USettingsWidget::HandleAVTab);
 
+    // Hover/unhover on the raw buttons inside each MenuButtonWidget — we drive
+    // the tab borders from here, MenuButtonWidget knows nothing about tabs
+    KeyboardTabButton->GetMainButton()->OnHovered.AddDynamic(this, &USettingsWidget::HandleKeyboardTabHovered);
+    ControllerTabButton->GetMainButton()->OnHovered.AddDynamic(this, &USettingsWidget::HandleControllerTabHovered);
+    AVTabButton->GetMainButton()->OnHovered.AddDynamic(this, &USettingsWidget::HandleAVTabHovered);
+
+    KeyboardTabButton->GetMainButton()->OnUnhovered.AddDynamic(this, &USettingsWidget::HandleTabUnhovered);
+    ControllerTabButton->GetMainButton()->OnUnhovered.AddDynamic(this, &USettingsWidget::HandleTabUnhovered);
+    AVTabButton->GetMainButton()->OnUnhovered.AddDynamic(this, &USettingsWidget::HandleTabUnhovered);
+
     // Bound in OnInitialized (runs once per lifetime) instead of Construct
     FWidgetAnimationDynamicEvent SlideOutFinished;
     SlideOutFinished.BindDynamic(this, &USettingsWidget::HandleSlideOutFinished);
     BindToAnimationFinished(Anim_SlideOut, SlideOutFinished);
 
-    // Define the tab cycling order � arrow keys and LB/RB step through this array.
+    // Define the tab cycling order — arrow keys and LB/RB step through these.
+    // Borders are index-paired with the roots: TabBorders[i] belongs to TabOrder[i]
     TabOrder = { KeyboardTabRoot, ControllerTabRoot, AVTabRoot };
+    TabBorders = { KeyboardTabBorder, ControllerTabBorder, AVTabBorder };
 }
 
 void USettingsWidget::OpenSettings()
@@ -30,7 +44,6 @@ void USettingsWidget::OpenSettings()
 
     // Always land on the first tab (Keyboard) when reopening
     SwitchToTab(0);
-
 
     // Steal focus so Backspace / gamepad B route to this widget
     SetKeyboardFocus();
@@ -46,7 +59,7 @@ void USettingsWidget::CloseSettings()
     PlayAnimation(Anim_SlideOut);
 }
 
-// Panel is fully off-screen left and the blur has faded � remove like the tutorial book does
+// Panel is fully off-screen left and the blur has faded — remove like the tutorial book does
 void USettingsWidget::HandleSlideOutFinished()
 {
     RemoveFromParent();
@@ -56,6 +69,9 @@ void USettingsWidget::SwitchToTab(int32 NewIndex)
 {
     CurrentTabIndex = FMath::Clamp(NewIndex, 0, TabOrder.Num() - 1);
     TabSwitcher->SetActiveWidget(TabOrder[CurrentTabIndex]);
+
+    // Active tab gets the fill, everything else goes transparent
+    RefreshTabBorders();
 }
 
 void USettingsWidget::ChangeTab(int32 Delta)
@@ -64,10 +80,22 @@ void USettingsWidget::ChangeTab(int32 Delta)
     int32 NewIndex = (CurrentTabIndex + Delta + TabOrder.Num()) % TabOrder.Num();
     SwitchToTab(NewIndex);
 
-    // Clicking can move keyboard focus � retake it so keys keep working
+    // Clicking can move keyboard focus — retake it so keys keep working
     SetKeyboardFocus();
 }
 
+// Single source of truth for tab border colours: the active tab is filled,
+// all other tabs are transparent. Called on switch and on unhover.
+void USettingsWidget::RefreshTabBorders()
+{
+    for (int32 i = 0; i < TabBorders.Num(); ++i)
+    {
+        if (TabBorders[i])
+        {
+            TabBorders[i]->SetBrushColor(i == CurrentTabIndex ? TabActiveColor : TabInactiveColor);
+        }
+    }
+}
 
 void USettingsWidget::HandleKeyboardTab()
 {
@@ -87,6 +115,28 @@ void USettingsWidget::HandleAVTab()
     SetKeyboardFocus();
 }
 
+// Hover fills that tab's border with the same colour as the active fill
+void USettingsWidget::HandleKeyboardTabHovered()
+{
+    if (KeyboardTabBorder) { KeyboardTabBorder->SetBrushColor(TabActiveColor); }
+}
+
+void USettingsWidget::HandleControllerTabHovered()
+{
+    if (ControllerTabBorder) { ControllerTabBorder->SetBrushColor(TabActiveColor); }
+}
+
+void USettingsWidget::HandleAVTabHovered()
+{
+    if (AVTabBorder) { AVTabBorder->SetBrushColor(TabActiveColor); }
+}
+
+// Unhover: restore all borders from the single source of truth — the ACTIVE
+// tab keeps its fill, non-active tabs return to transparent
+void USettingsWidget::HandleTabUnhovered()
+{
+    RefreshTabBorders();
+}
 
 FReply USettingsWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
 {

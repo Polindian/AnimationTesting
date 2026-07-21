@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+ï»¿// Christopher Naglik All Rights Reserved
 
 #include "Widgets/MenuButtonWidget.h"
 #include "Components/Button.h"
@@ -15,7 +15,7 @@ void UMenuButtonWidget::NativeConstruct()
     MainButton->OnUnhovered.AddDynamic(this, &UMenuButtonWidget::HandleUnhovered);
 }
 
-// Runs in the editor too — makes the label show up live in the Designer
+// Runs in the editor too â€” makes the label show up live in the Designer
 void UMenuButtonWidget::SynchronizeProperties()
 {
     Super::SynchronizeProperties();
@@ -29,7 +29,7 @@ void UMenuButtonWidget::SynchronizeProperties()
         }
     }
 
-    // Apply per-instance size to the internal SizeBox — this is why external
+    // Apply per-instance size to the internal SizeBox â€” this is why external
     // resizing "didn't work": the override always wins, so we drive the override
     if (RootSizeBox)
     {
@@ -58,11 +58,6 @@ void UMenuButtonWidget::HandleHovered()
     {
         ButtonRetainer->SetEffectMaterial(HoverGradientMaterial);
     }
-
-    if (HoverBackgroundColor.A > 0.f)
-    {
-        MainButton->SetBackgroundColor(HoverBackgroundColor);
-    }
 }
 
 void UMenuButtonWidget::HandleUnhovered()
@@ -71,9 +66,5 @@ void UMenuButtonWidget::HandleUnhovered()
     {
         ButtonRetainer->SetEffectMaterial(nullptr);
     }
-
-    if (HoverBackgroundColor.A > 0.f)
-    {
-        MainButton->SetBackgroundColor(DefaultBackgroundColor);
-    }
 }
+
