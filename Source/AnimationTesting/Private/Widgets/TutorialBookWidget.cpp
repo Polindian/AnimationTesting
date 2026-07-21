@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+ï»¿// Christopher Naglik All Rights Reserved
 
 #include "Widgets/TutorialBookWidget.h"
 #include "Components/Image.h"
@@ -18,7 +18,7 @@ void UTutorialBookWidget::NativeOnInitialized()
 
 	ReturnButton->OnMenuButtonClicked.AddDynamic(this, &UTutorialBookWidget::HandleReturnClicked);
 
-	// Bound in OnInitialized (runs once per lifetime) instead of Construct —
+	// Bound in OnInitialized (runs once per lifetime) instead of Construct â€”
 	// BindToAnimationFinished stacks duplicates if bound repeatedly
 	FWidgetAnimationDynamicEvent Finished;
 	Finished.BindDynamic(this, &UTutorialBookWidget::HandleBookAnimFinished);
@@ -39,7 +39,7 @@ void UTutorialBookWidget::OpenBook()
 	PlayAnimation(Anim_OpenBook);
 }
 
-// Fires after BOTH the forward and the reversed play — bClosing decides which path we're on
+// Fires after BOTH the forward and the reversed play â€” bClosing decides which path we're on
 void UTutorialBookWidget::HandleBookAnimFinished()
 {
 	if (bClosing)
@@ -56,7 +56,7 @@ void UTutorialBookWidget::HandleBookAnimFinished()
 
 void UTutorialBookWidget::HandleReturnClicked()
 {
-	// Same path as the back keys — CloseBook already guards against double-triggering
+	// Same path as the back keys â€” CloseBook already guards against double-triggering
 	CloseBook();
 }
 
@@ -75,7 +75,7 @@ void UTutorialBookWidget::CloseBook()
 void UTutorialBookWidget::HandleLeftArrow()
 {
 	ChangeSpread(-1);
-	// Clicking can move keyboard focus — retake it so keys keep working
+	// Clicking can move keyboard focus â€” retake it so keys keep working
 	SetKeyboardFocus();
 }
 
@@ -87,7 +87,7 @@ void UTutorialBookWidget::HandleRightArrow()
 
 void UTutorialBookWidget::ChangeSpread(int32 Delta)
 {
-	// Clamp handles the edges — pressing right on 10/10 or left on 1/10 just does nothing
+	// Clamp handles the edges â€” pressing right on 10/10 or left on 1/10 just does nothing
 	const int32 NewSpread = FMath::Clamp(CurrentSpread + Delta, 0, NumSpreads() - 1);
 	if (NewSpread == CurrentSpread) { return; }
 	CurrentSpread = NewSpread;
@@ -128,7 +128,7 @@ FReply UTutorialBookWidget::NativeOnKeyDown(const FGeometry& InGeometry, const F
 		return FReply::Handled();
 	}
 	// Gamepad_FaceButton_Right = B on Xbox / Circle on PlayStation
-	if (Key == EKeys::Escape || Key == EKeys::BackSpace || Key == EKeys::Gamepad_FaceButton_Right)
+	if (Key == EKeys::BackSpace || Key == EKeys::Gamepad_FaceButton_Right)
 	{
 		CloseBook();
 		return FReply::Handled();

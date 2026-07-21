@@ -7,6 +7,7 @@
 #include "Widgets/WaitingWidget.h"
 #include "Widgets/SessionEntryWidget.h"
 #include "Widgets/TutorialBookWidget.h"
+#include "Widgets/SettingsWidget.h"
 #include "Components/WidgetSwitcher.h"
 #include "Components/Image.h"
 #include "Components/EditableText.h"
@@ -67,6 +68,8 @@ void UMainMenuWidget::NativeConstruct()
 	JoinSessionButton->SetIsEnabled(false);
 
 	TutorialBookButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::TutorialBookButtonClicked);
+
+	SettingsButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::SettingsClicked);
 	
 }
 
@@ -190,6 +193,24 @@ void UMainMenuWidget::TutorialBookButtonClicked()
 	}
 	TutorialBook->AddToViewport(10);
 	TutorialBook->OpenBook();
+}
+
+void UMainMenuWidget::SettingsClicked()
+{
+	if (!SettingsWidgetClass) { return; }
+
+	// Create once, reuse afterwards — OpenSettings resets state each time
+	if (!SettingsWidgetInstance)
+	{
+		SettingsWidgetInstance = CreateWidget<USettingsWidget>(GetOwningPlayer(), SettingsWidgetClass);
+	}
+
+	if (SettingsWidgetInstance && !SettingsWidgetInstance->IsInViewport())
+	{
+		// High ZOrder so it draws over the menu (and the fade image)
+		SettingsWidgetInstance->AddToViewport(10);
+		SettingsWidgetInstance->OpenSettings();
+	}
 }
 
 

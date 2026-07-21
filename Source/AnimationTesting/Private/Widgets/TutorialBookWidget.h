@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+ï»¿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -14,7 +14,7 @@ class UWidgetAnimation;
 /**
  * Full-screen tutorial book overlay. Scales up from nothing over a background blur,
  * then shows 20 page textures as 10 double-page spreads with arrow/keyboard/gamepad paging.
- * Added to the viewport ON TOP of the menu — not a switcher page.
+ * Added to the viewport ON TOP of the menu â€” not a switcher page.
  */
 UCLASS()
 class ANIMATIONTESTING_API UTutorialBookWidget : public UUserWidget
@@ -44,11 +44,11 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> Button_RightArrow;
 
-	// Visible close button — same action as Esc/Backspace/gamepad B
+	// Visible close button â€” same action as Esc/Backspace/gamepad B
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<class UMenuButtonWidget> ReturnButton;
 
-	// Panel holding pages/arrows/counter — hidden while the book is animating so
+	// Panel holding pages/arrows/counter â€” hidden while the book is animating so
 	// content only appears once the book is at full size
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UWidget> PageContent;

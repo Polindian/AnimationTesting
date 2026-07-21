@@ -193,4 +193,25 @@ private:
 
 	UFUNCTION()
 	void TutorialBookButtonClicked();
+
+
+
+/*****************************/
+/*          Settings         */
+/*****************************/
+
+	// The SETTINGS button on the main page
+	UPROPERTY(meta = (BindWidget))
+	class UMenuButtonWidget* SettingsButton;
+
+	// WBP class to spawn 
+	UPROPERTY(EditDefaultsOnly, Category = "Settings")
+	TSubclassOf<class USettingsWidget> SettingsWidgetClass;
+
+	// Kept so reopening reuses one instance instead of allocating each time
+	UPROPERTY()
+	class USettingsWidget* SettingsWidgetInstance;
+
+	UFUNCTION()
+	void SettingsClicked();
 };

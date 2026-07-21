@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -7,6 +7,8 @@
 #include "MenuButtonWidget.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnMenuButtonClicked);
+
+class UButton;
 
 UCLASS()
 class UMenuButtonWidget : public UUserWidget
@@ -22,6 +24,8 @@ public:
 
     void SetButtonText(const FText& InText);
 
+    UButton* GetMainButton() const { return MainButton; }
+
 private:
     UPROPERTY(meta = (BindWidget))
     class UButton* MainButton;
@@ -36,7 +40,7 @@ private:
     UPROPERTY(EditAnywhere, Category = "Menu Button")
     FText ButtonLabel;
 
-    UPROPERTY(EditDefaultsOnly, Category = "Menu Button")
+    UPROPERTY(EditAnywhere, Category = "Menu Button")
     UMaterialInterface* HoverGradientMaterial;
 
     UFUNCTION()
@@ -58,4 +62,5 @@ private:
     // Full font control per instance: family, typeface, size, outline, spacing
     UPROPERTY(EditAnywhere, Category = "Menu Button")
     FSlateFontInfo ButtonFont;
+
 };
