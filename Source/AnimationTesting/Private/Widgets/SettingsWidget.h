@@ -70,9 +70,13 @@ protected:
     UPROPERTY(Transient, meta = (BindWidgetAnim))
     TObjectPtr<UWidgetAnimation> Anim_SlideOut;
 
-    // Fill colour for the active tab AND any hovered tab
+    // Fill colour of the tab you are currently ON — highest alpha, most prominent
     UPROPERTY(EditDefaultsOnly, Category = "Settings|Tabs")
     FLinearColor TabActiveColor = FLinearColor(0.55f, 0.35f, 0.05f, 1.f);
+
+    // Fill colour while hovering a NON-active tab — lower alpha than active
+    UPROPERTY(EditDefaultsOnly, Category = "Settings|Tabs")
+    FLinearColor TabHoveredColor = FLinearColor(0.55f, 0.35f, 0.05f, 0.5f);
 
     // Colour of inactive, unhovered tabs — fully transparent by default
     UPROPERTY(EditDefaultsOnly, Category = "Settings|Tabs")

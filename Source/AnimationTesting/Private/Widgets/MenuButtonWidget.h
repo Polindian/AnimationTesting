@@ -40,7 +40,7 @@ private:
     UPROPERTY(EditAnywhere, Category = "Menu Button")
     FText ButtonLabel;
 
-    UPROPERTY(EditDefaultsOnly, Category = "Menu Button")
+    UPROPERTY(EditAnywhere, Category = "Menu Button")
     UMaterialInterface* HoverGradientMaterial;
 
     UFUNCTION()

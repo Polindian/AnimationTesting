@@ -115,22 +115,31 @@ void USettingsWidget::HandleAVTab()
     SetKeyboardFocus();
 }
 
-// Hover fills that tab's border with the same colour as the active fill
+// Hover fills that tab's border with the hover colour — but the ACTIVE tab
+// keeps its stronger active colour even when hovered
 void USettingsWidget::HandleKeyboardTabHovered()
 {
-    if (KeyboardTabBorder) { KeyboardTabBorder->SetBrushColor(TabActiveColor); }
+    if (KeyboardTabBorder && CurrentTabIndex != 0)
+    {
+        KeyboardTabBorder->SetBrushColor(TabHoveredColor);
+    }
 }
 
 void USettingsWidget::HandleControllerTabHovered()
 {
-    if (ControllerTabBorder) { ControllerTabBorder->SetBrushColor(TabActiveColor); }
+    if (ControllerTabBorder && CurrentTabIndex != 1)
+    {
+        ControllerTabBorder->SetBrushColor(TabHoveredColor);
+    }
 }
 
 void USettingsWidget::HandleAVTabHovered()
 {
-    if (AVTabBorder) { AVTabBorder->SetBrushColor(TabActiveColor); }
+    if (AVTabBorder && CurrentTabIndex != 2)
+    {
+        AVTabBorder->SetBrushColor(TabHoveredColor);
+    }
 }
-
 // Unhover: restore all borders from the single source of truth — the ACTIVE
 // tab keeps its fill, non-active tabs return to transparent
 void USettingsWidget::HandleTabUnhovered()
