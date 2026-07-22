@@ -110,6 +110,24 @@ void UMainMenuWidget::NativeConstruct()
 				SettingsButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::SettingsClicked);
 }
 
+FReply UMainMenuWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
+{
+	const FKey Key = InKeyEvent.GetKey();
+
+	if (Key == EKeys::BackSpace || Key == EKeys::Gamepad_FaceButton_Right)
+	{
+		// Back only makes sense from the sub-pages — main and login have nowhere to go
+		UWidget* ActivePage = MainSwitcher ? MainSwitcher->GetActiveWidget() : nullptr;
+		if (ActivePage == StoryModeRoot || ActivePage == MultiplayerPageRoot)
+		{
+			GoToPage(MainWidgetRoot);
+			return FReply::Handled();
+		}
+	}
+
+	return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
+}
+
 void UMainMenuWidget::StoryModeClicked() { GoToPage(StoryModeRoot); }
 void UMainMenuWidget::MultiplayerClicked() { GoToPage(MultiplayerPageRoot); }
 void UMainMenuWidget::BackToMainClicked() { GoToPage(MainWidgetRoot); }
