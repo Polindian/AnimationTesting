@@ -27,21 +27,7 @@ private:
 	class UWidget* TeamSelectionRoot;
 
 	UPROPERTY(meta=(BindWidget))
-	class UButton* ReadyUpButton;
-
-	UPROPERTY(meta = (BindWidget))
-	class UTextBlock* ReadyUpText;
-
-	UPROPERTY(meta = (BindWidget))
-
-	class URetainerBox* ReadyUpRetainerDefault;
-	UPROPERTY(EditDefaultsOnly, Category = "Menu Style")
-	UMaterialInterface* HoverGradientMaterial;
-
-	UFUNCTION()
-	void OnReadyUpHovered();
-	UFUNCTION()
-	void OnReadyUpUnhovered();
+	class UMenuButtonWidget* ReadyUpButton;
 
 	bool bIsReady = false;
 
@@ -114,18 +100,7 @@ private:
 	void UpdateCharacterDisplay(const FPlayerSelection& PlayerSelection);
 
 	UPROPERTY(meta = (BindWidget))
-	class URetainerBox* StartMatchRetainerDefault;
-
-	UFUNCTION()
-	void OnStartMatchButtonHovered();
-	UFUNCTION()
-	void OnStartMatchButtonUnhovered();
-
-	UPROPERTY(meta = (BindWidget))
-	class UButton* StartMatchButton;
-
-	UPROPERTY(meta = (BindWidget))
-	class UTextBlock* StartMatchButtonText;
+	class UMenuButtonWidget* StartMatchButton;
 
 	// Local tracking of whether this client is locked in
 	bool bIsLockedIn = false;

@@ -38,6 +38,7 @@ void UMainMenuWidget::NativeConstruct()
 		ChrisGameInstance->StartGlobalSessionSearch();
 	}
 
+	LoginButton->FocusButton();
 	LoginButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::LoginButtonClicked);
 
 	// Every navigation button funnels into GoToPage — pages never switch themselves
@@ -190,9 +191,16 @@ void UMainMenuWidget::TutorialBookButtonClicked()
 	if (!TutorialBook)
 	{
 		TutorialBook = CreateWidget<UTutorialBookWidget>(GetOwningPlayer(), TutorialBookClass);
+		TutorialBook->OnBookClosed.AddUObject(this, &UMainMenuWidget::TutorialBookClosed);
 	}
 	TutorialBook->AddToViewport(10);
 	TutorialBook->OpenBook();
+}
+
+// Refocus the button which opened it
+void UMainMenuWidget::TutorialBookClosed()
+{
+	TutorialBookButton->FocusButton();
 }
 
 void UMainMenuWidget::SettingsClicked()
@@ -203,6 +211,8 @@ void UMainMenuWidget::SettingsClicked()
 	if (!SettingsWidgetInstance)
 	{
 		SettingsWidgetInstance = CreateWidget<USettingsWidget>(GetOwningPlayer(), SettingsWidgetClass);
+		// Restore controller focus to the menu when settings closes
+		SettingsWidgetInstance->OnSettingsClosed.AddUObject(this, &UMainMenuWidget::SettingsClosed);
 	}
 
 	if (SettingsWidgetInstance && !SettingsWidgetInstance->IsInViewport())
@@ -213,12 +223,19 @@ void UMainMenuWidget::SettingsClicked()
 	}
 }
 
+void UMainMenuWidget::SettingsClosed()
+{
+	// Back to a sensible default so gamepad navigation isn't stranded
+	SettingsButton->FocusButton();
+}
+
 
 void UMainMenuWidget::SwitchToMainWidget()
 {
 	if (MainSwitcher)
 	{
 		MainSwitcher->SetActiveWidget(MainWidgetRoot);
+		StoryModeButton->FocusButton();
 	}
 }
 
@@ -291,6 +308,12 @@ void UMainMenuWidget::OnFadeOutFinished()
 	if (!PendingPage) return;
 
 	MainSwitcher->SetActiveWidget(PendingPage);
+
+	// Console-style default: top button of the new page starts focused/highlighted
+	if (PendingPage == MainWidgetRoot) { StoryModeButton->FocusButton(); }
+	else if (PendingPage == MultiplayerPageRoot) { CreateSessionButton->FocusButton(); }
+	else if (PendingPage == StoryModeRoot) { StoryBackButton->FocusButton(); }
+
 	PendingPage = nullptr;
 
 	GetWorld()->GetTimerManager().SetTimer(

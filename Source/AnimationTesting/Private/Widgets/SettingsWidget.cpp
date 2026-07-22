@@ -59,11 +59,6 @@ void USettingsWidget::CloseSettings()
     PlayAnimation(Anim_SlideOut);
 }
 
-// Panel is fully off-screen left and the blur has faded — remove like the tutorial book does
-void USettingsWidget::HandleSlideOutFinished()
-{
-    RemoveFromParent();
-}
 
 void USettingsWidget::SwitchToTab(int32 NewIndex)
 {
@@ -95,6 +90,13 @@ void USettingsWidget::RefreshTabBorders()
             TabBorders[i]->SetBrushColor(i == CurrentTabIndex ? TabActiveColor : TabInactiveColor);
         }
     }
+}
+
+// Panel is fully off-screen left and the blur has faded — remove and tell the owner so it can refocus a button (controller users need something focused)
+void USettingsWidget::HandleSlideOutFinished()
+{
+    RemoveFromParent();
+    OnSettingsClosed.Broadcast();
 }
 
 void USettingsWidget::HandleKeyboardTab()

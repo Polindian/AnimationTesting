@@ -25,6 +25,9 @@ public:
 	// Resets to spread 1 and plays the open animation. Safe to call on a reused instance.
 	void OpenBook();
 
+	// Fired after the close animation finishes and the widget removes itself — the owner refocuses one of its own buttons for controller users
+	FSimpleMulticastDelegate OnBookClosed;
+
 protected:
 	virtual void NativeOnInitialized() override;
 	virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;

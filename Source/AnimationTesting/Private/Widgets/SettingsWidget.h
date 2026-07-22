@@ -23,6 +23,10 @@ public:
     // Resets to the first tab and plays the slide-in
     void OpenSettings();
 
+    // Fired after the slide-out finishes and the widget removes itself — the owner must refocus a button on its own page for controller users
+    FSimpleMulticastDelegate OnSettingsClosed;
+
+  
 protected:
     virtual void NativeOnInitialized() override;
     virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;

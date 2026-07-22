@@ -45,6 +45,7 @@ void UTutorialBookWidget::HandleBookAnimFinished()
 	if (bClosing)
 	{
 		RemoveFromParent();
+		OnBookClosed.Broadcast();
 	}
 	else
 	{

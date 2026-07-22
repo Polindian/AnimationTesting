@@ -194,6 +194,8 @@ private:
 	UFUNCTION()
 	void TutorialBookButtonClicked();
 
+	void TutorialBookClosed();
+
 
 
 /*****************************/
@@ -214,4 +216,6 @@ private:
 
 	UFUNCTION()
 	void SettingsClicked();
+
+	void SettingsClosed();
 };
