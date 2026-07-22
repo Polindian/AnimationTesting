@@ -18,6 +18,7 @@
 #include "Widgets/CharacterEntryWidget.h"
 #include "Widgets/CharacterDisplay.h"
 #include "Widgets/PlayerTeamLayoutWidget.h"
+#include "Widgets/MenuButtonWidget.h"
 #include "Network/ChrisNetStatics.h"
 #include "Player/LobbyPlayerController.h"
 #include "Player/ChrisPlayerState.h"
@@ -28,13 +29,18 @@ void ULobbyWidget::NativeConstruct()
     Super::NativeConstruct();
 	ClearAndPopulateTeamSelectionSlots();
 
+    GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this]()
+            {
+                if (TeamSelectionSlots.Num() > 0 && TeamSelectionSlots[0])
+                {
+                    TeamSelectionSlots[0]->FocusSlot();
+                }
+            }));
     // Cache our controller so we can call Server RPCs from the UI
 	LobbyPlayerController = GetOwningPlayer<ALobbyPlayerController>();
     ConfigureGameState();
 
-    ReadyUpButton->OnClicked.AddDynamic(this, &ULobbyWidget::OnReadyUpClicked);
-    ReadyUpButton->OnHovered.AddDynamic(this, &ULobbyWidget::OnReadyUpHovered);
-    ReadyUpButton->OnUnhovered.AddDynamic(this, &ULobbyWidget::OnReadyUpUnhovered);
+    ReadyUpButton->OnMenuButtonClicked.AddDynamic(this, &ULobbyWidget::OnReadyUpClicked);
 
     if (LobbyPlayerController)
     {
@@ -51,9 +57,7 @@ void ULobbyWidget::NativeConstruct()
 
     if (StartMatchButton)
     {
-        StartMatchButton->OnClicked.AddDynamic(this, &ULobbyWidget::OnStartMatchButtonClicked);
-        StartMatchButton->OnHovered.AddDynamic(this, &ULobbyWidget::OnStartMatchButtonHovered);
-        StartMatchButton->OnUnhovered.AddDynamic(this, &ULobbyWidget::OnStartMatchButtonUnhovered);
+        StartMatchButton->OnMenuButtonClicked.AddDynamic(this, &ULobbyWidget::OnStartMatchButtonClicked);
     }
 }
 
@@ -69,18 +73,6 @@ void ULobbyWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
     }
 }
 
-void ULobbyWidget::OnReadyUpHovered()
-{
-    if (ReadyUpRetainerDefault)
-        ReadyUpRetainerDefault->SetEffectMaterial(HoverGradientMaterial);
-}
-
-void ULobbyWidget::OnReadyUpUnhovered()
-{
-    if (ReadyUpRetainerDefault)
-        ReadyUpRetainerDefault->SetEffectMaterial(nullptr);
-}
-
 void ULobbyWidget::OnReadyUpClicked()
 {
     SetReadyState(!bIsReady);
@@ -89,7 +81,7 @@ void ULobbyWidget::OnReadyUpClicked()
 void ULobbyWidget::SetReadyState(bool bReady)
 {
     bIsReady = bReady;
-    ReadyUpText->SetText(FText::FromString(bReady ? TEXT("UNREADY") : TEXT("READY UP")));
+    ReadyUpButton->SetButtonText(FText::FromString(bReady ? TEXT("UNREADY") : TEXT("READY UP")));
 
     // Tell the server so all clients see the green bar
     if (LobbyPlayerController)
@@ -133,6 +125,11 @@ void ULobbyWidget::ClearAndPopulateTeamSelectionSlots()
             TeamSelectionSlots.Add(NewSelectionSlot);
         }
     }
+
+    // Spatial nav can't find ReadyUp from the left column — wire both bottom slots to it explicitly
+    UWidget* ReadyTarget = ReadyUpButton->GetMainButton();
+    TeamSelectionSlots[PlayersPerTeam - 1]->SetDownNavigationTarget(ReadyTarget);          // bottom of Red
+    TeamSelectionSlots[TeamSelectionSlots.Num() - 1]->SetDownNavigationTarget(ReadyTarget); // bottom of Blue
 }
 
 // Called when any slot widget is clicked — sends the request to the server via RPC
@@ -218,10 +215,9 @@ void ULobbyWidget::UpdatePlayerSelectionDisplay(const TArray<FPlayerSelection>& 
                 CharacterSelectionTileView->SetIsEnabled(!bIsLockedIn);
             }
 
-            // Update the button text to reflect current state
-            if (StartMatchButtonText)
+            if (StartMatchButton)
             {
-                StartMatchButtonText->SetText(FText::FromString(bIsLockedIn ? TEXT("RETURN") : TEXT("START MATCH")));
+                StartMatchButton->SetButtonText(FText::FromString(bIsLockedIn ? TEXT("RETURN") : TEXT("START MATCH")));
             }
         }
     }
@@ -236,6 +232,12 @@ void ULobbyWidget::UpdatePlayerSelectionDisplay(const TArray<FPlayerSelection>& 
 void ULobbyWidget::SwitchToHeroSelection()
 {
     MainSwitcher->SetActiveWidget(HeroSelectionRoot);
+
+    // Default focus: the character grid, so controller users can immediately navigate tiles with the stick/D-pad and pick with A/Enter
+    if (CharacterSelectionTileView)
+    {
+        CharacterSelectionTileView->SetKeyboardFocus();
+    }
 
     // Turn on the character spotlight — starts with Visible=false in the level
     TArray<AActor*> FoundActors;
@@ -313,18 +315,6 @@ void ULobbyWidget::UpdateCharacterDisplay(const FPlayerSelection& PlayerSelectio
 
     CurrentDisplayedDefinition = PlayerSelection.GetCharacterDefinition();
     CharacterDisplay->ConfigureWithCharacterDefinition(CurrentDisplayedDefinition);
-}
-
-void ULobbyWidget::OnStartMatchButtonHovered()
-{
-    if (StartMatchRetainerDefault)
-        StartMatchRetainerDefault->SetEffectMaterial(HoverGradientMaterial);
-}
-
-void ULobbyWidget::OnStartMatchButtonUnhovered()
-{
-    if (StartMatchRetainerDefault)
-        StartMatchRetainerDefault->SetEffectMaterial(nullptr);
 }
 
 // Toggles lock-in state: START MATCH → locks in, RETURN → unlocks

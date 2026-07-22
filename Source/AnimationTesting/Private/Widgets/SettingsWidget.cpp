@@ -41,13 +41,12 @@ void USettingsWidget::NativeOnInitialized()
 void USettingsWidget::OpenSettings()
 {
     bClosing = false;
-
-    // Always land on the first tab (Keyboard) when reopening
     SwitchToTab(0);
-
-    // Steal focus so Backspace / gamepad B route to this widget
-    SetKeyboardFocus();
     PlayAnimation(Anim_SlideIn);
+
+    // Deferred for the same first-open reason as the book
+    GetWorld()->GetTimerManager().SetTimerForNextTick(
+        FTimerDelegate::CreateWeakLambda(this, [this]() { SetKeyboardFocus(); }));
 }
 
 void USettingsWidget::CloseSettings()
@@ -59,11 +58,6 @@ void USettingsWidget::CloseSettings()
     PlayAnimation(Anim_SlideOut);
 }
 
-// Panel is fully off-screen left and the blur has faded — remove like the tutorial book does
-void USettingsWidget::HandleSlideOutFinished()
-{
-    RemoveFromParent();
-}
 
 void USettingsWidget::SwitchToTab(int32 NewIndex)
 {
@@ -95,6 +89,13 @@ void USettingsWidget::RefreshTabBorders()
             TabBorders[i]->SetBrushColor(i == CurrentTabIndex ? TabActiveColor : TabInactiveColor);
         }
     }
+}
+
+// Panel is fully off-screen left and the blur has faded — remove and tell the owner so it can refocus a button (controller users need something focused)
+void USettingsWidget::HandleSlideOutFinished()
+{
+    RemoveFromParent();
+    OnSettingsClosed.Broadcast();
 }
 
 void USettingsWidget::HandleKeyboardTab()

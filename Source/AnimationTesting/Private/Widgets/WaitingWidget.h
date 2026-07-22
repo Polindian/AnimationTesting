@@ -20,6 +20,8 @@ public:
 	FOnButtonClickedEvent& ClearAndGetButtonClickedEvent();
 
 	void SetWaitInfoText(const FText& WaitInfo, bool bAllowCancel = false);
+
+	void FocusCancelButton();
 	
 private:
 	UPROPERTY(meta = (BindWidget))
@@ -27,4 +29,6 @@ private:
 
 	UPROPERTY(meta=(BindWidget))
 	UButton* CancelButton;
+
+
 };

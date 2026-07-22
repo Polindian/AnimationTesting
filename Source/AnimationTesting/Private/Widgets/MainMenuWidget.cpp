@@ -38,39 +38,94 @@ void UMainMenuWidget::NativeConstruct()
 		ChrisGameInstance->StartGlobalSessionSearch();
 	}
 
-	LoginButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::LoginButtonClicked);
+	// Runs one frame later, when the Slate widgets actually exist
+	GetWorld()->GetTimerManager().SetTimerForNextTick(
+		FTimerDelegate::CreateWeakLambda(this, [this]()
+			{
+				// Explicit nav chain — spatial nav was skipping Multiplayer
+				UWidget* Story = StoryModeButton->GetMainButton();
+				UWidget* Multi = MultiplayerButton->GetMainButton();
+				UWidget* Leader = LeaderboardsButton->GetMainButton();
+				UWidget* Settings = SettingsButton->GetMainButton();
+				UWidget* Exit = ExitGameButton->GetMainButton();
 
-	// Every navigation button funnels into GoToPage — pages never switch themselves
-	StoryModeButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::StoryModeClicked);
-	MultiplayerButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::MultiplayerClicked);
-	ExitGameButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::ExitGameClicked);
+				Story->SetNavigationRuleExplicit(EUINavigation::Down, Multi);
+				Story->SetNavigationRuleExplicit(EUINavigation::Up, Exit);
+				Multi->SetNavigationRuleExplicit(EUINavigation::Up, Story);
+				Multi->SetNavigationRuleExplicit(EUINavigation::Down, Leader);
+				Leader->SetNavigationRuleExplicit(EUINavigation::Up, Multi);
+				Leader->SetNavigationRuleExplicit(EUINavigation::Down, Settings);
+				Settings->SetNavigationRuleExplicit(EUINavigation::Up, Leader);
+				Settings->SetNavigationRuleExplicit(EUINavigation::Down, Exit);
+				Exit->SetNavigationRuleExplicit(EUINavigation::Up, Settings);
+				Exit->SetNavigationRuleExplicit(EUINavigation::Down, Story);
 
-	// Both pages' back buttons lead to the same place
-	StoryBackButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::BackToMainClicked);
-	MultiplayerBackButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::BackToMainClicked);
+				for (UWidget* W : { Story, Multi, Leader, Settings, Exit })
+				{
+					W->BuildNavigation();
+				}
 
-	// Bind animation-finished handlers ONCE — BindToAnimationFinished stacks duplicates if called repeatedly (e.g. per transition)
-	FWidgetAnimationDynamicEvent FadeOutFinished;
-	FadeOutFinished.BindDynamic(this, &UMainMenuWidget::OnFadeOutFinished);
-	BindToAnimationFinished(FadeOut, FadeOutFinished);
+				// Initial focus — login button, or main page default if already logged in
+				if (ChrisGameInstance && ChrisGameInstance->IsLoggedIn())
+				{
+					StoryModeButton->FocusButton();
+				}
+				else
+				{
+					LoginButton->FocusButton();
+				}
+			}));
 
-	FWidgetAnimationDynamicEvent FadeInFinished;
-	FadeInFinished.BindDynamic(this, &UMainMenuWidget::HideFadeImage);
-	BindToAnimationFinished(FadeIn, FadeInFinished);
+				LoginButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::LoginButtonClicked);
 
-	CreateSessionButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::CreateSessionButtonClicked);
-	NewSessionNameText->OnTextChanged.AddDynamic(this, &UMainMenuWidget::NewSessionNameTextChanged);
+				// Every navigation button funnels into GoToPage — pages never switch themselves
+				StoryModeButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::StoryModeClicked);
+				MultiplayerButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::MultiplayerClicked);
+				ExitGameButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::ExitGameClicked);
 
-	// Stage 1 state: button fully active, name field hidden until first press
-	SessionNameContainer->SetVisibility(ESlateVisibility::Collapsed);
+				// Both pages' back buttons lead to the same place
+				StoryBackButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::BackToMainClicked);
+				MultiplayerBackButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::BackToMainClicked);
 
-	JoinSessionButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::JoinSessionButtonClicked);
-	JoinSessionButton->SetIsEnabled(false);
+				// Bind animation-finished handlers ONCE — BindToAnimationFinished stacks duplicates if called repeatedly (e.g. per transition)
+				FWidgetAnimationDynamicEvent FadeOutFinished;
+				FadeOutFinished.BindDynamic(this, &UMainMenuWidget::OnFadeOutFinished);
+				BindToAnimationFinished(FadeOut, FadeOutFinished);
 
-	TutorialBookButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::TutorialBookButtonClicked);
+				FWidgetAnimationDynamicEvent FadeInFinished;
+				FadeInFinished.BindDynamic(this, &UMainMenuWidget::HideFadeImage);
+				BindToAnimationFinished(FadeIn, FadeInFinished);
 
-	SettingsButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::SettingsClicked);
-	
+				CreateSessionButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::CreateSessionButtonClicked);
+				NewSessionNameText->OnTextChanged.AddDynamic(this, &UMainMenuWidget::NewSessionNameTextChanged);
+
+				// Stage 1 state: button fully active, name field hidden until first press
+				SessionNameContainer->SetVisibility(ESlateVisibility::Collapsed);
+
+				JoinSessionButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::JoinSessionButtonClicked);
+				JoinSessionButton->SetIsEnabled(false);
+
+				TutorialBookButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::TutorialBookButtonClicked);
+
+				SettingsButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::SettingsClicked);
+}
+
+FReply UMainMenuWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
+{
+	const FKey Key = InKeyEvent.GetKey();
+
+	if (Key == EKeys::BackSpace || Key == EKeys::Gamepad_FaceButton_Right)
+	{
+		// Back only makes sense from the sub-pages — main and login have nowhere to go
+		UWidget* ActivePage = MainSwitcher ? MainSwitcher->GetActiveWidget() : nullptr;
+		if (ActivePage == StoryModeRoot || ActivePage == MultiplayerPageRoot)
+		{
+			GoToPage(MainWidgetRoot);
+			return FReply::Handled();
+		}
+	}
+
+	return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
 }
 
 void UMainMenuWidget::StoryModeClicked() { GoToPage(StoryModeRoot); }
@@ -190,9 +245,18 @@ void UMainMenuWidget::TutorialBookButtonClicked()
 	if (!TutorialBook)
 	{
 		TutorialBook = CreateWidget<UTutorialBookWidget>(GetOwningPlayer(), TutorialBookClass);
+		TutorialBook->OnBookClosed.AddUObject(this, &UMainMenuWidget::TutorialBookClosed);
 	}
 	TutorialBook->AddToViewport(10);
+	SetVisibility(ESlateVisibility::HitTestInvisible);
 	TutorialBook->OpenBook();
+}
+
+// Refocus the button which opened it
+void UMainMenuWidget::TutorialBookClosed()
+{
+	TutorialBookButton->FocusButton();
+	SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 }
 
 void UMainMenuWidget::SettingsClicked()
@@ -203,14 +267,24 @@ void UMainMenuWidget::SettingsClicked()
 	if (!SettingsWidgetInstance)
 	{
 		SettingsWidgetInstance = CreateWidget<USettingsWidget>(GetOwningPlayer(), SettingsWidgetClass);
+		// Restore controller focus to the menu when settings closes
+		SettingsWidgetInstance->OnSettingsClosed.AddUObject(this, &UMainMenuWidget::SettingsClosed);
 	}
 
 	if (SettingsWidgetInstance && !SettingsWidgetInstance->IsInViewport())
 	{
 		// High ZOrder so it draws over the menu (and the fade image)
 		SettingsWidgetInstance->AddToViewport(10);
+		SetVisibility(ESlateVisibility::HitTestInvisible);
 		SettingsWidgetInstance->OpenSettings();
 	}
+}
+
+void UMainMenuWidget::SettingsClosed()
+{
+	// Back to a sensible default so gamepad navigation isn't stranded
+	SettingsButton->FocusButton();
+	SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 }
 
 
@@ -219,6 +293,7 @@ void UMainMenuWidget::SwitchToMainWidget()
 	if (MainSwitcher)
 	{
 		MainSwitcher->SetActiveWidget(MainWidgetRoot);
+		StoryModeButton->FocusButton();
 	}
 }
 
@@ -254,6 +329,8 @@ void UMainMenuWidget::LoginCompleted(bool bWasSuccessful, const FString& PlayerN
 	{
 		// Back to login page so the player can retry
 		MainSwitcher->SetActiveWidget(LoginWidgetRoot);
+
+		LoginButton->FocusButton();
 	}
 }
 
@@ -262,6 +339,12 @@ FOnButtonClickedEvent& UMainMenuWidget::SwitchToWaitingWidget(const FText& WaitI
 	// Overlay ON TOP of the current page (which keeps rendering, blurred) — not a switcher page anymore
 	WaitingWidget->SetVisibility(ESlateVisibility::Visible);
 	WaitingWidget->SetWaitInfoText(WaitInfo, bAllowCancel);
+
+	if (bAllowCancel)
+	{
+		WaitingWidget->FocusCancelButton();
+	}
+
 	return WaitingWidget->ClearAndGetButtonClickedEvent();
 }
 
@@ -291,6 +374,12 @@ void UMainMenuWidget::OnFadeOutFinished()
 	if (!PendingPage) return;
 
 	MainSwitcher->SetActiveWidget(PendingPage);
+
+	// Console-style default: top button of the new page starts focused/highlighted
+	if (PendingPage == MainWidgetRoot) { StoryModeButton->FocusButton(); }
+	else if (PendingPage == MultiplayerPageRoot) { CreateSessionButton->FocusButton(); }
+	else if (PendingPage == StoryModeRoot) { StoryBackButton->FocusButton(); }
+
 	PendingPage = nullptr;
 
 	GetWorld()->GetTimerManager().SetTimer(

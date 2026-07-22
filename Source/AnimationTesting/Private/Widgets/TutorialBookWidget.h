@@ -25,6 +25,9 @@ public:
 	// Resets to spread 1 and plays the open animation. Safe to call on a reused instance.
 	void OpenBook();
 
+	// Fired after the close animation finishes and the widget removes itself — the owner refocuses one of its own buttons for controller users
+	FSimpleMulticastDelegate OnBookClosed;
+
 protected:
 	virtual void NativeOnInitialized() override;
 	virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
@@ -43,10 +46,6 @@ protected:
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> Button_RightArrow;
-
-	// Visible close button — same action as Esc/Backspace/gamepad B
-	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<class UMenuButtonWidget> ReturnButton;
 
 	// Panel holding pages/arrows/counter — hidden while the book is animating so
 	// content only appears once the book is at full size
@@ -71,7 +70,6 @@ private:
 	UFUNCTION() void HandleLeftArrow();
 	UFUNCTION() void HandleRightArrow();
 	UFUNCTION() void HandleBookAnimFinished();
-	UFUNCTION() void HandleReturnClicked();
 
 	void ChangeSpread(int32 Delta);
 	void RefreshSpread();

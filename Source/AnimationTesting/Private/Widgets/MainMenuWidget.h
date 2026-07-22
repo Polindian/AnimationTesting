@@ -21,6 +21,8 @@ class UMainMenuWidget : public UUserWidget
 public:
 	virtual void NativeConstruct() override;
 
+	virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
+
 
 	/*****************************/
 	/*          Main             */
@@ -194,11 +196,15 @@ private:
 	UFUNCTION()
 	void TutorialBookButtonClicked();
 
+	void TutorialBookClosed();
+
 
 
 /*****************************/
 /*          Settings         */
 /*****************************/
+
+private:
 
 	// The SETTINGS button on the main page
 	UPROPERTY(meta = (BindWidget))
@@ -214,4 +220,17 @@ private:
 
 	UFUNCTION()
 	void SettingsClicked();
+
+	void SettingsClosed();
+
+
+
+	/*****************************/
+	/*        Leaderboards       */
+	/*****************************/
+
+private:
+
+	UPROPERTY(meta = (BindWidget))
+	class UMenuButtonWidget* LeaderboardsButton;
 };

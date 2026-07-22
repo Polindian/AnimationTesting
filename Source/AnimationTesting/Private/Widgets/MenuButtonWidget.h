@@ -63,4 +63,20 @@ private:
     UPROPERTY(EditAnywhere, Category = "Menu Button")
     FSlateFontInfo ButtonFont;
 
+
+    /*********************************/
+    /*     UE Navigation Focus       */
+    /*********************************/
+
+public:
+    // Gives this button user focus — used for default page highlighting and mouse override
+    void FocusButton();
+
+protected:
+    // Focus drives the highlight now — these fire when this widget (or its inner button) gains/loses focus, whether from keyboard, gamepad, or mouse hover
+    virtual void NativeOnAddedToFocusPath(const FFocusEvent& InFocusEvent) override;
+    virtual void NativeOnRemovedFromFocusPath(const FFocusEvent& InFocusEvent) override;
+
+
+
 };

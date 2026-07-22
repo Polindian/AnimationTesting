@@ -29,6 +29,15 @@ public:
 
 	void SetReadyVisual(bool bReady);
 
+	// Focus drives the glow — fires for keyboard, gamepad, and mouse (via SetFocus)
+	virtual void NativeOnAddedToFocusPath(const FFocusEvent& InFocusEvent) override;
+	virtual void NativeOnRemovedFromFocusPath(const FFocusEvent& InFocusEvent) override;
+
+	// Focuses the inner button — for default slot highlighting from LobbyWidget
+	void FocusSlot();
+
+	void SetDownNavigationTarget(UWidget* Target);
+
 private:
 	UPROPERTY(meta=(BindWidget))
 	class UButton* SelectButton;

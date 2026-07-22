@@ -13,6 +13,9 @@ void UMenuButtonWidget::NativeConstruct()
     MainButton->OnClicked.AddDynamic(this, &UMenuButtonWidget::HandleClicked);
     MainButton->OnHovered.AddDynamic(this, &UMenuButtonWidget::HandleHovered);
     MainButton->OnUnhovered.AddDynamic(this, &UMenuButtonWidget::HandleUnhovered);
+
+    // Buttons must be focusable for spatial navigation to consider them
+    MainButton->IsFocusable = true;
 }
 
 // Runs in the editor too — makes the label show up live in the Designer
@@ -54,17 +57,43 @@ void UMenuButtonWidget::HandleClicked()
 
 void UMenuButtonWidget::HandleHovered()
 {
+    FocusButton();
+}
+
+void UMenuButtonWidget::HandleUnhovered()
+{
+}
+
+void UMenuButtonWidget::FocusButton()
+{
+    if (MainButton)
+    {
+        MainButton->SetFocus();
+    }
+}
+
+void UMenuButtonWidget::NativeOnAddedToFocusPath(const FFocusEvent& InFocusEvent)
+{
+    Super::NativeOnAddedToFocusPath(InFocusEvent);
+
+    if (!ButtonRetainer) return;
+
     if (ButtonRetainer)
     {
         ButtonRetainer->SetEffectMaterial(HoverGradientMaterial);
     }
 }
 
-void UMenuButtonWidget::HandleUnhovered()
+void UMenuButtonWidget::NativeOnRemovedFromFocusPath(const FFocusEvent& InFocusEvent)
 {
+    Super::NativeOnRemovedFromFocusPath(InFocusEvent);
+
+    if (!ButtonRetainer) return;
+
     if (ButtonRetainer)
     {
         ButtonRetainer->SetEffectMaterial(nullptr);
     }
 }
+
 
