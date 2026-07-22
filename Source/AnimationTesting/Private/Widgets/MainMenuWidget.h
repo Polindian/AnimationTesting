@@ -202,6 +202,8 @@ private:
 /*          Settings         */
 /*****************************/
 
+private:
+
 	// The SETTINGS button on the main page
 	UPROPERTY(meta = (BindWidget))
 	class UMenuButtonWidget* SettingsButton;
@@ -218,4 +220,15 @@ private:
 	void SettingsClicked();
 
 	void SettingsClosed();
+
+
+
+	/*****************************/
+	/*        Leaderboards       */
+	/*****************************/
+
+private:
+
+	UPROPERTY(meta = (BindWidget))
+	class UMenuButtonWidget* LeaderboardsButton;
 };

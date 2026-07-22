@@ -16,10 +16,8 @@ void UTutorialBookWidget::NativeOnInitialized()
 	Button_LeftArrow->OnClicked.AddDynamic(this, &UTutorialBookWidget::HandleLeftArrow);
 	Button_RightArrow->OnClicked.AddDynamic(this, &UTutorialBookWidget::HandleRightArrow);
 
-	ReturnButton->OnMenuButtonClicked.AddDynamic(this, &UTutorialBookWidget::HandleReturnClicked);
+	// (ReturnButton binding deleted)
 
-	// Bound in OnInitialized (runs once per lifetime) instead of Construct —
-	// BindToAnimationFinished stacks duplicates if bound repeatedly
 	FWidgetAnimationDynamicEvent Finished;
 	Finished.BindDynamic(this, &UTutorialBookWidget::HandleBookAnimFinished);
 	BindToAnimationFinished(Anim_OpenBook, Finished);
@@ -30,13 +28,13 @@ void UTutorialBookWidget::OpenBook()
 	bClosing = false;
 	CurrentSpread = 0;
 	RefreshSpread();
-
-	// Pages stay hidden until the book finishes growing
 	PageContent->SetVisibility(ESlateVisibility::Hidden);
-
-	// Steal focus so arrow keys / LB / RB / back keys route to this widget
-	SetKeyboardFocus();
 	PlayAnimation(Anim_OpenBook);
+
+	// Deferred one tick: the widget was AddToViewport'd this same frame,
+	// so its Slate widget doesn't exist yet and an immediate focus call fails
+	GetWorld()->GetTimerManager().SetTimerForNextTick(
+		FTimerDelegate::CreateWeakLambda(this, [this]() { SetKeyboardFocus(); }));
 }
 
 // Fires after BOTH the forward and the reversed play — bClosing decides which path we're on
@@ -53,14 +51,6 @@ void UTutorialBookWidget::HandleBookAnimFinished()
 		PageContent->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 	}
 }
-
-
-void UTutorialBookWidget::HandleReturnClicked()
-{
-	// Same path as the back keys — CloseBook already guards against double-triggering
-	CloseBook();
-}
-
 
 void UTutorialBookWidget::CloseBook()
 {
@@ -128,7 +118,6 @@ FReply UTutorialBookWidget::NativeOnKeyDown(const FGeometry& InGeometry, const F
 		ChangeSpread(-1);
 		return FReply::Handled();
 	}
-	// Gamepad_FaceButton_Right = B on Xbox / Circle on PlayStation
 	if (Key == EKeys::BackSpace || Key == EKeys::Gamepad_FaceButton_Right)
 	{
 		CloseBook();

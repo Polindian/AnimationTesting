@@ -41,13 +41,12 @@ void USettingsWidget::NativeOnInitialized()
 void USettingsWidget::OpenSettings()
 {
     bClosing = false;
-
-    // Always land on the first tab (Keyboard) when reopening
     SwitchToTab(0);
-
-    // Steal focus so Backspace / gamepad B route to this widget
-    SetKeyboardFocus();
     PlayAnimation(Anim_SlideIn);
+
+    // Deferred for the same first-open reason as the book
+    GetWorld()->GetTimerManager().SetTimerForNextTick(
+        FTimerDelegate::CreateWeakLambda(this, [this]() { SetKeyboardFocus(); }));
 }
 
 void USettingsWidget::CloseSettings()

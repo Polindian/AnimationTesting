@@ -36,6 +36,8 @@ public:
 	// Focuses the inner button — for default slot highlighting from LobbyWidget
 	void FocusSlot();
 
+	void SetDownNavigationTarget(UWidget* Target);
+
 private:
 	UPROPERTY(meta=(BindWidget))
 	class UButton* SelectButton;

@@ -82,4 +82,13 @@ void UTeamSelectionWidget::FocusSlot()
 	}
 }
 
+void UTeamSelectionWidget::SetDownNavigationTarget(UWidget* Target)
+{
+	if (SelectButton)
+	{
+		SelectButton->SetNavigationRuleExplicit(EUINavigation::Down, Target);
+		SelectButton->BuildNavigation();
+	}
+}
+
 

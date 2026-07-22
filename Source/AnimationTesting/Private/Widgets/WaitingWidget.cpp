@@ -28,3 +28,8 @@ void UWaitingWidget::SetWaitInfoText(const FText& WaitInfo, bool bAllowCancel)
 		WaitInfoText->SetText(WaitInfo);
 	}
 }
+
+void UWaitingWidget::FocusCancelButton()
+{
+	if (CancelButton) { CancelButton->SetFocus(); } 
+}

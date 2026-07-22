@@ -29,12 +29,13 @@ void ULobbyWidget::NativeConstruct()
     Super::NativeConstruct();
 	ClearAndPopulateTeamSelectionSlots();
 
-    // Default focus: first slot, so controller users can navigate immediately
-    if (TeamSelectionSlots.Num() > 0 && TeamSelectionSlots[0])
-    {
-        TeamSelectionSlots[0]->FocusSlot();
-    }
-
+    GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this]()
+            {
+                if (TeamSelectionSlots.Num() > 0 && TeamSelectionSlots[0])
+                {
+                    TeamSelectionSlots[0]->FocusSlot();
+                }
+            }));
     // Cache our controller so we can call Server RPCs from the UI
 	LobbyPlayerController = GetOwningPlayer<ALobbyPlayerController>();
     ConfigureGameState();
@@ -124,6 +125,11 @@ void ULobbyWidget::ClearAndPopulateTeamSelectionSlots()
             TeamSelectionSlots.Add(NewSelectionSlot);
         }
     }
+
+    // Spatial nav can't find ReadyUp from the left column — wire both bottom slots to it explicitly
+    UWidget* ReadyTarget = ReadyUpButton->GetMainButton();
+    TeamSelectionSlots[PlayersPerTeam - 1]->SetDownNavigationTarget(ReadyTarget);          // bottom of Red
+    TeamSelectionSlots[TeamSelectionSlots.Num() - 1]->SetDownNavigationTarget(ReadyTarget); // bottom of Blue
 }
 
 // Called when any slot widget is clicked — sends the request to the server via RPC
