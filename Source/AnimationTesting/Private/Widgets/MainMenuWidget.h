@@ -184,6 +184,15 @@ private:
 
 	void SessionEntrySelected(const FString& SelectedEntryIdString);
 
+	UPROPERTY(EditDefaultsOnly, Category = "Session")
+	bool bDebugFillSessionList = false;
+
+	void PopulateDebugSessionEntries();
+
+	// X = inset from the scroll box sides, Y = gap above/below each entry
+	UPROPERTY(EditDefaultsOnly, Category = "Session")
+	FMargin SessionEntryPadding = FMargin(25.f, 12.f);
+
 	UPROPERTY(meta = (BindWidget))
 	class UMenuButtonWidget* TutorialBookButton;
 

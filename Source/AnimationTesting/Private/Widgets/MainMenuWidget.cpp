@@ -13,6 +13,7 @@
 #include "Components/EditableText.h"
 #include "Components/SizeBox.h"
 #include "Components/ScrollBox.h"
+#include "Components/ScrollBoxSlot.h"
 #include "Network/ChrisNetStatics.h"
 #include "Animation/WidgetAnimation.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -108,6 +109,13 @@ void UMainMenuWidget::NativeConstruct()
 				TutorialBookButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::TutorialBookButtonClicked);
 
 				SettingsButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::SettingsClicked);
+
+				if (!bDebugFillSessionList) return;
+
+				if (bDebugFillSessionList)
+				{
+					PopulateDebugSessionEntries();
+				}
 }
 
 FReply UMainMenuWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
@@ -191,6 +199,10 @@ void UMainMenuWidget::JoinSessionFailed()
 void UMainMenuWidget::UpdateLobbyList(const TArray<FOnlineSessionSearchResult>& SearchResults)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Updating Session Search Results"));
+
+	// Debug mode: the global search still fires and would ClearChildren the fake list
+	if (bDebugFillSessionList) { return; }
+
 	SessionScrollBox->ClearChildren();
 
 	bool bCurrentSelectedSessionValid = false;
@@ -207,6 +219,12 @@ void UMainMenuWidget::UpdateLobbyList(const TArray<FOnlineSessionSearchResult>& 
 			NewSessionWidget->OnSessionEntrySelected.AddUObject(this, &UMainMenuWidget::SessionEntrySelected);
 
 			SessionScrollBox->AddChild(NewSessionWidget);
+
+			if (UScrollBoxSlot* BoxSlot = Cast<UScrollBoxSlot>(NewSessionWidget->Slot))
+			{
+				BoxSlot->SetPadding(SessionEntryPadding);
+			}
+
 			if (CurrentSelectedSessionId == SessionIdString)
 			{
 				bCurrentSelectedSessionValid = true;
@@ -216,6 +234,8 @@ void UMainMenuWidget::UpdateLobbyList(const TArray<FOnlineSessionSearchResult>& 
 
 	CurrentSelectedSessionId = bCurrentSelectedSessionValid ? CurrentSelectedSessionId : "";
 	JoinSessionButton->SetIsEnabled(bCurrentSelectedSessionValid);
+
+
 }
 
 void UMainMenuWidget::JoinSessionButtonClicked()
@@ -238,6 +258,36 @@ void UMainMenuWidget::JoinSessionButtonClicked()
 void UMainMenuWidget::SessionEntrySelected(const FString& SelectedEntryIdString)
 {
 	CurrentSelectedSessionId = SelectedEntryIdString;
+	JoinSessionButton->SetIsEnabled(true);
+
+	// Exactly one entry carries the selected indicator
+	for (UWidget* Child : SessionScrollBox->GetAllChildren())
+	{
+		if (USessionEntryWidget* Entry = Cast<USessionEntryWidget>(Child))
+		{
+			Entry->SetSelectedVisual(Entry->GetCachedSessionIdString() == SelectedEntryIdString);
+		}
+	}
+}
+
+void UMainMenuWidget::PopulateDebugSessionEntries()
+{
+	for (int32 i = 0; i < 10; ++i)
+	{
+		USessionEntryWidget* Entry = CreateWidget<USessionEntryWidget>(GetOwningPlayer(), SessionEntryWidgetClass);
+		if (Entry)
+		{
+			Entry->InitializeEntry(FString::Printf(TEXT("Session Created %d"), i + 1),
+				FString::Printf(TEXT("DebugId_%d"), i));
+			Entry->OnSessionEntrySelected.AddUObject(this, &UMainMenuWidget::SessionEntrySelected);
+			SessionScrollBox->AddChild(Entry);
+
+			if (UScrollBoxSlot* BoxSlot = Cast<UScrollBoxSlot>(Entry->Slot))
+			{
+				BoxSlot->SetPadding(SessionEntryPadding);
+			}
+		}
+	}
 }
 
 void UMainMenuWidget::TutorialBookButtonClicked()
