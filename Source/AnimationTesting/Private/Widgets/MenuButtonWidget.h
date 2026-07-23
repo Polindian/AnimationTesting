@@ -7,6 +7,7 @@
 #include "MenuButtonWidget.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnMenuButtonClicked);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMenuButtonClickedWithLabel, const FText&, Label);
 
 class UButton;
 
@@ -15,7 +16,7 @@ class UMenuButtonWidget : public UUserWidget
 {
     GENERATED_BODY()
 public:
-    virtual void NativeConstruct() override;
+    virtual void NativeOnInitialized() override;
     virtual void SynchronizeProperties() override;
 
     // MainMenuWidget subscribes to this
@@ -25,6 +26,11 @@ public:
     void SetButtonText(const FText& InText);
 
     UButton* GetMainButton() const { return MainButton; }
+
+    UPROPERTY(BlueprintAssignable, Category = "Menu Button")
+    FOnMenuButtonClickedWithLabel OnMenuButtonClickedWithLabel;
+
+    void SetButtonSize(float InWidth, float InHeight);
 
 private:
     UPROPERTY(meta = (BindWidget))

@@ -6,15 +6,17 @@
 #include "Components/RetainerBox.h"
 #include "Components/SizeBox.h"
 
-void UMenuButtonWidget::NativeConstruct()
+void UMenuButtonWidget::NativeOnInitialized()
 {
-    Super::NativeConstruct();
+    Super::NativeOnInitialized();
 
+    // Once per LIFETIME, not per add-to-tree — NativeConstruct re-runs every time
+    // an overlay containing this button is re-added to the viewport, and
+    // AddDynamic stacks duplicates
     MainButton->OnClicked.AddDynamic(this, &UMenuButtonWidget::HandleClicked);
     MainButton->OnHovered.AddDynamic(this, &UMenuButtonWidget::HandleHovered);
     MainButton->OnUnhovered.AddDynamic(this, &UMenuButtonWidget::HandleUnhovered);
 
-    // Buttons must be focusable for spatial navigation to consider them
     MainButton->IsFocusable = true;
 }
 
@@ -50,9 +52,23 @@ void UMenuButtonWidget::SetButtonText(const FText& InText)
     }
 }
 
+void UMenuButtonWidget::SetButtonSize(float InWidth, float InHeight)
+{
+    ButtonWidth = InWidth;
+    ButtonHeight = InHeight;
+
+    // Same override SynchronizeProperties applies — without this the SizeBox wins
+    if (RootSizeBox)
+    {
+        RootSizeBox->SetWidthOverride(ButtonWidth);
+        RootSizeBox->SetHeightOverride(ButtonHeight);
+    }
+}
+
 void UMenuButtonWidget::HandleClicked()
 {
     OnMenuButtonClicked.Broadcast();
+    OnMenuButtonClickedWithLabel.Broadcast(ButtonLabel);
 }
 
 void UMenuButtonWidget::HandleHovered()
