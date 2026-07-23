@@ -8,6 +8,8 @@
 #include "Widgets/SessionEntryWidget.h"
 #include "Widgets/TutorialBookWidget.h"
 #include "Widgets/SettingsWidget.h"
+#include "Widgets/SessionSearchBarWidget.h"
+#include "Widgets/VirtualKeyboardWidget.h"
 #include "Components/WidgetSwitcher.h"
 #include "Components/Image.h"
 #include "Components/EditableText.h"
@@ -75,6 +77,8 @@ void UMainMenuWidget::NativeConstruct()
 				{
 					LoginButton->FocusButton();
 				}
+
+				WireMultiplayerPageNavigation();
 			}));
 
 				LoginButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::LoginButtonClicked);
@@ -98,7 +102,8 @@ void UMainMenuWidget::NativeConstruct()
 				BindToAnimationFinished(FadeIn, FadeInFinished);
 
 				CreateSessionButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::CreateSessionButtonClicked);
-				NewSessionNameText->OnTextChanged.AddDynamic(this, &UMainMenuWidget::NewSessionNameTextChanged);
+				SessionSearchBar->OnSearchTextChanged.AddUObject(this, &UMainMenuWidget::NewSessionNameTextChanged);
+				SessionSearchBar->OnVirtualKeyboardRequested.AddUObject(this, &UMainMenuWidget::OpenVirtualKeyboard);
 
 				// Stage 1 state: button fully active, name field hidden until first press
 				SessionNameContainer->SetVisibility(ESlateVisibility::Collapsed);
@@ -153,15 +158,15 @@ void UMainMenuWidget::CreateSessionButtonClicked()
 		if (SessionNameContainer->GetVisibility() == ESlateVisibility::Collapsed)
 		{
 			SessionNameContainer->SetVisibility(ESlateVisibility::Visible);
-			NewSessionNameText->SetKeyboardFocus();   // let them type immediately
+			SessionSearchBar->FocusBar();
 
 			// Disable and dim until text arrives
 			CreateSessionButton->SetIsEnabled(false);
 			CreateSessionButton->SetRenderOpacity(0.5f);
+			WireMultiplayerPageNavigation();
 			return;
 		}
 
-		ChrisGameInstance->RequestCreateAndJoinSession(FName(NewSessionNameText->GetText().ToString()));
 		SwitchToWaitingWidget(FText::FromString("CREATING LOBBY"), true).AddDynamic(this, &UMainMenuWidget::CancelSessionCreation);
 	}
 }
@@ -171,6 +176,8 @@ void UMainMenuWidget::NewSessionNameTextChanged(const FText& NewText)
 	const bool bHasName = !NewText.IsEmpty();
 	CreateSessionButton->SetIsEnabled(bHasName);
 	CreateSessionButton->SetRenderOpacity(bHasName ? 1.f : 0.5f);
+
+	WireMultiplayerPageNavigation();
 }
 
 void UMainMenuWidget::CancelSessionCreation()
@@ -235,7 +242,7 @@ void UMainMenuWidget::UpdateLobbyList(const TArray<FOnlineSessionSearchResult>& 
 	CurrentSelectedSessionId = bCurrentSelectedSessionValid ? CurrentSelectedSessionId : "";
 	JoinSessionButton->SetIsEnabled(bCurrentSelectedSessionValid);
 
-
+	WireMultiplayerPageNavigation();
 }
 
 void UMainMenuWidget::JoinSessionButtonClicked()
@@ -288,6 +295,8 @@ void UMainMenuWidget::PopulateDebugSessionEntries()
 			}
 		}
 	}
+
+	WireMultiplayerPageNavigation();
 }
 
 void UMainMenuWidget::TutorialBookButtonClicked()
@@ -308,6 +317,130 @@ void UMainMenuWidget::TutorialBookClosed()
 	TutorialBookButton->FocusButton();
 	SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 }
+
+void UMainMenuWidget::OpenVirtualKeyboard()
+{
+	if (!VirtualKeyboardClass) { return; }
+
+	if (!VirtualKeyboard)
+	{
+		VirtualKeyboard = CreateWidget<UVirtualKeyboardWidget>(GetOwningPlayer(), VirtualKeyboardClass);
+		VirtualKeyboard->OnCommitted.AddUObject(this, &UMainMenuWidget::VirtualKeyboardCommitted);
+		VirtualKeyboard->OnCancelled.AddUObject(this, &UMainMenuWidget::VirtualKeyboardCancelled);
+	}
+
+	VirtualKeyboard->AddToViewport(10);
+	SetVisibility(ESlateVisibility::HitTestInvisible);   // menu dead while OSK is up
+	VirtualKeyboard->OpenKeyboard(SessionSearchBar->GetText());
+}
+
+void UMainMenuWidget::VirtualKeyboardCommitted(const FText& FinalText)
+{
+	SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+	SessionSearchBar->SetTextFromKeyboard(FinalText);   // sets text, enables CreateLobby, refocuses the bar
+}
+
+void UMainMenuWidget::VirtualKeyboardCancelled()
+{
+	SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+	SessionSearchBar->FocusBar();
+}
+
+// Re-run whenever anything it depends on changes: list repopulated, bar
+// revealed/hidden, name text changed. One function owns the whole page's nav.
+void UMainMenuWidget::WireMultiplayerPageNavigation()
+{
+	USessionEntryWidget* FirstEntry = nullptr;
+
+	for (UWidget* Child : SessionScrollBox->GetAllChildren())
+	{
+		FirstEntry = Cast<USessionEntryWidget>(Child);
+		if (FirstEntry) { break; }
+	}
+
+	UWidget* FirstEntryButton = FirstEntry ? FirstEntry->GetSessionButton() : nullptr;
+	UWidget* CreateBtn = CreateSessionButton->GetMainButton();
+	UWidget* BarBtn = SessionSearchBar->GetBarButton();
+	UWidget* TutorialBtn = TutorialBookButton->GetMainButton();
+
+	const bool bBarVisible = SessionNameContainer->GetVisibility() != ESlateVisibility::Collapsed;
+	const bool bHasName = !SessionSearchBar->GetText().IsEmpty();
+	// Disabled exactly when the bar is up with an empty name — and explicit nav
+	// rules don't skip disabled widgets, so no rule may target it while disabled
+	const bool bCreateEnabled = !bBarVisible || bHasName;
+
+	// Right from CreateLobby: the bar when it's up, otherwise straight to the list
+	if (bBarVisible)
+	{
+		CreateBtn->SetNavigationRuleExplicit(EUINavigation::Right, BarBtn);
+	}
+	else if (FirstEntryButton)
+	{
+		CreateBtn->SetNavigationRuleExplicit(EUINavigation::Right, FirstEntryButton);
+	}
+	else
+	{
+		CreateBtn->SetNavigationRuleBase(EUINavigation::Right, EUINavigationRule::Stop);
+	}
+
+	// TutorialBook can also hop straight into the list
+	if (FirstEntryButton)
+	{
+		TutorialBtn->SetNavigationRuleExplicit(EUINavigation::Right, FirstEntryButton);
+	}
+
+	// Left from the bar: only when CreateLobby is a legal (enabled) target
+	if (bCreateEnabled)
+	{
+		BarBtn->SetNavigationRuleExplicit(EUINavigation::Left, CreateBtn);
+	}
+	else
+	{
+		BarBtn->SetNavigationRuleBase(EUINavigation::Left, EUINavigationRule::Stop);
+	}
+
+	// Right from the bar into the list
+	if (FirstEntryButton)
+	{
+		BarBtn->SetNavigationRuleExplicit(EUINavigation::Right, FirstEntryButton);
+	}
+
+	// Left from any entry: to the bar when it's up, otherwise to CreateLobby
+	UWidget* ListLeftTarget = bBarVisible ? BarBtn : CreateBtn;
+	for (UWidget* Child : SessionScrollBox->GetAllChildren())
+	{
+		if (USessionEntryWidget* Entry = Cast<USessionEntryWidget>(Child))
+		{
+			Entry->GetSessionButton()->SetNavigationRuleExplicit(EUINavigation::Left, ListLeftTarget);
+			Entry->GetSessionButton()->BuildNavigation();
+		}
+	}
+
+	// TutorialBook sits below CreateLobby — its Up hop needs the same gate
+	if (bCreateEnabled)
+	{
+		TutorialBtn->SetNavigationRuleExplicit(EUINavigation::Up, CreateBtn);
+	}
+	else
+	{
+		TutorialBtn->SetNavigationRuleBase(EUINavigation::Up, EUINavigationRule::Stop);
+	}
+
+	CreateBtn->BuildNavigation();
+	BarBtn->BuildNavigation();
+	TutorialBtn->BuildNavigation();
+}
+
+void UMainMenuWidget::ResetCreateSessionFlow()
+{
+	SessionSearchBar->ClearText();
+	SessionNameContainer->SetVisibility(ESlateVisibility::Collapsed);
+	CreateSessionButton->SetIsEnabled(true);
+	CreateSessionButton->SetRenderOpacity(1.f);
+	WireMultiplayerPageNavigation();
+}
+
+
 
 void UMainMenuWidget::SettingsClicked()
 {
@@ -429,6 +562,11 @@ void UMainMenuWidget::OnFadeOutFinished()
 	if (PendingPage == MainWidgetRoot) { StoryModeButton->FocusButton(); }
 	else if (PendingPage == MultiplayerPageRoot) { CreateSessionButton->FocusButton(); }
 	else if (PendingPage == StoryModeRoot) { StoryBackButton->FocusButton(); }
+	else if (PendingPage == MultiplayerPageRoot)
+	{
+		ResetCreateSessionFlow();
+		CreateSessionButton->FocusButton();
+	}
 
 	PendingPage = nullptr;
 

@@ -41,6 +41,8 @@ public:
 	// Persistent "Join will use this one" indicator, independent of focus
 	void SetSelectedVisual(bool bSelected);
 
+	class UButton* GetSessionButton() const { return SessionButton; }
+
 private:
 	UPROPERTY(meta = (BindWidget))
 	class UTextBlock* SessionNameText;

@@ -148,13 +148,9 @@ private:
 	UPROPERTY(meta = (BindWidget))
 	class UMenuButtonWidget* CreateSessionButton;
 
-	UPROPERTY(meta = (BindWidget))
-	class UEditableText* NewSessionNameText;
-
 	UFUNCTION()
 	void CreateSessionButtonClicked();
 
-	UFUNCTION()
 	void NewSessionNameTextChanged(const FText& NewText);
 
 	UFUNCTION()
@@ -207,6 +203,25 @@ private:
 
 	void TutorialBookClosed();
 
+	/***********   Keyboard   *************/
+
+	UPROPERTY(meta = (BindWidget))
+	class USessionSearchBarWidget* SessionSearchBar;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Session")
+	TSubclassOf<class UVirtualKeyboardWidget> VirtualKeyboardClass;
+
+	UPROPERTY()
+	class UVirtualKeyboardWidget* VirtualKeyboard;
+
+	void OpenVirtualKeyboard();
+	void VirtualKeyboardCommitted(const FText& FinalText);
+	void VirtualKeyboardCancelled();
+
+	// Re-run after every list repopulation — entry widgets are new objects each time
+	void WireMultiplayerPageNavigation();
+
+	void ResetCreateSessionFlow();
 
 
 /*****************************/
