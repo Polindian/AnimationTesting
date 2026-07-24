@@ -68,3 +68,13 @@ UAnimSequenceBase* UPA_CharacterDefinition::LoadDisplayAnimation() const
 	}
 	return nullptr;
 }
+
+UTexture2D* UPA_CharacterDefinition::LoadToolTip() const
+{
+	ToolTipTexture.LoadSynchronous();
+	if (ToolTipTexture.IsValid())
+	{
+		return ToolTipTexture.Get();
+	}
+	return nullptr;
+}

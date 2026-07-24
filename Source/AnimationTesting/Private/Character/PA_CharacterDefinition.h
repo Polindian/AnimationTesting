@@ -81,12 +81,17 @@ public:
 
 	UAnimSequenceBase* LoadDisplayAnimation() const;
 
+	UTexture2D* LoadToolTip() const;
+
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "Character")
 	FString CharacterName;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Character")
 	TSoftObjectPtr<UTexture2D> CharacterIcon;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Character")
+	TSoftObjectPtr<UTexture2D> ToolTipTexture;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Character")
 	TSoftClassPtr<AChrisCharacter> CharacterClass;

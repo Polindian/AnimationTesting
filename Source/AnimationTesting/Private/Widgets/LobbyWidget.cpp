@@ -9,6 +9,8 @@
 #include "Components/RetainerBox.h" 
 #include "Components/TileView.h"
 #include "Components/WidgetSwitcher.h"
+#include "Components/Image.h"
+#include "Engine/Texture2D.h"
 #include "Character/PA_CharacterDefinition.h"
 #include "GameFramework/PlayerStart.h"
 #include "Framework/ChrisGameState.h"
@@ -36,6 +38,7 @@ void ULobbyWidget::NativeConstruct()
                     TeamSelectionSlots[0]->FocusSlot();
                 }
             }));
+
     // Cache our controller so we can call Server RPCs from the UI
 	LobbyPlayerController = GetOwningPlayer<ALobbyPlayerController>();
     ConfigureGameState();
@@ -50,7 +53,7 @@ void ULobbyWidget::NativeConstruct()
     UCAssetManager::Get().LoadCharacterDefinitions(FStreamableDelegate::CreateUObject(this, &ULobbyWidget::CharacterDefinitionsLoaded));
     if (CharacterSelectionTileView)
     {
-        CharacterSelectionTileView->OnItemSelectionChanged().AddUObject(this, &ULobbyWidget::CharacterSelected);
+        CharacterSelectionTileView->OnEntryWidgetGenerated().AddUObject(this, &ULobbyWidget::HandleHeroEntryGenerated);
     }
 
     SpawnCharacterDisplay();
@@ -232,11 +235,12 @@ void ULobbyWidget::UpdatePlayerSelectionDisplay(const TArray<FPlayerSelection>& 
 void ULobbyWidget::SwitchToHeroSelection()
 {
     MainSwitcher->SetActiveWidget(HeroSelectionRoot);
+    HeroTooltipImage->SetVisibility(ESlateVisibility::Hidden);
 
     // Default focus: the character grid, so controller users can immediately navigate tiles with the stick/D-pad and pick with A/Enter
     if (CharacterSelectionTileView)
     {
-        CharacterSelectionTileView->SetKeyboardFocus();
+        TryInitHeroSelectionFocus();
     }
 
     // Turn on the character spotlight — starts with Visible=false in the level
@@ -262,24 +266,70 @@ void ULobbyWidget::CharacterDefinitionsLoaded()
 }
 
 
-void ULobbyWidget::CharacterSelected(UObject* SelectedUObject)
+void ULobbyWidget::HeroEntryClicked(const UPA_CharacterDefinition* Definition)
 {
-    // If we're locked in, ignore character selection attempts
-    if (bIsLockedIn) return;
+    if (bIsLockedIn || !Definition) return;
 
     if (!ChrisPlayerState)
     {
         ChrisPlayerState = GetOwningPlayerState<AChrisPlayerState>();
     }
+    if (!ChrisPlayerState) return;
 
-    if (!ChrisPlayerState)
-        return;
+    ChrisPlayerState->Server_SetSelectedCharacterDefinition(Definition);
+}
 
-    if (const UPA_CharacterDefinition* CharacterDefinition = Cast<UPA_CharacterDefinition>(SelectedUObject))
+void ULobbyWidget::WireHeroSelectionNavigation()
+{
+    UWidget* StartBtn = StartMatchButton->GetMainButton();
+
+    UCharacterEntryWidget* FirstEntry = nullptr;
+    for (UUserWidget* W : CharacterSelectionTileView->GetDisplayedEntryWidgets())
     {
-        ChrisPlayerState->Server_SetSelectedCharacterDefinition(CharacterDefinition);
+        UCharacterEntryWidget* Entry = Cast<UCharacterEntryWidget>(W);
+        if (!Entry) continue;
+        if (!FirstEntry) { FirstEntry = Entry; }
+
+        Entry->GetSelectButton()->SetNavigationRuleExplicit(EUINavigation::Right, StartBtn);
+        Entry->GetSelectButton()->BuildNavigation();
+    }
+
+    // Left from StartMatch back into the grid — but never at disabled tiles (locked in)
+    if (FirstEntry && !bIsLockedIn)
+    {
+        StartBtn->SetNavigationRuleExplicit(EUINavigation::Left, FirstEntry->GetSelectButton());
+    }
+    else
+    {
+        StartBtn->SetNavigationRuleBase(EUINavigation::Left, EUINavigationRule::Stop);
+    }
+    StartBtn->BuildNavigation();
+}
+
+void ULobbyWidget::TryInitHeroSelectionFocus()
+{
+    // Tiles only generate once the page is active and laid out — retry until they exist
+    if (!CharacterSelectionTileView || CharacterSelectionTileView->GetDisplayedEntryWidgets().Num() == 0)
+    {
+        GetWorld()->GetTimerManager().SetTimerForNextTick(
+            FTimerDelegate::CreateWeakLambda(this, [this]() { TryInitHeroSelectionFocus(); }));
+        return;
+    }
+
+    WireHeroSelectionNavigation();
+
+    for (UUserWidget* W : CharacterSelectionTileView->GetDisplayedEntryWidgets())
+    {
+        if (UCharacterEntryWidget* First = Cast<UCharacterEntryWidget>(W))
+        {
+            First->FocusEntry();                               // browse highlight + tooltip
+            HeroEntryClicked(First->GetCharacterDefinition()); // one default pick
+            break;
+        }
     }
 }
+
+
 
 void ULobbyWidget::SpawnCharacterDisplay()
 {
@@ -325,4 +375,31 @@ void ULobbyWidget::OnStartMatchButtonClicked()
     bIsLockedIn = !bIsLockedIn;
 
     LobbyPlayerController->Server_RequestLockIn(bIsLockedIn);
+}
+
+void ULobbyWidget::HandleHeroEntryGenerated(UUserWidget& EntryWidget)
+{
+    if (UCharacterEntryWidget* Entry = Cast<UCharacterEntryWidget>(&EntryWidget))
+    {
+        Entry->OnEntryHovered.RemoveAll(this);
+        Entry->OnEntryClicked.RemoveAll(this);
+        Entry->OnEntryHovered.AddUObject(this, &ULobbyWidget::HeroEntryHovered);
+        Entry->OnEntryClicked.AddUObject(this, &ULobbyWidget::HeroEntryClicked);
+    }
+}
+
+void ULobbyWidget::HeroEntryHovered(const UPA_CharacterDefinition* Definition)
+{
+    ShowHeroTooltip(Definition);
+}
+
+void ULobbyWidget::ShowHeroTooltip(const UPA_CharacterDefinition* Definition)
+{
+    if (!HeroTooltipImage || !Definition) return;
+
+    if (UTexture2D* TooltipTexture = Definition->LoadToolTip())
+    {
+        HeroTooltipImage->SetBrushFromTexture(TooltipTexture);
+        HeroTooltipImage->SetVisibility(ESlateVisibility::HitTestInvisible);
+    }
 }
