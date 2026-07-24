@@ -165,6 +165,18 @@ bool AChrisGameState::CanStartHeroSelection() const
 {
 	if (PlayerSelectionArray.Num() == 0) return false;
 
+#if WITH_EDITOR
+	// PIE shortcut: any number of readied players can proceed, teams ignored.
+	// Compiled out of packaged builds entirely — this code won't exist in shipping.
+	if (GIsEditor)
+	{
+		for (const FPlayerSelection& PS : PlayerSelectionArray)
+		{
+			if (!PS.GetIsReady()) return false;
+		}
+		return true;
+	}
+#endif
 	int32 PlayersPerTeam = UChrisNetStatics::GetPlayerCountPerTeam();
 	int32 RedCount = 0;
 	int32 BlueCount = 0;

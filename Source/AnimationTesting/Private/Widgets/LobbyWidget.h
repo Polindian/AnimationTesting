@@ -7,6 +7,8 @@
 #include "Player/PlayerInfoTypes.h"
 #include "LobbyWidget.generated.h"
 
+class UPA_CharacterDefinition;
+
 /**
  * Main lobby UI widget. Manages the team selection page
  * and dynamically populates player slots for each team.
@@ -84,8 +86,9 @@ private:
 	UPROPERTY(meta = (BindWidget))
 	class UTileView* CharacterSelectionTileView;
 
-	void CharacterSelected(UObject* SelectedUObject);
-
+	void HeroEntryClicked(const UPA_CharacterDefinition* Definition);
+	void WireHeroSelectionNavigation(); 
+	void TryInitHeroSelectionFocus();
 
 	UPROPERTY(EditDefaultsOnly, Category = "Character Display")
 	TSubclassOf<class ACharacterDisplay> CharacterDisplayClass;
@@ -113,4 +116,11 @@ private:
 
 	UPROPERTY()
 	const UPA_CharacterDefinition* CurrentDisplayedDefinition = nullptr;
+
+	UPROPERTY(meta = (BindWidget))
+	class UImage* HeroTooltipImage;
+
+	void HandleHeroEntryGenerated(UUserWidget& EntryWidget);
+	void HeroEntryHovered(const UPA_CharacterDefinition* Definition);
+	void ShowHeroTooltip(const UPA_CharacterDefinition* Definition);
 };
