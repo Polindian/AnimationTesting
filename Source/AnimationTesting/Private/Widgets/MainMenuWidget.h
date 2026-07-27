@@ -268,4 +268,19 @@ private:
 
 	UPROPERTY(meta = (BindWidget))
 	class UMenuButtonWidget* LeaderboardsButton;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Leaderboard")
+	TSubclassOf<class ULeaderboardWidget> LeaderboardWidgetClass;
+
+	UPROPERTY()
+	class ULeaderboardWidget* LeaderboardInstance;
+
+	UFUNCTION() 
+	void LeaderboardsClicked();
+
+	void LeaderboardsClosed();
+
+	// A second button on the multiplayer page
+	UPROPERTY(meta = (BindWidget))
+	class UMenuButtonWidget* MultiplayerLeaderboardsButton;
 };

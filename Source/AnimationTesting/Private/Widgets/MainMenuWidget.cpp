@@ -11,6 +11,7 @@
 #include "Widgets/SessionSearchBarWidget.h"
 #include "Widgets/VirtualKeyboardWidget.h"
 #include "Widgets/GeneralMenuWidget.h"
+#include "Widgets/LeaderboardWidget.h"
 #include "Components/WidgetSwitcher.h"
 #include "Components/Image.h"
 #include "Components/EditableText.h"
@@ -88,6 +89,10 @@ void UMainMenuWidget::NativeConstruct()
 				StoryModeButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::StoryModeClicked);
 				MultiplayerButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::MultiplayerClicked);
 				ExitGameButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::ExitGameClicked);
+
+				LeaderboardsButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::LeaderboardsClicked);
+				MultiplayerLeaderboardsButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::LeaderboardsClicked);
+
 
 				// Both pages' back buttons lead to the same place
 				StoryBackButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::BackToMainClicked);
@@ -518,6 +523,32 @@ void UMainMenuWidget::SettingsClosed()
 	// Back to a sensible default so gamepad navigation isn't stranded
 	SettingsButton->FocusButton();
 	SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+}
+
+void UMainMenuWidget::LeaderboardsClicked()
+{
+	if (!LeaderboardWidgetClass) return;
+
+	if (!LeaderboardInstance)
+	{
+		LeaderboardInstance = CreateWidget<ULeaderboardWidget>(GetOwningPlayer(), LeaderboardWidgetClass);
+		LeaderboardInstance->OnLeaderboardClosed.AddUObject(this, &UMainMenuWidget::LeaderboardsClosed);
+	}
+
+	if (!LeaderboardInstance->IsInViewport())
+	{
+		LeaderboardInstance->AddToViewport(10);
+		SetVisibility(ESlateVisibility::HitTestInvisible);   // menu dead underneath
+		LeaderboardInstance->OpenLeaderboard();
+	}
+}
+
+void UMainMenuWidget::LeaderboardsClosed()
+{
+	SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+
+	// Refocus leaderboards button
+	LeaderboardsButton->FocusButton();
 }
 
 
