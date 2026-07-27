@@ -39,6 +39,14 @@ public:
 
 	void ClearText();
 
+	FSimpleMulticastDelegate OnMaxLengthExceeded;   // committed a name too long — owner shows the dialog
+
+	FORCEINLINE int32 GetMaxLength() const { return MaxLength; }
+
+	// private:
+	UPROPERTY(EditDefaultsOnly, Category = "Search Bar")
+	int32 MaxLength = 12;
+
 protected:
 	virtual void NativeOnInitialized() override;
 	virtual FReply NativeOnPreviewKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;

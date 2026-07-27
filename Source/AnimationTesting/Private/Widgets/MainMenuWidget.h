@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Components/Button.h"
 #include "Widgets/MenuButtonWidget.h"
+#include "Widgets/GeneralMenuWidget.h"
 #include "OnlineSessionSettings.h"
 #include "MainMenuWidget.generated.h"
 
@@ -63,7 +64,7 @@ private:
 	UPROPERTY(meta = (BindWidget))
 	class UWaitingWidget* WaitingWidget;
 
-	FOnButtonClickedEvent& SwitchToWaitingWidget(const FText& WaitInfo, bool bAllowCancel = false);
+	FOnMenuButtonClicked& SwitchToWaitingWidget(const FText& WaitInfo, bool bAllowCancel = false);
 
 	void HideWaitingWidget();
 
@@ -203,6 +204,16 @@ private:
 
 	void TutorialBookClosed();
 
+	UPROPERTY(EditDefaultsOnly, Category = "General Menu")
+	TSubclassOf<class UGeneralMenuWidget> GeneralMenuClass;
+
+	UPROPERTY()
+	class UGeneralMenuWidget* GeneralMenu;
+
+	FOnGeneralMenuClosed& OpenGeneralMenu(EGeneralMenuType Type, const FText& Message);
+	void SessionNameTooLong();
+
+
 	/***********   Keyboard   *************/
 
 	UPROPERTY(meta = (BindWidget))
@@ -257,4 +268,19 @@ private:
 
 	UPROPERTY(meta = (BindWidget))
 	class UMenuButtonWidget* LeaderboardsButton;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Leaderboard")
+	TSubclassOf<class ULeaderboardWidget> LeaderboardWidgetClass;
+
+	UPROPERTY()
+	class ULeaderboardWidget* LeaderboardInstance;
+
+	UFUNCTION() 
+	void LeaderboardsClicked();
+
+	void LeaderboardsClosed();
+
+	// A second button on the multiplayer page
+	UPROPERTY(meta = (BindWidget))
+	class UMenuButtonWidget* MultiplayerLeaderboardsButton;
 };

@@ -108,9 +108,16 @@ void USessionSearchBarWidget::HandleTextChanged(const FText& Text)
 
 void USessionSearchBarWidget::HandleTextCommitted(const FText& Text, ETextCommit::Type CommitMethod)
 {
-	// Deffered focus
 	if (CommitMethod == ETextCommit::OnEnter)
 	{
+		// Too long: don't refocus the bar — the owner opens the Continue dialog,
+		// and its close handler brings focus back to the bar
+		if (Text.ToString().Len() > MaxLength)
+		{
+			OnMaxLengthExceeded.Broadcast();
+			return;
+		}
+
 		GetWorld()->GetTimerManager().SetTimerForNextTick(
 			FTimerDelegate::CreateWeakLambda(this, [this]() { FocusBar(); }));
 	}
