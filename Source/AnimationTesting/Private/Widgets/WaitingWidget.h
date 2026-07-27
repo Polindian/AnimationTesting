@@ -1,34 +1,34 @@
-// Christopher Naglik All Rights Reserved
-
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Components/Button.h"
+#include "Widgets/MenuButtonWidget.h"  
 #include "WaitingWidget.generated.h"
 
-/**
- * 
- */
+class UBackHintWidget;
+
 UCLASS()
 class UWaitingWidget : public UUserWidget
 {
 	GENERATED_BODY()
-	
+
 public:
-	virtual void NativeConstruct() override;
-	FOnButtonClickedEvent& ClearAndGetButtonClickedEvent();
+	FOnMenuButtonClicked& ClearAndGetButtonClickedEvent();   // return type changed
 
-	void SetWaitInfoText(const FText& WaitInfo, bool bAllowCancel = false);
-
+	void SetWaitInfoText(const FText& WaitInfo, bool bInAllowCancel = false);
 	void FocusCancelButton();
-	
+	void TriggerCancel();
+
 private:
 	UPROPERTY(meta = (BindWidget))
 	class UTextBlock* WaitInfoText;
 
-	UPROPERTY(meta=(BindWidget))
-	UButton* CancelButton;
+	UPROPERTY(meta = (BindWidget))
+	class UMenuButtonWidget* CancelButton;   
 
+	// Backspace/B hint — only shown when cancelling is allowed
+	UPROPERTY(meta = (BindWidget))
+	UBackHintWidget* BackHint;
 
+	bool bAllowCancel = false;
 };

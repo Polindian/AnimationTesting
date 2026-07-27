@@ -10,6 +10,7 @@
 #include "Widgets/SettingsWidget.h"
 #include "Widgets/SessionSearchBarWidget.h"
 #include "Widgets/VirtualKeyboardWidget.h"
+#include "Widgets/GeneralMenuWidget.h"
 #include "Components/WidgetSwitcher.h"
 #include "Components/Image.h"
 #include "Components/EditableText.h"
@@ -104,6 +105,7 @@ void UMainMenuWidget::NativeConstruct()
 				CreateSessionButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::CreateSessionButtonClicked);
 				SessionSearchBar->OnSearchTextChanged.AddUObject(this, &UMainMenuWidget::NewSessionNameTextChanged);
 				SessionSearchBar->OnVirtualKeyboardRequested.AddUObject(this, &UMainMenuWidget::OpenVirtualKeyboard);
+				SessionSearchBar->OnMaxLengthExceeded.AddUObject(this, &UMainMenuWidget::SessionNameTooLong);
 
 				// Stage 1 state: button fully active, name field hidden until first press
 				SessionNameContainer->SetVisibility(ESlateVisibility::Collapsed);
@@ -129,7 +131,13 @@ FReply UMainMenuWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyE
 
 	if (Key == EKeys::BackSpace || Key == EKeys::Gamepad_FaceButton_Right)
 	{
-		// Back only makes sense from the sub-pages — main and login have nowhere to go
+		// Waiting overlay up: B means cancel-the-operation, NEVER page navigation
+		if (WaitingWidget->GetVisibility() != ESlateVisibility::Collapsed)
+		{
+			WaitingWidget->TriggerCancel();   // no-op when cancel isn't allowed (LOGGING IN)
+			return FReply::Handled();
+		}
+
 		UWidget* ActivePage = MainSwitcher ? MainSwitcher->GetActiveWidget() : nullptr;
 		if (ActivePage == StoryModeRoot || ActivePage == MultiplayerPageRoot)
 		{
@@ -152,23 +160,31 @@ void UMainMenuWidget::ExitGameClicked()
 
 void UMainMenuWidget::CreateSessionButtonClicked()
 {
-	if (ChrisGameInstance && ChrisGameInstance->IsLoggedIn())
-	{
-		// Stage 1: field hidden -> click reveals bar and arms stage 2
-		if (SessionNameContainer->GetVisibility() == ESlateVisibility::Collapsed)
+		if (ChrisGameInstance && ChrisGameInstance->IsLoggedIn())
 		{
-			SessionNameContainer->SetVisibility(ESlateVisibility::Visible);
-			SessionSearchBar->FocusBar();
+			// Stage 1: field hidden -> this click only reveals the bar and arms stage 2
+			if (SessionNameContainer->GetVisibility() == ESlateVisibility::Collapsed)
+			{
+				SessionNameContainer->SetVisibility(ESlateVisibility::Visible);
+				SessionSearchBar->FocusBar();
 
-			// Disable and dim until text arrives
-			CreateSessionButton->SetIsEnabled(false);
-			CreateSessionButton->SetRenderOpacity(0.5f);
-			WireMultiplayerPageNavigation();
-			return;
+				// Disable and dim until text arrives
+				CreateSessionButton->SetIsEnabled(false);
+				CreateSessionButton->SetRenderOpacity(0.5f);
+				WireMultiplayerPageNavigation();
+				return;
+			}
+
+			// Stage 2 (bar already visible): validate, then create
+			if (SessionSearchBar->GetText().ToString().Len() > SessionSearchBar->GetMaxLength())
+			{
+				SessionNameTooLong();
+				return;   // dialog instead of creating
+			}
+
+			ChrisGameInstance->RequestCreateAndJoinSession(FName(SessionSearchBar->GetText().ToString()));
+			SwitchToWaitingWidget(FText::FromString("CREATING LOBBY"), true).AddDynamic(this, &UMainMenuWidget::CancelSessionCreation);
 		}
-
-		SwitchToWaitingWidget(FText::FromString("CREATING LOBBY"), true).AddDynamic(this, &UMainMenuWidget::CancelSessionCreation);
-	}
 }
 
 void UMainMenuWidget::NewSessionNameTextChanged(const FText& NewText)
@@ -186,8 +202,12 @@ void UMainMenuWidget::CancelSessionCreation()
 	{
 		ChrisGameInstance->CancelSessionCreation();
 	}
+
 	HideWaitingWidget();
 	SwitchToMultiplayerPage();
+
+	GetWorld()->GetTimerManager().SetTimerForNextTick(
+		FTimerDelegate::CreateWeakLambda(this, [this]() { CreateSessionButton->FocusButton(); }));
 }
 
 void UMainMenuWidget::SwitchToMultiplayerPage()
@@ -318,6 +338,31 @@ void UMainMenuWidget::TutorialBookClosed()
 	SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 }
 
+FOnGeneralMenuClosed& UMainMenuWidget::OpenGeneralMenu(EGeneralMenuType Type, const FText& Message)
+{
+	if (!GeneralMenu)
+	{
+		GeneralMenu = CreateWidget<UGeneralMenuWidget>(GetOwningPlayer(), GeneralMenuClass);
+	}
+	GeneralMenu->AddToViewport(20);   // above everything, including other overlays
+	SetVisibility(ESlateVisibility::HitTestInvisible);
+	return GeneralMenu->OpenMenu(Type, Message);
+}
+
+
+void UMainMenuWidget::SessionNameTooLong()
+{
+	OpenGeneralMenu(EGeneralMenuType::Continue,
+		FText::Format(NSLOCTEXT("MainMenu", "NameTooLong",
+			"SESSION NAME CANNOT EXCEED {0} CHARACTERS"),
+			FText::AsNumber(SessionSearchBar->GetMaxLength())))
+		.AddLambda([this](bool)
+			{
+				SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+				SessionSearchBar->FocusBar();   // back to the highlighted bar to fix the name
+			});
+}
+
 void UMainMenuWidget::OpenVirtualKeyboard()
 {
 	if (!VirtualKeyboardClass) { return; }
@@ -337,7 +382,12 @@ void UMainMenuWidget::OpenVirtualKeyboard()
 void UMainMenuWidget::VirtualKeyboardCommitted(const FText& FinalText)
 {
 	SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-	SessionSearchBar->SetTextFromKeyboard(FinalText);   // sets text, enables CreateLobby, refocuses the bar
+	SessionSearchBar->SetTextFromKeyboard(FinalText);
+
+	if (FinalText.ToString().Len() > SessionSearchBar->GetMaxLength())
+	{
+		SessionNameTooLong();
+	} 
 }
 
 void UMainMenuWidget::VirtualKeyboardCancelled()
@@ -517,7 +567,7 @@ void UMainMenuWidget::LoginCompleted(bool bWasSuccessful, const FString& PlayerN
 	}
 }
 
-FOnButtonClickedEvent& UMainMenuWidget::SwitchToWaitingWidget(const FText& WaitInfo, bool bAllowCancel)
+FOnMenuButtonClicked& UMainMenuWidget::SwitchToWaitingWidget(const FText& WaitInfo, bool bAllowCancel)
 {
 	// Overlay ON TOP of the current page (which keeps rendering, blurred) — not a switcher page anymore
 	WaitingWidget->SetVisibility(ESlateVisibility::Visible);
@@ -525,7 +575,8 @@ FOnButtonClickedEvent& UMainMenuWidget::SwitchToWaitingWidget(const FText& WaitI
 
 	if (bAllowCancel)
 	{
-		WaitingWidget->FocusCancelButton();
+		GetWorld()->GetTimerManager().SetTimerForNextTick(
+			FTimerDelegate::CreateWeakLambda(this, [this]() { WaitingWidget->FocusCancelButton(); }));
 	}
 
 	return WaitingWidget->ClearAndGetButtonClickedEvent();
