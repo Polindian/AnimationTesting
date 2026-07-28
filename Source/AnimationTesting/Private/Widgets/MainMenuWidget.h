@@ -275,7 +275,12 @@ private:
 	UPROPERTY()
 	class ULeaderboardWidget* LeaderboardInstance;
 
-	UFUNCTION() 
+	UPROPERTY()
+	class UMenuButtonWidget* LeaderboardOpener;
+
+	UFUNCTION() void LeaderboardsClickedFromMain();
+	UFUNCTION() void LeaderboardsClickedFromMultiplayer();
+
 	void LeaderboardsClicked();
 
 	void LeaderboardsClosed();

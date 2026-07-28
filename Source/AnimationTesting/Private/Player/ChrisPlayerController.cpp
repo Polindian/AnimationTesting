@@ -185,6 +185,27 @@ void AChrisPlayerController::ToggleGameplayMenu()
 	}
 }
 
+void AChrisPlayerController::Client_ShowBanner_Implementation(EBannerType Type, int32 RoundNumber, uint8 WinningTeamId)
+{
+	if (!BannerWidgetClass) return;
+
+	// Create once, reuse — the widget queues and manages its own visibility
+	if (!BannerWidget)
+	{
+		BannerWidget = CreateWidget<UBannerWidget>(this, BannerWidgetClass);
+		if (BannerWidget)
+		{
+			BannerWidget->AddToViewport(150);   // above gameplay UI, below the pause menu (200)
+		}
+	}
+
+	if (BannerWidget)
+	{
+		// LocalTeamId is this client's own team — what makes WON/LOST resolve per player
+		BannerWidget->ShowBanner(Type, RoundNumber, WinningTeamId, TeamID.GetId());
+	}
+}
+
 // ============================================================
 // COUNTDOWN RPCs
 // ============================================================
@@ -211,7 +232,7 @@ void AChrisPlayerController::Client_OnCountdownStart_Implementation(int32 Second
 		if (CountdownWidget)
 		{
 			CountdownWidget->AddToViewport(100);
-			CountdownWidget->UpdateCountdown(Seconds);
+			CountdownWidget->StartCountdown(Seconds);
 		}
 	}
 

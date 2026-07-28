@@ -319,8 +319,13 @@ void AChrisGameMode::EndRound()
 		It->OnFlagCaptured.RemoveAll(this);
 	}
 
-	// Award soul points and track round wins based on match conditions
-	AwardRoundEndSouls();
+	// === CHANGED === Award souls AND capture who won, for the banner
+	const EFlagOwnership RoundWinner = AwardRoundEndSouls();
+
+	// === NEW === Flag ownership -> team id: TeamOne = 0 (Red), TeamTwo = 1 (Blue), 255 = draw
+	const uint8 WinningTeamId =
+		(RoundWinner == EFlagOwnership::TeamOne) ? 0 :
+		(RoundWinner == EFlagOwnership::TeamTwo) ? 1 : 255;
 
 	// Check if the match is over (a team reached RoundsToWin)
 	if (TeamOneRoundWins >= RoundsToWin)
@@ -333,6 +338,15 @@ void AChrisGameMode::EndRound()
 		EndMatch(false);
 		return;
 	}
+
+	// === NEW === Match continues, so announce the round result.
+	// Below the match-over checks on purpose: when the match ends, EndMatch
+	// sends MATCH + TRIUMPH instead and this would queue in front of them.
+	const int32 FinishedRound = CurrentRound;
+	ForEachPlayerController([WinningTeamId, FinishedRound](AChrisPlayerController* PC)
+		{
+			PC->Client_ShowBanner(EBannerType::RoundResult, FinishedRound, WinningTeamId);
+		});
 
 	GetWorldTimerManager().SetTimer(PhaseTimerHandle, this, &AChrisGameMode::StartTransitionToShop, RoundEndWaitTime, false);
 
@@ -361,11 +375,10 @@ void AChrisGameMode::EndRound()
 
 	StopAllAIBehavior();
 }
-
 // === NEW === Uses DetermineRoundWinner to evaluate all match conditions,
 // then awards 50 souls to winners and 100 souls to losers (catch-up mechanic).
 // If round is a draw (all tiebreakers failed), no round win is awarded.
-void AChrisGameMode::AwardRoundEndSouls()
+EFlagOwnership AChrisGameMode::AwardRoundEndSouls()
 {
 	EFlagOwnership RoundWinner = DetermineRoundWinner();
 
@@ -424,6 +437,9 @@ void AChrisGameMode::AwardRoundEndSouls()
 			UE_LOG(LogTemp, Log, TEXT("[MatchFlow] Player %s (Team %d) awarded %.0f souls"),
 				*PC->GetName(), PlayerTeam.GetId(), Reward);
 		});
+
+	// === NEW === hand the result back for the round-result banner
+	return RoundWinner;
 }
 
 EFlagOwnership AChrisGameMode::DetermineRoundWinner()
@@ -786,6 +802,23 @@ void AChrisGameMode::OnTransitionToArenaMidpoint()
 
 }
 
+void AChrisGameMode::StartRoundIntro()
+{
+	CurrentPhase = EMatchPhase::RoundIntro;
+
+	// CurrentRound increments in StartRound, so the round about to be played is +1
+	const int32 UpcomingRound = CurrentRound + 1;
+
+	UE_LOG(LogTemp, Log, TEXT("[MatchFlow] Round %d intro banner"), UpcomingRound);
+
+	ForEachPlayerController([UpcomingRound](AChrisPlayerController* PC)
+		{
+			PC->Client_ShowBanner(EBannerType::RoundNumber, UpcomingRound, 255);
+		});
+
+	GetWorldTimerManager().SetTimer(PhaseTimerHandle, this, &AChrisGameMode::StartRoundIntro, 2.f, false);
+}
+
 void AChrisGameMode::OnTransitionToArenaFadeIn()
 {
 	float HalfTransition = TransitionDuration / 2.f;
@@ -796,7 +829,7 @@ void AChrisGameMode::OnTransitionToArenaFadeIn()
 		});
 
 	// After fade-in, start next countdown
-	GetWorldTimerManager().SetTimer(PhaseTimerHandle, this, &AChrisGameMode::StartCountdown, HalfTransition, false);
+	GetWorldTimerManager().SetTimer(PhaseTimerHandle, this, &AChrisGameMode::StartRoundIntro, HalfTransition, false);
 }
 
 void AChrisGameMode::StopAllAISpawning()

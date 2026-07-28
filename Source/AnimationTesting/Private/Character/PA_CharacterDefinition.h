@@ -83,6 +83,9 @@ public:
 
 	UTexture2D* LoadToolTip() const;
 
+	void GetPreloadAssetPaths(TArray<FSoftObjectPath>& OutPaths) const;
+	
+
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "Character")
 	FString CharacterName;
@@ -113,6 +116,9 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Character")
 	TSoftObjectPtr<UAnimSequenceBase> DisplayAnimation;
+
+
+
 
 
 };

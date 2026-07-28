@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "GenericTeamAgentInterface.h"
+#include "Widgets/BannerWidget.h"  
 #include "ChrisPlayerController.generated.h"
 
 
@@ -83,6 +84,10 @@ public:
     // Resetting round rotation for all players
     UFUNCTION(Client, Reliable)
     void Client_OnResetRotation(FRotator SpawnRotation);
+
+    // Shows a banner. Server sends what happened; the client picks its own texture.
+    UFUNCTION(Client, Reliable)
+    void Client_ShowBanner(EBannerType Type, int32 RoundNumber, uint8 WinningTeamId);
 private:
 
 	void SpawnGameplayWidget();
@@ -151,4 +156,11 @@ public:
     bool bIsGameplayMenuOpen = false;
 
     bool bIsRoundActive = false;
+
+   
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    TSubclassOf<class UBannerWidget> BannerWidgetClass;
+
+    UPROPERTY()
+    class UBannerWidget* BannerWidget;
 };

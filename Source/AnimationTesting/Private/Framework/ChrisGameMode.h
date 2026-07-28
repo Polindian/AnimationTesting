@@ -16,6 +16,7 @@ UENUM(BlueprintType)
 enum class EMatchPhase : uint8
 {
     WaitingForPlayers,    // Waiting for enough players to join
+    RoundIntro,           // Banner logic before countdown
     Countdown,            // 5,4,3,2,1,FIGHT! - input disabled
     InRound,              // Active gameplay - input enabled, timer running
     RoundEnd,             // "Round Over" - input disabled, 5s pause
@@ -66,6 +67,12 @@ private:
     void StartShopPhase();           // Shop Timer
     void StartTransitionToArena();   // Fade To Arena
     void OnTransitionToArenaMidpoint(); // Swap Widgets during black screen
+
+
+    void StartRoundIntro();
+
+    UPROPERTY(EditDefaultsOnly, Category = "Match Timing")
+    float BannerPhaseDuration = 7.f;   // must cover open + hold + close
 
     // Loop through player controllers in server
     void ForEachPlayerController(TFunctionRef<void(class AChrisPlayerController*)> Func);
@@ -128,7 +135,7 @@ private:
     EFlagOwnership DetermineRoundWinner();
 
     // === NEW === Awards souls based on round result, increments round wins
-    void AwardRoundEndSouls();
+    EFlagOwnership AwardRoundEndSouls();
 
     // === NEW === Called when any flag is captured — checks if ALL flags are now captured
     void OnFlagCapturedCallback(EFlagOwnership CapturedByTeam);
