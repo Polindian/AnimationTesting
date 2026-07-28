@@ -90,8 +90,9 @@ void UMainMenuWidget::NativeConstruct()
 				MultiplayerButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::MultiplayerClicked);
 				ExitGameButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::ExitGameClicked);
 
-				LeaderboardsButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::LeaderboardsClicked);
-				MultiplayerLeaderboardsButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::LeaderboardsClicked);
+				LeaderboardsButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::LeaderboardsClickedFromMain);
+				MultiplayerLeaderboardsButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::LeaderboardsClickedFromMultiplayer);
+
 
 
 				// Both pages' back buttons lead to the same place
@@ -417,6 +418,7 @@ void UMainMenuWidget::WireMultiplayerPageNavigation()
 	UWidget* CreateBtn = CreateSessionButton->GetMainButton();
 	UWidget* BarBtn = SessionSearchBar->GetBarButton();
 	UWidget* TutorialBtn = TutorialBookButton->GetMainButton();
+	UWidget* LeaderboardsBtn = MultiplayerLeaderboardsButton->GetMainButton();
 
 	const bool bBarVisible = SessionNameContainer->GetVisibility() != ESlateVisibility::Collapsed;
 	const bool bHasName = !SessionSearchBar->GetText().IsEmpty();
@@ -442,6 +444,7 @@ void UMainMenuWidget::WireMultiplayerPageNavigation()
 	if (FirstEntryButton)
 	{
 		TutorialBtn->SetNavigationRuleExplicit(EUINavigation::Right, FirstEntryButton);
+		LeaderboardsBtn->SetNavigationRuleExplicit(EUINavigation::Right, FirstEntryButton);
 	}
 
 	// Left from the bar: only when CreateLobby is a legal (enabled) target
@@ -481,9 +484,19 @@ void UMainMenuWidget::WireMultiplayerPageNavigation()
 		TutorialBtn->SetNavigationRuleBase(EUINavigation::Up, EUINavigationRule::Stop);
 	}
 
+	// LeaderboardsButton underneath TutorialBook — both directions
+	LeaderboardsBtn->SetNavigationRuleExplicit(EUINavigation::Up, TutorialBtn);
+
+	// And let it hop right into the session list like its neighbours
+	if (FirstEntryButton)
+	{
+		LeaderboardsBtn->SetNavigationRuleExplicit(EUINavigation::Right, FirstEntryButton);
+	}
+
 	CreateBtn->BuildNavigation();
 	BarBtn->BuildNavigation();
 	TutorialBtn->BuildNavigation();
+	LeaderboardsBtn->BuildNavigation();
 }
 
 void UMainMenuWidget::ResetCreateSessionFlow()
@@ -543,12 +556,22 @@ void UMainMenuWidget::LeaderboardsClicked()
 	}
 }
 
+void UMainMenuWidget::LeaderboardsClickedFromMain()
+{
+	LeaderboardOpener = LeaderboardsButton;
+	LeaderboardsClicked();
+}
+
+void UMainMenuWidget::LeaderboardsClickedFromMultiplayer()
+{
+	LeaderboardOpener = MultiplayerLeaderboardsButton;
+	LeaderboardsClicked();
+}
+
 void UMainMenuWidget::LeaderboardsClosed()
 {
 	SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-
-	// Refocus leaderboards button
-	LeaderboardsButton->FocusButton();
+	if (LeaderboardOpener) { LeaderboardOpener->FocusButton(); }
 }
 
 
