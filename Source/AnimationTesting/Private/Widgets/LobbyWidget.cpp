@@ -258,6 +258,8 @@ void ULobbyWidget::CharacterDefinitionsLoaded()
     if (UCAssetManager::Get().GetLoadedCharacterDefinitions(LoadedCharacterDefinitions))
     {
         CharacterSelectionTileView->SetListItems(LoadedCharacterDefinitions);   // moved out of the loop
+
+        // Definitions are loaded but their meshes/grooms/textures are still soft references. Warm them now, well before anyone reaches hero selection.
         PreloadHeroAssets(LoadedCharacterDefinitions);
     }
 }
