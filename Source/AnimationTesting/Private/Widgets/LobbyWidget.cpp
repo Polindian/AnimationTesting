@@ -257,11 +257,8 @@ void ULobbyWidget::CharacterDefinitionsLoaded()
     TArray<UPA_CharacterDefinition*> LoadedCharacterDefinitions;
     if (UCAssetManager::Get().GetLoadedCharacterDefinitions(LoadedCharacterDefinitions))
     {
-        for (UPA_CharacterDefinition* LoadedCharacterDefinition : LoadedCharacterDefinitions)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("Loaded Character: %s"), *(LoadedCharacterDefinition->GetCharacterDisplayName()));
-            CharacterSelectionTileView->SetListItems(LoadedCharacterDefinitions);
-        }
+        CharacterSelectionTileView->SetListItems(LoadedCharacterDefinitions);   // moved out of the loop
+        PreloadHeroAssets(LoadedCharacterDefinitions);
     }
 }
 
@@ -403,3 +400,23 @@ void ULobbyWidget::ShowHeroTooltip(const UPA_CharacterDefinition* Definition)
         HeroTooltipImage->SetVisibility(ESlateVisibility::HitTestInvisible);
     }
 }
+
+void ULobbyWidget::PreloadHeroAssets(const TArray<UPA_CharacterDefinition*>& Definitions)
+{
+    TArray<FSoftObjectPath> PathsToLoad;
+    for (const UPA_CharacterDefinition* Def : Definitions)
+    {
+        if (Def) { Def->GetPreloadAssetPaths(PathsToLoad); }
+    }
+
+    if (PathsToLoad.Num() == 0) return;
+
+    // Handle is stored so the assets stay loaded — if it goes out of scope they can be garbage collected
+    HeroAssetPreloadHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
+        PathsToLoad,
+        FStreamableDelegate::CreateWeakLambda(this, [this]()
+            {
+                UE_LOG(LogTemp, Warning, TEXT("Hero display assets preloaded"));
+            }));
+}
+

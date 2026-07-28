@@ -13,7 +13,6 @@ void UCharacterEntryWidget::NativeOnInitialized()
 
 	// OnInitialized, not Construct — list entries get recycled and re-added
 	SelectButton->OnClicked.AddDynamic(this, &UCharacterEntryWidget::HandleClicked);
-	SelectButton->IsFocusable = true;
 
 	HoverGlow->SetVisibility(ESlateVisibility::Hidden);
 }
@@ -72,4 +71,15 @@ void UCharacterEntryWidget::NativeOnRemovedFromFocusPath(const FFocusEvent& InFo
 	{
 		HoverGlow->SetVisibility(ESlateVisibility::Hidden);
 	}
+}
+
+FReply UCharacterEntryWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
+{
+	const FKey Key = InKeyEvent.GetKey();
+	if (Key == EKeys::Enter || Key == EKeys::Gamepad_FaceButton_Bottom || Key == EKeys::Virtual_Accept)
+	{
+		HandleClicked();
+		return FReply::Handled();
+	}
+	return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
 }

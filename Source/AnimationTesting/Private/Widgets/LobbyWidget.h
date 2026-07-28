@@ -123,4 +123,8 @@ private:
 	void HandleHeroEntryGenerated(UUserWidget& EntryWidget);
 	void HeroEntryHovered(const UPA_CharacterDefinition* Definition);
 	void ShowHeroTooltip(const UPA_CharacterDefinition* Definition);
+
+	TSharedPtr<struct FStreamableHandle> HeroAssetPreloadHandle;
+
+	void PreloadHeroAssets(const TArray<UPA_CharacterDefinition*>& Definitions);
 };

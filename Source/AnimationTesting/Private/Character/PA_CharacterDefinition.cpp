@@ -3,6 +3,8 @@
 
 #include "Character/PA_CharacterDefinition.h"
 #include "Character/ChrisCharacter.h"
+#include "Engine/StreamableManager.h"
+#include "Engine/AssetManager.h"
 
 FPrimaryAssetId UPA_CharacterDefinition::GetPrimaryAssetId() const
 {
@@ -78,3 +80,32 @@ UTexture2D* UPA_CharacterDefinition::LoadToolTip() const
 	}
 	return nullptr;
 }
+
+void UPA_CharacterDefinition::GetPreloadAssetPaths(TArray<FSoftObjectPath>& OutPaths) const
+{
+	auto AddIfValid = [&OutPaths](const FSoftObjectPath& Path)
+		{
+			if (!Path.IsNull()) { OutPaths.Add(Path); }
+		};
+
+	AddIfValid(CharacterIcon.ToSoftObjectPath());
+	AddIfValid(ToolTipTexture.ToSoftObjectPath());
+	AddIfValid(CharacterClass.ToSoftObjectPath());
+	AddIfValid(DisplayAnimBP.ToSoftObjectPath());
+	AddIfValid(DisplayAnimation.ToSoftObjectPath());
+
+	for (const FDisplayCostumePiece& Piece : DisplayCostumePieces)
+	{
+		AddIfValid(Piece.Mesh.ToSoftObjectPath());
+	}
+	for (const FDisplayWeaponPiece& Weapon : DisplayWeapons)
+	{
+		AddIfValid(Weapon.Mesh.ToSoftObjectPath());
+	}
+	for (const FDisplayGroomPiece& Groom : DisplayGrooms)
+	{
+		AddIfValid(Groom.GroomAsset.ToSoftObjectPath());
+		AddIfValid(Groom.BindingAsset.ToSoftObjectPath());
+	}
+}
+

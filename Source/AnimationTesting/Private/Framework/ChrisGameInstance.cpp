@@ -11,10 +11,27 @@
 // Only the server (dedicated or listen) should initiate a map travel
 void UChrisGameInstance::StartMatch()
 {
-	if (GetWorld()->GetNetMode() == ENetMode::NM_DedicatedServer || GetWorld()->GetNetMode() == ENetMode::NM_ListenServer)
+	const ENetMode NetMode = GetWorld()->GetNetMode();
+
+	if (NetMode == ENetMode::NM_DedicatedServer || NetMode == ENetMode::NM_ListenServer)
 	{
 		LoadLevelAndListen(Lvl_ThirdPerson);
+		return;
 	}
+
+#if WITH_EDITOR
+	// PIE-only: solo standalone has no server net mode, so travel plainly with no
+	// ?listen and no port. Compiled out of packaged builds entirely.
+	if (NetMode == ENetMode::NM_Standalone && GIsEditor)
+	{
+		const FName LevelURL = FName(*FPackageName::ObjectPathToPackageName(Lvl_ThirdPerson.ToString()));
+		if (LevelURL != NAME_None)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[EDITOR] Solo travel to: %s"), *LevelURL.ToString());
+			GetWorld()->ServerTravel(LevelURL.ToString());
+		}
+	}
+#endif
 }
 
 void UChrisGameInstance::Init()
