@@ -32,8 +32,6 @@ protected:
     virtual void SynchronizeProperties() override;
 
 private:
-    UPROPERTY(meta = (BindWidgetOptional))
-    class UImage* FocusTint;
 
     // Assigned per instance in the shop WBP — each category has its own art
     UPROPERTY(EditAnywhere, Category = "Category")

@@ -8,6 +8,7 @@
 #include "Components/CanvasPanelSlot.h"
 #include "Widgets/ShopCategoryWidget.h"
 #include "Widgets/MenuButtonWidget.h"
+#include "Framework/Application/SlateApplication.h"
 #include "Inventory/InventoryComponent.h"
 #include "Widgets/ItemToolTip.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -18,7 +19,6 @@
 void UShopWidget::NativeConstruct()
 {
     Super::NativeConstruct();
-    SetIsFocusable(true);
     LoadShopItems();
     InitBranchMaterials();
 
@@ -32,11 +32,22 @@ void UShopWidget::NativeConstruct()
         }
     }
 
-    SetupCategoryTooltips();
-
     if (ContinueButton)
     {
         ContinueButton->OnMenuButtonClicked.AddDynamic(this, &UShopWidget::OnContinueClicked);
+    }
+
+    // Categories aren't purchasable — they only announce their tooltip on focus
+    UShopCategoryWidget* Categories[] = {
+        CategoryHeader_Assassin, CategoryHeader_Gambler, CategoryHeader_Tank,
+        CategoryHeader_Magician, AbilityUpgradesHeader, ConsumablesHeader
+    };
+    for (UShopCategoryWidget* Category : Categories)
+    {
+        if (Category)
+        {
+            Category->OnCategoryFocusChanged.AddUObject(this, &UShopWidget::HandleCategoryFocusChanged);
+        }
     }
 }
 
@@ -279,44 +290,6 @@ void UShopWidget::UpdateAbilityUpgradeStates()
     }
 }
 
-void UShopWidget::SetupCategoryTooltips()
-{
-    if (!CategoryToolTipClass) return;
-
-    // Pair each category header widget with its tooltip texture.
-    TArray<TPair<UWidget*, UTexture2D*>> Categories = {
-        { CategoryHeader_Assassin,  AssassinTooltipTexture  },
-        { CategoryHeader_Gambler,   GamblerTooltipTexture   },
-        { CategoryHeader_Tank,      TankTooltipTexture      },
-        { CategoryHeader_Magician,  MagicianTooltipTexture  },
-        { AbilityUpgradesHeader,    AbilityUpgradesTooltipTexture }, 
-        { ConsumablesHeader,        ConsumablesTooltipTexture     }
-    };
-
-    for (auto& Pair : Categories)
-    {
-        if (!Pair.Key || !Pair.Value) continue;
-
-        UItemToolTip* Tooltip = CreateWidget<UItemToolTip>(GetOwningPlayer(), CategoryToolTipClass);
-        if (Tooltip)
-        {
-            Tooltip->SetTooltipImage(Pair.Value);
-
-            // Apply custom size for the non-standard aspect ratio tooltips.
-            if (Pair.Key == AbilityUpgradesHeader)
-            {
-                Tooltip->SetTooltipSize(AbilityUpgradesTooltipSize);
-            }
-            else if (Pair.Key == ConsumablesHeader)
-            {
-                Tooltip->SetTooltipSize(ConsumablesTooltipSize);
-            }
-
-            Pair.Key->SetToolTip(Tooltip);
-        }
-    }
-}
-
 void UShopWidget::InitBranchMaterials()
 {
     if (!BranchFillMaterial) return;
@@ -463,7 +436,7 @@ void UShopWidget::ShowTooltipNextTo(UWidget* Target, UTexture2D* Texture)
         return;
     }
 
-    TooltipImage->SetBrushFromTexture(Texture, false);
+    TooltipImage->SetBrushFromTexture(Texture, true);
 
     const FGeometry TargetGeo = Target->GetCachedGeometry();
     const FGeometry CanvasGeo = TooltipCanvas->GetCachedGeometry();
@@ -485,6 +458,69 @@ void UShopWidget::HideTooltip()
     if (TooltipImage) { TooltipImage->SetVisibility(ESlateVisibility::Hidden); }
 }
 
+void UShopWidget::SetNav(UWidget* From, UWidget* Up, UWidget* Down, UWidget* Left, UWidget* Right)
+{
+    if (!From) { return; }
+
+    if (Up) { From->SetNavigationRuleExplicit(EUINavigation::Up, Up); }
+    if (Down) { From->SetNavigationRuleExplicit(EUINavigation::Down, Down); }
+    if (Left) { From->SetNavigationRuleExplicit(EUINavigation::Left, Left); }
+    if (Right) { From->SetNavigationRuleExplicit(EUINavigation::Right, Right); }
+
+    From->BuildNavigation();
+}
+
+void UShopWidget::WireShopNavigation()
+{
+    // MenuButtonWidget's inner button is the actual focus target
+    UWidget* Continue = ContinueButton ? ContinueButton->GetMainButton() : nullptr;
+
+
+    // --- Assassin ---
+    SetNav(Skill_Assassin1, Skill_Assassin2, Skill_Tank1, Skill_Magician1, Skill_Gambler1);
+    SetNav(Skill_Assassin2, Skill_Assassin3, Skill_Assassin1, Skill_Magician1, Skill_Gambler1);
+    SetNav(Skill_Assassin3, CategoryHeader_Assassin, Skill_Assassin2, Skill_Magician1, Skill_Gambler1);
+
+    // --- Gambler ---
+    SetNav(Skill_Gambler1, Skill_Assassin1, Skill_Tank1, Skill_Magician1, Skill_Gambler2);
+    SetNav(Skill_Gambler2, Skill_Assassin1, Skill_Tank1, Skill_Gambler1, Skill_Gambler3);
+    SetNav(Skill_Gambler3, Skill_Assassin1, Skill_Tank1, Skill_Gambler2, CategoryHeader_Gambler);
+
+    // --- Magician ---
+    SetNav(Skill_Magician1, Skill_Assassin1, Skill_Tank1, Skill_Magician2, Skill_Gambler1);
+    SetNav(Skill_Magician2, Skill_Assassin1, Skill_Tank1, Skill_Magician3, Skill_Magician1);
+    SetNav(Skill_Magician3, Skill_Assassin1, Skill_Tank1, CategoryHeader_Magician, Skill_Magician2);
+
+    // --- Tank ---
+    SetNav(Skill_Tank1, Skill_Assassin1, Skill_Tank2, Skill_Magician1, Skill_Gambler1);
+    SetNav(Skill_Tank2, Skill_Tank1, Skill_Tank3, Skill_Magician1, Skill_Gambler1);
+    SetNav(Skill_Tank3, Skill_Tank2, CategoryHeader_Tank, Skill_Magician1, Skill_Gambler1);
+
+    // --- Headers ---
+    SetNav(CategoryHeader_Assassin, CategoryHeader_Tank, Skill_Assassin3, CategoryHeader_Magician, CategoryHeader_Gambler);
+    SetNav(CategoryHeader_Gambler, AbilityUpgradesHeader, CategoryHeader_Tank, Skill_Gambler3, AbilityUpgradesHeader);
+    SetNav(CategoryHeader_Tank, Skill_Tank3, CategoryHeader_Assassin, CategoryHeader_Magician, Continue);
+    SetNav(CategoryHeader_Magician, CategoryHeader_Assassin, CategoryHeader_Tank, ConsumablesHeader, Skill_Magician3);
+    SetNav(AbilityUpgradesHeader, Continue, Bonebreaker, CategoryHeader_Gambler, CategoryHeader_Magician);
+    SetNav(ConsumablesHeader, Deadeye, ElixirOfLife, CategoryHeader_Gambler, CategoryHeader_Magician);
+
+    // --- Ability Upgrades ---
+    SetNav(Bonebreaker, AbilityUpgradesHeader, Scorched, CategoryHeader_Gambler, Shockwave);
+    SetNav(Shockwave, AbilityUpgradesHeader, Deadeye, Bonebreaker, Scorched);
+    SetNav(Scorched, Bonebreaker, ConsumablesHeader, CategoryHeader_Gambler, Deadeye);
+    SetNav(Deadeye, Shockwave, ConsumablesHeader, Scorched, CategoryHeader_Magician);
+
+    // --- Consumables ---
+    SetNav(ElixirOfLife, ConsumablesHeader, Quicksilver, CategoryHeader_Gambler, BloodSerum);
+    SetNav(BloodSerum, ConsumablesHeader, Quicksilver, ElixirOfLife, WardensPhial);
+    SetNav(WardensPhial, ConsumablesHeader, Nightflare, BloodSerum, Quicksilver);
+    SetNav(Quicksilver, ElixirOfLife, Continue, CategoryHeader_Gambler, Nightflare);
+    SetNav(Nightflare, WardensPhial, Continue, Quicksilver, Continue);
+
+    // --- Continue ---
+    SetNav(Continue, Nightflare, AbilityUpgradesHeader, CategoryHeader_Tank, CategoryHeader_Magician);
+}
+
 void UShopWidget::HandleItemFocusChanged(UItemWidget* Item, bool bFocused)
 {
     if (bFocused) { ShowTooltipNextTo(Item, Item->GetTooltipTexture()); }
@@ -500,13 +536,17 @@ void UShopWidget::HandleCategoryFocusChanged(UShopCategoryWidget* Category, bool
 
 void UShopWidget::FocusDefaultItem()
 {
-    // Deferred: the shop goes from Collapsed to visible in the same frame,
-    // and a collapsed widget has no geometry to focus
-    GetWorld()->GetTimerManager().SetTimerForNextTick(
-        FTimerDelegate::CreateWeakLambda(this, [this]()
-            {
-                if (Skill_Assassin1) { Skill_Assassin1->FocusItem(); }
-            }));
+    if (!Skill_Assassin1) { return; }
+
+    WireShopNavigation();
+
+    // Slate directly — the UMG wrapper wasn't taking
+    TSharedPtr<SWidget> SlateWidget = Skill_Assassin1->GetCachedWidget();
+    if (SlateWidget.IsValid())
+    {
+        FSlateApplication::Get().SetKeyboardFocus(SlateWidget, EFocusCause::SetDirectly);
+        FSlateApplication::Get().SetUserFocus(0, SlateWidget, EFocusCause::SetDirectly);
+    }
 }
 
 void UShopWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)

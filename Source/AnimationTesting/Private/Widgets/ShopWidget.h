@@ -134,31 +134,6 @@ private:
     UPROPERTY(meta = (BindWidget))
     UShopCategoryWidget* ConsumablesHeader;
 
-    // Tooltip textures for each category (set in WBP class defaults).
-    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
-    UTexture2D* AssassinTooltipTexture;
-    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
-    UTexture2D* GamblerTooltipTexture;
-    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
-    UTexture2D* TankTooltipTexture;
-    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
-    UTexture2D* MagicianTooltipTexture;
-    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
-    UTexture2D* AbilityUpgradesTooltipTexture;
-    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
-    UTexture2D* ConsumablesTooltipTexture;
-
-    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
-    FVector2D AbilityUpgradesTooltipSize = FVector2D(400.f, 300.f);
-
-    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
-    FVector2D ConsumablesTooltipSize = FVector2D(400.f, 300.f);
-
-    // The same tooltip widget class used by ItemWidget.
-    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
-    TSubclassOf<UItemToolTip> CategoryToolTipClass;
-
-    void SetupCategoryTooltips();
 
     // ── Branch Fill System ──────────────────────────────────────────
 
@@ -250,4 +225,9 @@ private:
 
     // All focusable shop entries, gathered once for nav wiring and default focus
     TArray<UItemWidget*> AllItemWidgets;
+
+    static void SetNav(UWidget* From, UWidget* Up, UWidget* Down, UWidget* Left, UWidget* Right);
+    void WireShopNavigation();
 };
+
+

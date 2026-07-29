@@ -146,9 +146,11 @@ void UItemWidget::NativeOnAddedToFocusPath(const FFocusEvent& InFocusEvent)
 {
     Super::NativeOnAddedToFocusPath(InFocusEvent);
 
+    UE_LOG(LogTemp, Warning, TEXT("[Shop] Focus arrived: %s | HasKeyboardFocus=%d"),
+        *GetName(), HasKeyboardFocus() ? 1 : 0);
+
     // Scale grows from the widget's centre (default pivot 0.5,0.5)
     SetRenderScale(FVector2D(FocusScale, FocusScale));
-    if (FocusTint) { FocusTint->SetVisibility(ESlateVisibility::HitTestInvisible); }
 
     OnItemFocusChanged.Broadcast(this, true);
 }
@@ -158,7 +160,6 @@ void UItemWidget::NativeOnRemovedFromFocusPath(const FFocusEvent& InFocusEvent)
     Super::NativeOnRemovedFromFocusPath(InFocusEvent);
 
     SetRenderScale(FVector2D(1.f, 1.f));
-    if (FocusTint) { FocusTint->SetVisibility(ESlateVisibility::Hidden); }
 
     OnItemFocusChanged.Broadcast(this, false);
 }

@@ -97,11 +97,6 @@ protected:
     virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
 
 private:
-    // Tint overlay laid over the icon — a separate image so it never fights
-    // the desaturation/brightness logic in SetSkillState
-    UPROPERTY(meta = (BindWidgetOptional))
-    class UImage* FocusTint;
-
     UPROPERTY(EditDefaultsOnly, Category = "Focus")
     float FocusScale = 1.1f;
 

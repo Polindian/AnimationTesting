@@ -355,6 +355,12 @@ void AChrisPlayerController::Client_OnShopPhaseStart_Implementation(float InShop
 		}
 	}
 
+	// Input mode first — setting it later would steal focus back
+	SetShowMouseCursor(true);
+	FInputModeGameAndUI GameAndUI;
+	GameAndUI.SetHideCursorDuringCapture(false);
+	SetInputMode(GameAndUI);
+
 	// Show it and restart the timer
 	if (ShopWidget)
 	{
@@ -362,7 +368,8 @@ void AChrisPlayerController::Client_OnShopPhaseStart_Implementation(float InShop
 		ShopWidget->SetRenderOpacity(0.f);
 		ShopWidget->StartTimer(InShopDuration);
 
-		// Fade the widget in over the same duration as the camera fade
+		// Fade in, then focus — focusing mid-fade was failing because the fade
+		// takes ~3s at this rate, so the old 1s delay fired at ~30% opacity
 		GetWorldTimerManager().SetTimer(ShopFadeTimerHandle, [this]()
 			{
 				if (ShopWidget)
@@ -374,16 +381,18 @@ void AChrisPlayerController::Client_OnShopPhaseStart_Implementation(float InShop
 					if (NewOpacity >= 1.f)
 					{
 						GetWorldTimerManager().ClearTimer(ShopFadeTimerHandle);
+						ShopWidget->FocusDefaultItem();   // fully visible now
 					}
 				}
 			}, 0.016f, true);
 	}
-	SetShowMouseCursor(true);
-	SetInputMode(FInputModeGameAndUI());
 }
 
 void AChrisPlayerController::Client_OnReturnToArena_Implementation(float FadeInDuration)
 {
+	// Shop is closing — cancel a pending focus attempt so it can't fire late
+	GetWorldTimerManager().ClearTimer(ShopFocusTimerHandle);
+
 	// Reset weapons to sheathed on client
 	if (ChrisPlayerCharacter)
 	{
@@ -392,7 +401,7 @@ void AChrisPlayerController::Client_OnReturnToArena_Implementation(float FadeInD
 			SwordComponent->ResetToUnequipped();
 		}
 	}
-	
+
 	// Force-close menu if it was open during shop
 	if (bIsGameplayMenuOpen)
 	{

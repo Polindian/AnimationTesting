@@ -10,11 +10,6 @@ void UShopCategoryWidget::NativeOnInitialized()
 
     // Required for navigation to consider this widget at all
     SetIsFocusable(true);
-
-    if (FocusTint)
-    {
-        FocusTint->SetVisibility(ESlateVisibility::Hidden);
-    }
 }
 
 void UShopCategoryWidget::NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
@@ -29,7 +24,6 @@ void UShopCategoryWidget::NativeOnAddedToFocusPath(const FFocusEvent& InFocusEve
     Super::NativeOnAddedToFocusPath(InFocusEvent);
 
     SetRenderScale(FVector2D(FocusScale, FocusScale));
-    if (FocusTint) { FocusTint->SetVisibility(ESlateVisibility::HitTestInvisible); }
 
     OnCategoryFocusChanged.Broadcast(this, true);
 }
@@ -39,7 +33,6 @@ void UShopCategoryWidget::NativeOnRemovedFromFocusPath(const FFocusEvent& InFocu
     Super::NativeOnRemovedFromFocusPath(InFocusEvent);
 
     SetRenderScale(FVector2D(1.f, 1.f));
-    if (FocusTint) { FocusTint->SetVisibility(ESlateVisibility::Hidden); }
 
     OnCategoryFocusChanged.Broadcast(this, false);
 }
