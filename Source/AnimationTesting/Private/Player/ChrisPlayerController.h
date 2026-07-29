@@ -132,6 +132,7 @@ private:
     FRotator InitialSpawnRotation;
 
     FTimerHandle ShopFadeTimerHandle;
+    FTimerHandle ShopFocusTimerHandle;
 
 
 public:

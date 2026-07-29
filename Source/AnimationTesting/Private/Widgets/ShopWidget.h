@@ -11,6 +11,8 @@ class UPA_ShopItem;
 class UItemWidget;
 class UInventoryComponent;
 class UItemToolTip;
+class UShopCategoryWidget;      
+class UMenuButtonWidget;
 
 UCLASS()
 class UShopWidget : public UUserWidget
@@ -19,6 +21,7 @@ class UShopWidget : public UUserWidget
 
 public:
     void StartTimer(float Duration);
+    void FocusDefaultItem();
 
 protected:
     virtual void NativeConstruct() override;
@@ -39,7 +42,7 @@ private:
     class UTextBlock* TimerText;
 
     UPROPERTY(meta = (BindWidget))
-    class UButton* ContinueButton;
+    class UMenuButtonWidget* ContinueButton;
 
     // Skills
     UPROPERTY(meta = (BindWidget))
@@ -119,43 +122,18 @@ private:
     // ── Category Tooltips ──────────────────────────────────────────
 
     UPROPERTY(meta = (BindWidget))
-    UWidget* CategoryHeader_Assassin;
+    UShopCategoryWidget* CategoryHeader_Assassin;
     UPROPERTY(meta = (BindWidget))
-    UWidget* CategoryHeader_Gambler;
+    UShopCategoryWidget* CategoryHeader_Gambler;
     UPROPERTY(meta = (BindWidget))
-    UWidget* CategoryHeader_Tank;
+    UShopCategoryWidget* CategoryHeader_Tank;
     UPROPERTY(meta = (BindWidget))
-    UWidget* CategoryHeader_Magician;
+    UShopCategoryWidget* CategoryHeader_Magician;
     UPROPERTY(meta = (BindWidget))
-    UWidget* AbilityUpgradesHeader;
+    UShopCategoryWidget* AbilityUpgradesHeader;
     UPROPERTY(meta = (BindWidget))
-    UWidget* ConsumablesHeader;
+    UShopCategoryWidget* ConsumablesHeader;
 
-    // Tooltip textures for each category (set in WBP class defaults).
-    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
-    UTexture2D* AssassinTooltipTexture;
-    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
-    UTexture2D* GamblerTooltipTexture;
-    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
-    UTexture2D* TankTooltipTexture;
-    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
-    UTexture2D* MagicianTooltipTexture;
-    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
-    UTexture2D* AbilityUpgradesTooltipTexture;
-    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
-    UTexture2D* ConsumablesTooltipTexture;
-
-    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
-    FVector2D AbilityUpgradesTooltipSize = FVector2D(400.f, 300.f);
-
-    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
-    FVector2D ConsumablesTooltipSize = FVector2D(400.f, 300.f);
-
-    // The same tooltip widget class used by ItemWidget.
-    UPROPERTY(EditDefaultsOnly, Category = "Category Tooltips")
-    TSubclassOf<UItemToolTip> CategoryToolTipClass;
-
-    void SetupCategoryTooltips();
 
     // ── Branch Fill System ──────────────────────────────────────────
 
@@ -225,4 +203,31 @@ private:
 
     // Finds category/tier index for a purchased shop item. Returns false if not a skill.
     bool FindSkillIndices(const UPA_ShopItem* Item, int32& OutCategory, int32& OutTier) const;
+
+
+    /******************************/
+    /*         Navigation         */
+    /******************************/
+
+    UPROPERTY(meta = (BindWidget))
+    class UCanvasPanel* TooltipCanvas;
+
+    UPROPERTY(meta = (BindWidget))
+    class UImage* TooltipImage;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Tooltip")
+    FVector2D TooltipOffset = FVector2D(20.f, 0.f);
+
+    void HandleItemFocusChanged(UItemWidget* Item, bool bFocused);
+    void HandleCategoryFocusChanged(UShopCategoryWidget* Category, bool bFocused);
+    void ShowTooltipNextTo(UWidget* Target, UTexture2D* Texture);
+    void HideTooltip();
+
+    // All focusable shop entries, gathered once for nav wiring and default focus
+    TArray<UItemWidget*> AllItemWidgets;
+
+    static void SetNav(UWidget* From, UWidget* Up, UWidget* Down, UWidget* Left, UWidget* Right);
+    void WireShopNavigation();
 };
+
+

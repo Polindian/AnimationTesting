@@ -11,6 +11,8 @@ class UItemToolTip;
 class UPA_ShopItem;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnItemPurchaseRequested, const UPA_ShopItem*);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnItemFocusChanged, UItemWidget* /*Item*/, bool /*bFocused*/); 
+
 /**
  *
  */
@@ -37,7 +39,6 @@ private:
 
 protected:
     virtual void OnItemClicked();
-    UItemToolTip* SetToolTipWidget();
 
     class UImage* GetItemIcon() const { return ItemIcon; };
 
@@ -57,7 +58,9 @@ private:
     virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
     virtual FReply NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 
-//Skill Tree Lock System
+/******************************/
+/*   Skill Tree Lock System   */
+/******************************/
 public:
     void SetSkillState(bool bPurchased, bool bLocked);
 
@@ -76,4 +79,26 @@ private:
     // Runtime dynamic instance so we can change parameters per-widget.
     UPROPERTY()
     UMaterialInstanceDynamic* IconMaterialInstance;
+
+
+    /******************************/
+    /*         Navigation         */
+    /******************************/
+public:
+    FOnItemFocusChanged OnItemFocusChanged;
+
+    UTexture2D* GetTooltipTexture() const { return TooltipTexture; }
+    void FocusItem() { SetKeyboardFocus(); }
+
+protected:
+    virtual void NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+    virtual void NativeOnAddedToFocusPath(const FFocusEvent& InFocusEvent) override;
+    virtual void NativeOnRemovedFromFocusPath(const FFocusEvent& InFocusEvent) override;
+    virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
+
+private:
+    UPROPERTY(EditDefaultsOnly, Category = "Focus")
+    float FocusScale = 1.1f;
+
+
 };
