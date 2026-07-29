@@ -187,6 +187,8 @@ void AChrisPlayerController::ToggleGameplayMenu()
 
 void AChrisPlayerController::Client_ShowBanner_Implementation(EBannerType Type, int32 RoundNumber, uint8 WinningTeamId)
 {
+	UE_LOG(LogTemp, Warning, TEXT("[Banner] Client_ShowBanner type=%d round=%d — Class=%s"), (int32)Type, RoundNumber, BannerWidgetClass ? TEXT("SET") : TEXT("NULL"));
+	
 	if (!BannerWidgetClass) return;
 
 	// Create once, reuse — the widget queues and manages its own visibility

@@ -137,6 +137,29 @@ AActor* AChrisGameMode::FindNextStartSpotForTeam(const FGenericTeamId& TeamID)
 	return nullptr;
 }
 
+void AChrisGameMode::ShowRoundResultBanner()
+{
+	const uint8 TeamId = PendingBannerWinningTeamId;
+	const int32 Round = PendingBannerRound;
+
+	ForEachPlayerController([TeamId, Round](AChrisPlayerController* PC)
+		{
+			PC->Client_ShowBanner(EBannerType::RoundResult, Round, TeamId);
+		});
+}
+
+void AChrisGameMode::ShowMatchResultBanner()
+{
+	const uint8 TeamId = PendingMatchWinningTeamId;
+
+	ForEachPlayerController([TeamId](AChrisPlayerController* PC)
+		{
+			// Queued: MATCH WON/LOST shows first, TEAM TRIUMPH follows when it closes
+			PC->Client_ShowBanner(EBannerType::MatchResult, 0, TeamId);
+			PC->Client_ShowBanner(EBannerType::TeamTriumph, 0, TeamId);
+		});
+}
+
 void AChrisGameMode::ForEachPlayerController(TFunctionRef<void(AChrisPlayerController*)> Func)
 {
 	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
@@ -164,7 +187,7 @@ void AChrisGameMode::PostLogin(APlayerController* NewPlayer)
 	{
 		// 2 second delay: lets the last player's pawn fully initialize
 		// (ServerSideInit, widget spawning, etc.) before we start the countdown.
-		GetWorldTimerManager().SetTimer(PhaseTimerHandle, this, &AChrisGameMode::StartCountdown, 2.f, false);
+		GetWorldTimerManager().SetTimer(PhaseTimerHandle, this, &AChrisGameMode::StartRoundIntro, 2.f, false);
 	}
 }
 
@@ -342,11 +365,9 @@ void AChrisGameMode::EndRound()
 	// === NEW === Match continues, so announce the round result.
 	// Below the match-over checks on purpose: when the match ends, EndMatch
 	// sends MATCH + TRIUMPH instead and this would queue in front of them.
-	const int32 FinishedRound = CurrentRound;
-	ForEachPlayerController([WinningTeamId, FinishedRound](AChrisPlayerController* PC)
-		{
-			PC->Client_ShowBanner(EBannerType::RoundResult, FinishedRound, WinningTeamId);
-		});
+	PendingBannerWinningTeamId = WinningTeamId;
+	PendingBannerRound = CurrentRound;
+	GetWorldTimerManager().SetTimer(BannerDelayTimerHandle, this, &AChrisGameMode::ShowRoundResultBanner, RoundResultBannerDelay, false);
 
 	GetWorldTimerManager().SetTimer(PhaseTimerHandle, this, &AChrisGameMode::StartTransitionToShop, RoundEndWaitTime, false);
 
@@ -638,11 +659,15 @@ void AChrisGameMode::EndMatch(bool bTeamOneWon)
 	DestroyAllAI();
 
 	// Notify all clients that the match is over
-	// TODO: Add a Client_OnMatchEnd RPC to show a results screen
-	ForEachPlayerController([](AChrisPlayerController* PC)
+	const uint8 WinningTeamId = bTeamOneWon ? 0 : 1;
+
+	ForEachPlayerController([WinningTeamId](AChrisPlayerController* PC)
 		{
-			PC->Client_OnRoundEnd(); // Disables input for now
+			PC->Client_OnRoundEnd();   // disables input
 		});
+
+	PendingMatchWinningTeamId = WinningTeamId;
+	GetWorldTimerManager().SetTimer(BannerDelayTimerHandle, this, &AChrisGameMode::ShowMatchResultBanner, RoundResultBannerDelay, false);
 
 	// Reset zone time accumulators
 	ForEachPlayerController([](AChrisPlayerController* PC)
@@ -804,19 +829,20 @@ void AChrisGameMode::OnTransitionToArenaMidpoint()
 
 void AChrisGameMode::StartRoundIntro()
 {
+	if (CurrentPhase == EMatchPhase::RoundIntro) { return; }
+
 	CurrentPhase = EMatchPhase::RoundIntro;
 
 	// CurrentRound increments in StartRound, so the round about to be played is +1
 	const int32 UpcomingRound = CurrentRound + 1;
-
-	UE_LOG(LogTemp, Log, TEXT("[MatchFlow] Round %d intro banner"), UpcomingRound);
+	UE_LOG(LogTemp, Warning, TEXT("[Banner] StartRoundIntro - round %d, waiting %.1fs"), UpcomingRound, BannerPhaseDuration);
 
 	ForEachPlayerController([UpcomingRound](AChrisPlayerController* PC)
 		{
 			PC->Client_ShowBanner(EBannerType::RoundNumber, UpcomingRound, 255);
 		});
 
-	GetWorldTimerManager().SetTimer(PhaseTimerHandle, this, &AChrisGameMode::StartRoundIntro, 2.f, false);
+	GetWorldTimerManager().SetTimer(PhaseTimerHandle, this, &AChrisGameMode::StartCountdown, BannerPhaseDuration, false);
 }
 
 void AChrisGameMode::OnTransitionToArenaFadeIn()

@@ -74,6 +74,24 @@ private:
     UPROPERTY(EditDefaultsOnly, Category = "Match Timing")
     float BannerPhaseDuration = 7.f;   // must cover open + hold + close
 
+    UPROPERTY(EditDefaultsOnly, Category = "Match Timing")
+    float RoundResultBannerDelay = 3.f;
+
+   
+    void ShowRoundResultBanner();
+
+    // Stashed because the banner fires on a timer, after EndRound has returned
+    uint8 PendingBannerWinningTeamId = 255;
+    int32 PendingBannerRound = 0;
+
+    FTimerHandle BannerDelayTimerHandle;
+
+    void ShowMatchResultBanner();
+
+    // Stashed for the delayed match banner, same reason as the round one
+    uint8 PendingMatchWinningTeamId = 0;
+
+
     // Loop through player controllers in server
     void ForEachPlayerController(TFunctionRef<void(class AChrisPlayerController*)> Func);
 
