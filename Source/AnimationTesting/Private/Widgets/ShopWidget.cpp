@@ -4,6 +4,10 @@
 #include "Widgets/ItemWidget.h"
 #include "Components/TextBlock.h"
 #include "Components/Button.h"
+#include "Components/CanvasPanel.h"
+#include "Components/CanvasPanelSlot.h"
+#include "Widgets/ShopCategoryWidget.h"
+#include "Widgets/MenuButtonWidget.h"
 #include "Inventory/InventoryComponent.h"
 #include "Widgets/ItemToolTip.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -32,16 +36,17 @@ void UShopWidget::NativeConstruct()
 
     if (ContinueButton)
     {
-        ContinueButton->OnClicked.AddDynamic(this, &UShopWidget::OnContinueClicked);
+        ContinueButton->OnMenuButtonClicked.AddDynamic(this, &UShopWidget::OnContinueClicked);
     }
 }
 
 void UShopWidget::BindWidgetPurchase(UItemWidget* Widget)
 {
-    if (Widget)
-    {
-        Widget->OnItemPurchaseRequested.AddUObject(this, &UShopWidget::OnItemPurchaseRequested);
-    }
+    if (!Widget) return;
+
+    Widget->OnItemPurchaseRequested.AddUObject(this, &UShopWidget::OnItemPurchaseRequested);
+    Widget->OnItemFocusChanged.AddUObject(this, &UShopWidget::HandleItemFocusChanged);
+    AllItemWidgets.AddUnique(Widget);
 }
 
 void UShopWidget::ShopItemLoadFinished()
@@ -446,6 +451,62 @@ bool UShopWidget::FindSkillIndices(const UPA_ShopItem* Item, int32& OutCategory,
     }
 
     return false;
+}
+
+// Positions the tooltip beside whatever has focus, converting the target's
+// absolute screen geometry into the tooltip canvas's local space
+void UShopWidget::ShowTooltipNextTo(UWidget* Target, UTexture2D* Texture)
+{
+    if (!Target || !Texture || !TooltipImage || !TooltipCanvas)
+    {
+        HideTooltip();
+        return;
+    }
+
+    TooltipImage->SetBrushFromTexture(Texture, false);
+
+    const FGeometry TargetGeo = Target->GetCachedGeometry();
+    const FGeometry CanvasGeo = TooltipCanvas->GetCachedGeometry();
+
+    FVector2D LocalPos = CanvasGeo.AbsoluteToLocal(TargetGeo.GetAbsolutePosition());
+    LocalPos.X += TargetGeo.GetLocalSize().X + TooltipOffset.X;   // to the right of the item
+    LocalPos.Y += TooltipOffset.Y;
+
+    if (UCanvasPanelSlot* TooltipSlot = Cast<UCanvasPanelSlot>(TooltipImage->Slot))
+    {
+        TooltipSlot->SetPosition(LocalPos);
+    }
+
+    TooltipImage->SetVisibility(ESlateVisibility::HitTestInvisible);
+}
+
+void UShopWidget::HideTooltip()
+{
+    if (TooltipImage) { TooltipImage->SetVisibility(ESlateVisibility::Hidden); }
+}
+
+void UShopWidget::HandleItemFocusChanged(UItemWidget* Item, bool bFocused)
+{
+    if (bFocused) { ShowTooltipNextTo(Item, Item->GetTooltipTexture()); }
+    else { HideTooltip(); }
+}
+
+// Same for categories — separate handler only because the delegate types differ
+void UShopWidget::HandleCategoryFocusChanged(UShopCategoryWidget* Category, bool bFocused)
+{
+    if (bFocused) { ShowTooltipNextTo(Category, Category->GetTooltipTexture()); }
+    else { HideTooltip(); }
+}
+
+void UShopWidget::FocusDefaultItem()
+{
+    // Deferred: the shop goes from Collapsed to visible in the same frame,
+    // and a collapsed widget has no geometry to focus
+    GetWorld()->GetTimerManager().SetTimerForNextTick(
+        FTimerDelegate::CreateWeakLambda(this, [this]()
+            {
+                if (Skill_Assassin1) { Skill_Assassin1->FocusItem(); }
+            }));
 }
 
 void UShopWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)

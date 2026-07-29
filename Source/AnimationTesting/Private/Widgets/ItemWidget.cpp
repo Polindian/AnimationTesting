@@ -46,24 +46,8 @@ void UItemWidget::SetIcon(UTexture2D* IconTexture)
 void UItemWidget::SetTooltipTexture(UTexture2D* InTooltipTexture)
 {
     TooltipTexture = InTooltipTexture;
-    SetToolTipWidget();
 }
 
-UItemToolTip* UItemWidget::SetToolTipWidget()
-{
-    if (!ItemToolTipClass || !TooltipTexture)
-    {
-        return nullptr;
-    }
-
-    UItemToolTip* NewToolTip = CreateWidget<UItemToolTip>(GetOwningPlayer(), ItemToolTipClass);
-    if (NewToolTip)
-    {
-        NewToolTip->SetTooltipImage(TooltipTexture);
-        SetToolTip(NewToolTip);
-    }
-    return NewToolTip;
-}
 
 void UItemWidget::SetStock(int32 InStock)
 {
@@ -149,4 +133,43 @@ void UItemWidget::SetSkillState(bool bPurchased, bool bLocked)
         const FLinearColor Dimmed(0.3f, 0.3f, 0.3f, 1.f);
         ItemIcon->SetColorAndOpacity(bPurchased ? FLinearColor::White : Dimmed);
     }
+}
+
+void UItemWidget::NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+    Super::NativeOnMouseEnter(InGeometry, InMouseEvent);
+    // Route mouse through focus so all three devices share one highlight path
+    FocusItem();
+}
+
+void UItemWidget::NativeOnAddedToFocusPath(const FFocusEvent& InFocusEvent)
+{
+    Super::NativeOnAddedToFocusPath(InFocusEvent);
+
+    // Scale grows from the widget's centre (default pivot 0.5,0.5)
+    SetRenderScale(FVector2D(FocusScale, FocusScale));
+    if (FocusTint) { FocusTint->SetVisibility(ESlateVisibility::HitTestInvisible); }
+
+    OnItemFocusChanged.Broadcast(this, true);
+}
+
+void UItemWidget::NativeOnRemovedFromFocusPath(const FFocusEvent& InFocusEvent)
+{
+    Super::NativeOnRemovedFromFocusPath(InFocusEvent);
+
+    SetRenderScale(FVector2D(1.f, 1.f));
+    if (FocusTint) { FocusTint->SetVisibility(ESlateVisibility::Hidden); }
+
+    OnItemFocusChanged.Broadcast(this, false);
+}
+
+FReply UItemWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
+{
+    const FKey Key = InKeyEvent.GetKey();
+    if (Key == EKeys::Enter || Key == EKeys::Gamepad_FaceButton_Bottom || Key == EKeys::Virtual_Accept)
+    {
+        OnItemClicked();   // same path as a mouse click, including all its guards
+        return FReply::Handled();
+    }
+    return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
 }
