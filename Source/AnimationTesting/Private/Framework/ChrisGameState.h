@@ -5,11 +5,13 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameStateBase.h"
 #include "Player/PlayerInfoTypes.h"
+#include "Data/MatchStatsTypes.h"
 #include "ChrisGameState.generated.h"
 
 class UPA_CharacterDefinition;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerSelectionUpdated, const TArray<FPlayerSelection>& /*NewPlayerSelection*/);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnMatchStatsUpdated, const TArray<FPlayerMatchStats>&);
 
 /**
  * 
@@ -71,4 +73,35 @@ private:
 
 	// Assigns a random character from the loaded definitions to any player who hasn't picked one
 	void AssignRandomCharactersToEmptySlots();
+
+	/************************/
+	/*    Match Stats       */
+	/************************/
+
+public:
+	// Tracking entry points — server only
+	void AddHeroKill(AActor* Killer);
+	void AddDeath(AActor* Victim);
+	void AddCaptureTime(AActor* Player, float DeltaSeconds);
+	void AddDamageDealt(AActor* Dealer, float Amount);
+
+	// Called at match end: snapshots XP and fills every rank
+	void FinalizeMatchStats();
+
+	const TArray<FPlayerMatchStats>& GetMatchStats() const { return MatchStatsArray; }
+	FOnMatchStatsUpdated OnMatchStatsUpdated;
+
+private:
+	UPROPERTY(ReplicatedUsing = OnRep_MatchStatsArray)
+	TArray<FPlayerMatchStats> MatchStatsArray;
+
+	UFUNCTION()
+	void OnRep_MatchStatsArray();
+
+	// Resolves an actor (pawn or controller) to its stats entry, creating one if needed.
+	// Returns null for AI, which has no PlayerState — so AI never accrues stats.
+	FPlayerMatchStats* FindOrAddStatsFor(AActor* Actor);
+
+
+
 };

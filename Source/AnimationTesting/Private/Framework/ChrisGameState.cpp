@@ -7,6 +7,12 @@
 #include "Framework/ChrisGameInstance.h"
 #include "Framework/CAssetManager.h"
 #include "Net/UnrealNetwork.h"
+#include "GameFramework/PlayerState.h"
+#include "GameFramework/Pawn.h"
+#include "GameFramework/Controller.h" 
+#include "GAS/CHeroAttributeSet.h"
+#include "AbilitySystemInterface.h"
+#include "AbilitySystemComponent.h"
 
 void AChrisGameState::RequestPlayerSelectionChange(const APlayerState* RequestingPlayer, uint8 DesiredSlot)
 {
@@ -116,6 +122,7 @@ void AChrisGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME_CONDITION_NOTIFY(AChrisGameState, PlayerSelectionArray, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME(AChrisGameState, HeroSelectionTimeRemaining);
+	DOREPLIFETIME_CONDITION_NOTIFY(AChrisGameState, MatchStatsArray, COND_None, REPNOTIFY_Always);
 }
 
 const TArray<FPlayerSelection>& AChrisGameState::GetPlayerSelection() const
@@ -294,4 +301,125 @@ void AChrisGameState::AssignRandomCharactersToEmptySlots()
 void AChrisGameState::OnRep_PlayerSelectionArray()
 {
 	OnPlayerSelectionUpdated.Broadcast(PlayerSelectionArray);
+}
+
+// Resolves any actor to its match-stats entry, creating one on first contact.
+// Works from either a pawn or a controller because damage reports come from
+// pawns while some kill reports come from controllers.
+// Returns null for AI: skeletons have no PlayerState, so they can never
+// accumulate stats of their own (though damage dealt TO them still counts
+// for the player who dealt it).
+FPlayerMatchStats* AChrisGameState::FindOrAddStatsFor(AActor* Actor)
+{
+	if (!HasAuthority() || !Actor) return nullptr;
+
+	// A PlayerState is the only thing that survives respawns and round resets, so it's what identifies a player across the whole match
+	APlayerState* PS = nullptr;
+	if (APawn* Pawn = Cast<APawn>(Actor)) { PS = Pawn->GetPlayerState(); }
+	else if (AController* C = Cast<AController>(Actor)) { PS = C->PlayerState; }
+
+	// No PlayerState means AI or a world actor — nothing to track
+	if (!PS) return nullptr;
+
+	// If we have already found an entry fo this player, hand back a pointer to it
+	FPlayerMatchStats* Found = MatchStatsArray.FindByPredicate(
+		[PS](const FPlayerMatchStats& S) { return S.OwningPlayer == PS; });
+
+	if (Found) return Found;
+
+	// First time we've seen this player — create their entry now. Entries are created lazily rather than up front so late joiners are handled for free.
+
+	FPlayerMatchStats NewStats;
+	NewStats.OwningPlayer = PS;
+	NewStats.PlayerName = PS->GetPlayerName();
+	return &MatchStatsArray[MatchStatsArray.Add(NewStats)];
+}
+
+// Called from GAP_Dead when a hero kills another hero
+void AChrisGameState::AddHeroKill(AActor* Killer)
+{
+	if (FPlayerMatchStats* S = FindOrAddStatsFor(Killer)) { S->HeroKills++; }
+}
+
+// Called from GAP_Dead for every hero death, including deaths with no killer (AI or environment)
+void AChrisGameState::AddDeath(AActor* Victim)
+{
+	if (FPlayerMatchStats* S = FindOrAddStatsFor(Victim)) { S->Deaths++; }
+}
+
+// Called every tick from Flag for each hero standing in an uncaptured zone
+void AChrisGameState::AddCaptureTime(AActor* Player, float DeltaSeconds)
+{
+	if (FPlayerMatchStats* S = FindOrAddStatsFor(Player)) { S->CaptureSeconds += DeltaSeconds; }
+}
+
+// Called from the attribute set whenever health is actually lost, with the true post-mitigation figure
+void AChrisGameState::AddDamageDealt(AActor* Dealer, float Amount)
+{
+	if (FPlayerMatchStats* S = FindOrAddStatsFor(Dealer)) { S->DamageInflicted += Amount; }
+}
+
+// Runs once at match end. Two jobs: snapshots each player's XP state (which the
+// stats screen can't read live, because a client can't query another player's
+// attributes), then convert raw values into the 1-based positions the UI shows.
+void AChrisGameState::FinalizeMatchStats()
+{
+	if (!HasAuthority()) return;
+
+	// --- Snapshot XP/level from each player's pawn ---
+	for (FPlayerMatchStats& S : MatchStatsArray)
+	{
+		if (!S.OwningPlayer) continue;
+
+		// The pawn owns the ability system, so go PlayerState -> Pawn -> ASC
+		APawn* Pawn = S.OwningPlayer->GetPawn();
+		if (!Pawn) continue;
+
+		IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(Pawn);
+		if (!ASI) continue;
+		UAbilitySystemComponent* ASC = ASI->GetAbilitySystemComponent();
+		if (!ASC) continue;
+
+		// Prev/Next level XP are stored so the gauge can show progress through the current level without recalculating from the experience curve
+		bool bFound = false;
+		S.Experience = ASC->GetGameplayAttributeValue(UCHeroAttributeSet::GetExperienceAttribute(), bFound);
+		S.Level = ASC->GetGameplayAttributeValue(UCHeroAttributeSet::GetLevelAttribute(), bFound);
+		S.PrevLevelExperience = ASC->GetGameplayAttributeValue(UCHeroAttributeSet::GetPrevLevelExperienceAttribute(), bFound);
+		S.NextLevelExperience = ASC->GetGameplayAttributeValue(UCHeroAttributeSet::GetNextLevelExperienceAttribute(), bFound);
+	}
+
+	// --- Generic ranking helper ---
+	// Takes a function that reads one stat, and a function that returns a writable reference to the matching rank field. Sorting an array of
+	// POINTERS means the ranks get written back into the real entries rather than into throwaway copies.
+	auto AssignRanks = [this](TFunctionRef<float(const FPlayerMatchStats&)> GetValue,
+		TFunctionRef<int32& (FPlayerMatchStats&)> GetRankRef)
+		{
+			TArray<FPlayerMatchStats*> Sorted;
+			for (FPlayerMatchStats& S : MatchStatsArray) { Sorted.Add(&S); }
+
+			// Descending: highest value first, so index 0 becomes rank 1
+			Sorted.Sort([&GetValue](const FPlayerMatchStats& A, const FPlayerMatchStats& B)
+				{ return GetValue(A) > GetValue(B); });
+
+			// Convert array index to a 1-based position for display
+			for (int32 i = 0; i < Sorted.Num(); ++i) { GetRankRef(*Sorted[i]) = i + 1; }
+		};
+
+	// The four displayed stats, each ranked independently
+	AssignRanks([](const FPlayerMatchStats& S) { return (float)S.HeroKills; }, [](FPlayerMatchStats& S) -> int32& { return S.RankKills; });
+	AssignRanks([](const FPlayerMatchStats& S) { return S.GetKD(); }, [](FPlayerMatchStats& S) -> int32& { return S.RankKD; });
+	AssignRanks([](const FPlayerMatchStats& S) { return S.CaptureSeconds; }, [](FPlayerMatchStats& S) -> int32& { return S.RankCapture; });
+	AssignRanks([](const FPlayerMatchStats& S) { return S.DamageInflicted; }, [](FPlayerMatchStats& S) -> int32& { return S.RankDamage; });
+
+	// Overall rank is XP — rank 1 is the MVP
+	AssignRanks([](const FPlayerMatchStats& S) { return S.Experience; }, [](FPlayerMatchStats& S) -> int32& { return S.RankOverall; });
+
+	// Tell any listeners on the server; clients get told by OnRep instead
+	OnMatchStatsUpdated.Broadcast(MatchStatsArray);
+}
+
+// Fires on clients when the array replicates down, which is the signal the stats screen waits for before it has anything to display
+void AChrisGameState::OnRep_MatchStatsArray()
+{
+	OnMatchStatsUpdated.Broadcast(MatchStatsArray);
 }

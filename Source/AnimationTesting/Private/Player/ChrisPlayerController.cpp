@@ -12,11 +12,13 @@
 #include "Widgets/MatchCountdownWidget.h"
 #include "Widgets/RoundTimerWidget.h"
 #include "Widgets/ShopWidget.h"
+#include "Widgets/MatchStatsWidget.h"
 #include "Framework/ChrisGameMode.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Weapon/SwordEquipComponent.h"
 #include "Camera/PlayerCameraManager.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "GameFramework/PlayerState.h"
 #include "Animation/AnimInstance.h"
 
 
@@ -183,6 +185,37 @@ void AChrisPlayerController::ToggleGameplayMenu()
 		GameAndUI.SetHideCursorDuringCapture(false);
 		SetInputMode(GameAndUI);
 	}
+}
+
+void AChrisPlayerController::Client_ShowMatchStats_Implementation()
+{
+	if (!MatchStatsWidgetClass) return;
+
+	// Black out the world behind the stats
+	if (PlayerCameraManager)
+	{
+		PlayerCameraManager->StartCameraFade(0.f, 1.f, 1.5f, FLinearColor::Black, false, true);
+	}
+
+	if (GameplayWidget) { GameplayWidget->SetVisibility(ESlateVisibility::Collapsed); }
+
+	if (!MatchStatsWidget)
+	{
+		MatchStatsWidget = CreateWidget<UMatchStatsWidget>(this, MatchStatsWidgetClass);
+	}
+	if (MatchStatsWidget && !MatchStatsWidget->IsInViewport())
+	{
+		MatchStatsWidget->AddToViewport(160);   // above banners (150)
+	}
+	if (MatchStatsWidget)
+	{
+		MatchStatsWidget->ShowStats(GetPlayerState<APlayerState>());
+	}
+
+	SetShowMouseCursor(true);
+	FInputModeGameAndUI GameAndUI;
+	GameAndUI.SetHideCursorDuringCapture(false);
+	SetInputMode(GameAndUI);
 }
 
 void AChrisPlayerController::Client_ShowBanner_Implementation(EBannerType Type, int32 RoundNumber, uint8 WinningTeamId)

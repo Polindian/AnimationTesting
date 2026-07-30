@@ -91,6 +91,12 @@ private:
     // Stashed for the delayed match banner, same reason as the round one
     uint8 PendingMatchWinningTeamId = 0;
 
+    UPROPERTY(EditDefaultsOnly, Category = "Match Timing")
+    float MatchStatsDelay = 60.f;   // after MATCH result + TEAM TRIUMPH banners
+
+    void ShowMatchStats();
+    FTimerHandle MatchStatsTimerHandle;
+
 
     // Loop through player controllers in server
     void ForEachPlayerController(TFunctionRef<void(class AChrisPlayerController*)> Func);
