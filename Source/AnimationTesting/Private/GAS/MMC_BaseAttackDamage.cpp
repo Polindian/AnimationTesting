@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 
 #include "GAS/MMC_BaseAttackDamage.h"
@@ -37,7 +37,7 @@ float UMMC_BaseAttackDamage::CalculateBaseMagnitude_Implementation(const FGamepl
 	float CritChance = 0.f;
 	GetCapturedAttributeMagnitude(DoubleDownChanceCaptureDefinition, Spec, EvaluationParameters, CritChance);
 
-	// Roll for crit � 20% chance to deal 30% more damage on combo hits
+	// Roll for crit — 20% chance to deal 30% more damage on combo hits
 	// Safe because combo damage is only applied server-side (K2_HasAuthority())
 	float CritMultiplier = 1.f;
 	if (CritChance > 0.f && FMath::FRand() < CritChance)

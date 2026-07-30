@@ -59,11 +59,6 @@ void UGameplayWidget::SetOwningPawnInputEnabled(bool bPawnInputEnabled)
 	}
 }
 
-/*void UGameplayWidget::SetShowMouseCursor(bool bShowCursor)
-{
-	GetOwningPlayer()->SetShowMouseCursor(bShowCursor);
-}
-*/
 void UGameplayWidget::SetFocusToGameAndUI()
 {
 	FInputModeGameAndUI GameAndUIInputMode;

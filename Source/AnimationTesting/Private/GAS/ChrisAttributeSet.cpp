@@ -6,6 +6,7 @@
 #include "GameplayEffectExtension.h"
 #include "AbilitySystemInterface.h"
 #include "AbilitySystemComponent.h"
+#include "Framework/ChrisGameState.h"
 #include "GAS/ChrisAbilitySystemStatics.h"
 
 void UChrisAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
@@ -24,6 +25,9 @@ void UChrisAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallb
 {
     if (Data.EvaluatedData.Attribute == GetHealthAttribute())
     {
+        // GAS has already applied the base magnitude by the time we get here, so back it out to find the health before this effect touched anything
+        const float HealthBeforeEffect = GetHealth() - Data.EvaluatedData.Magnitude;
+
         float Magnitude = Data.EvaluatedData.Magnitude;
 
         if (Magnitude < 0.f)
@@ -266,7 +270,24 @@ void UChrisAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallb
 
         SetHealth(FMath::Clamp(GetHealth(), 0.f, GetMaxHealth()));
         SetCachedHealthPercent(GetHealth() / GetMaxHealth());
+
+      // Credit the DEALER with the true health lost: base damage after armour,plus every bonus, minus every reduction 
+        const float ActualDamage = HealthBeforeEffect - GetHealth();
+        if (ActualDamage > 0.f)
+        {
+            if (AActor* Causer = Data.EffectSpec.GetContext().GetEffectCauser())
+            {
+                if (AChrisGameState* GS = GetWorld() ? GetWorld()->GetGameState<AChrisGameState>() : nullptr)
+                {
+                    if (Causer != GetOwningActor())
+                    {
+                        GS->AddDamageDealt(Causer, ActualDamage);
+                    }
+                }
+            }
+        }
     }
+
     if (Data.EvaluatedData.Attribute == GetManaAttribute())
     {
         SetMana(FMath::Clamp(GetMana(), 0.f, GetMaxMana()));

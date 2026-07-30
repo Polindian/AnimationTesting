@@ -14,6 +14,7 @@
 #include "GAS/CHeroAttributeSet.h"
 #include "EngineUtils.h"
 #include "Framework/Flag.h"
+#include "Framework/ChrisGameState.h"
 #include "AI/SkeletonBarrack.h"
 #include "Weapon/SwordEquipComponent.h" 
 #include "Player/ChrisPlayerState.h"
@@ -157,6 +158,21 @@ void AChrisGameMode::ShowMatchResultBanner()
 			// Queued: MATCH WON/LOST shows first, TEAM TRIUMPH follows when it closes
 			PC->Client_ShowBanner(EBannerType::MatchResult, 0, TeamId);
 			PC->Client_ShowBanner(EBannerType::TeamTriumph, 0, TeamId);
+		});
+
+	GetWorldTimerManager().SetTimer(MatchStatsTimerHandle, this, &AChrisGameMode::ShowMatchStats, MatchStatsDelay, false);
+}
+
+void AChrisGameMode::ShowMatchStats()
+{
+	if (AChrisGameState* GS = GetGameState<AChrisGameState>())
+	{
+		GS->FinalizeMatchStats();   // snapshot XP, compute ranks, replicate
+	}
+
+	ForEachPlayerController([](AChrisPlayerController* PC)
+		{
+			PC->Client_ShowMatchStats();
 		});
 }
 

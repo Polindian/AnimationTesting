@@ -12,6 +12,7 @@
 class UMatchCountdownWidget;
 class URoundTimerWidget;
 class UShopWidget;
+class UMatchStatsWidget;
 
 /**
  * 
@@ -42,6 +43,9 @@ public:
 
     UFUNCTION(Client, Reliable)
     void Client_OnSetArenaCamera();
+
+    UFUNCTION(Client, Reliable)
+    void Client_ShowMatchStats();
 
 
 	// ---- Client RPCs for match flow ---- 
@@ -164,4 +168,12 @@ public:
 
     UPROPERTY()
     class UBannerWidget* BannerWidget;
+
+    // MATCH STATS
+
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    TSubclassOf<class UMatchStatsWidget> MatchStatsWidgetClass;
+
+    UPROPERTY()
+    class UMatchStatsWidget* MatchStatsWidget;
 };
