@@ -6,6 +6,7 @@
 #include "GenericTeamAgentInterface.h"
 #include "GAS/CHeroAttributeSet.h"
 #include "GAS/ChrisAttributeSet.h"
+#include "Framework/ChrisGameState.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/ChrisPlayerCharacter.h"
 
@@ -154,6 +155,27 @@ void AFlag::Tick(float DeltaTime)
     if (!HasAuthority() || bIsCaptured || !bCaptureEnabled)
         return;
 
+    // Zone time and XP accrue for anyone standing here while the flag is uncaptured — including a contested zone where influence cancels out.
+    AChrisGameState* GS = GetWorld()->GetGameState<AChrisGameState>();
+    for (AChrisPlayerCharacter* Hero : OverlappingHeroes)
+    {
+        if (!Hero || Hero->IsDead()) continue;
+
+        Hero->ZoneTimeAccumulator += DeltaTime;
+
+        // Total capture duration for match stats — never consumed
+        if (GS) { GS->AddCaptureTime(Hero, DeltaTime); }
+
+        if (Hero->ZoneTimeAccumulator >= ZoneTimeThreshold)
+        {
+            Hero->ZoneTimeAccumulator -= ZoneTimeThreshold;
+            if (UAbilitySystemComponent* ASC = Hero->GetAbilitySystemComponent())
+            {
+                ASC->ApplyModToAttribute(UCHeroAttributeSet::GetExperienceAttribute(), EGameplayModOp::Additive, ZoneXPReward);
+            }
+        }
+    }
+
     // Calculate net capture rate: positive = TeamOne gaining, negative = TeamTwo gaining
     float NetRate = TeamOneCaptureRate - TeamTwoCaptureRate;
 
@@ -181,30 +203,6 @@ void AFlag::Tick(float DeltaTime)
             // Crossed zero — flip ownership, carry over the remainder
             CapturePercent = FMath::Abs(CapturePercent);
             Ownership = FavouringTeam;
-        }
-    }
-
-    // Accumulate zone time for heroes and reward XP
-    if (bCaptureEnabled)
-    {
-        for (AChrisPlayerCharacter* Hero : OverlappingHeroes)
-        {
-            if (!Hero || Hero->IsDead())
-                continue;
-
-            Hero->ZoneTimeAccumulator += DeltaTime;
-
-            if (Hero->ZoneTimeAccumulator >= ZoneTimeThreshold)
-            {
-                Hero->ZoneTimeAccumulator -= ZoneTimeThreshold;
-
-                UAbilitySystemComponent* ASC = Hero->GetAbilitySystemComponent();
-                if (ASC)
-                {
-                    ASC->ApplyModToAttribute(UCHeroAttributeSet::GetExperienceAttribute(), EGameplayModOp::Additive, ZoneXPReward);
-                    UE_LOG(LogTemp, Warning, TEXT("Zone XP: Granted %.0f XP to %s"), ZoneXPReward, *Hero->GetName());
-                }
-            }
         }
     }
 

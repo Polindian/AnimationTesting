@@ -8,6 +8,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemInterface.h"
 #include "Framework/ChrisGameMode.h"
+#include "Framework/ChrisGameState.h"
 #include "Engine/OverlapResult.h"
 
 UGAP_Dead::UGAP_Dead()
@@ -26,10 +27,21 @@ void UGAP_Dead::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 {
     if (K2_HasAuthority())
     {
+        AActor* Victim = GetAvatarActorFromActorInfo();
+        AChrisGameState* GS = GetWorld()->GetGameState<AChrisGameState>();
+
         AActor* Killer = TriggerEventData->ContextHandle.GetEffectCauser();
         if (!Killer || !UChrisAbilitySystemStatics::IsHero(Killer))
         {
             Killer = nullptr;
+        }
+
+        // Count stats BEFORE the no-killer return below — a hero killed by AI
+        // or the environment still died, and that must count against their K/D
+        if (GS && UChrisAbilitySystemStatics::IsHero(Victim))
+        {
+            GS->AddDeath(Victim);
+            if (Killer) { GS->AddHeroKill(Killer); }
         }
 
         // No killer identified — no rewards
@@ -38,7 +50,6 @@ void UGAP_Dead::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
             K2_EndAbility();
             return;
         }
-
      
         float TotalExperienceReward = UChrisAbilitySystemStatics::IsHero(GetAvatarActorFromActorInfo()) ? HeroExperienceReward : BaseExperenceReward;
         float TotalSoulReward = UChrisAbilitySystemStatics::IsHero(GetAvatarActorFromActorInfo()) ? HeroSoulReward : BaseSoulReward;
