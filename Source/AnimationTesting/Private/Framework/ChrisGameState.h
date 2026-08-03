@@ -102,6 +102,8 @@ private:
 	// Returns null for AI, which has no PlayerState — so AI never accrues stats.
 	FPlayerMatchStats* FindOrAddStatsFor(AActor* Actor);
 
+	void SubmitMatchResultsToLeaderboard();
+
 
 
 };

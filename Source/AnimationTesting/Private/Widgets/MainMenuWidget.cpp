@@ -32,12 +32,33 @@ void UMainMenuWidget::NativeConstruct()
 	if (ChrisGameInstance)
 	{
 		ChrisGameInstance->OnLoginCompleted.AddUObject(this, &UMainMenuWidget::LoginCompleted);
-		// Widget may be created AFTER login already happened (GameInstance outlives UI) — sync to existing state instead of waiting for an event that already fired
-		if (ChrisGameInstance->IsLoggedIn())
+
+		// Returning from a match — but only meaningful once logged in, since the multiplayer page needs a session. In PIE, solo runs skip login
+		// entirely, so allow it through there for testing.
+		bool bGoToMultiplayer = false;
+		if (ChrisGameInstance->bReturnToMultiplayerPage)
+		{
+#if WITH_EDITOR
+			bGoToMultiplayer = true;   // PIE: no login needed to inspect the page
+#else
+			bGoToMultiplayer = ChrisGameInstance->IsLoggedIn();
+#endif
+			ChrisGameInstance->bReturnToMultiplayerPage = false;
+		}
+
+		if (bGoToMultiplayer)
+		{
+			MainSwitcher->SetActiveWidget(MultiplayerPageRoot);
+			ResetCreateSessionFlow();
+
+			// Arrived from a match on a black screen — fade up into the page, matching how GoToPage transitions look
+			FadeImage->SetVisibility(ESlateVisibility::Visible);
+			PlayAnimation(FadeIn);
+		}
+		else if (ChrisGameInstance->IsLoggedIn())
 		{
 			SwitchToMainWidget();
 		}
-
 		ChrisGameInstance->OnJoinSessionFailed.AddUObject(this, &UMainMenuWidget::JoinSessionFailed);
 		ChrisGameInstance->OnGlobalSessionSearchCompleted.AddUObject(this, &UMainMenuWidget::UpdateLobbyList);
 		ChrisGameInstance->StartGlobalSessionSearch();
@@ -70,10 +91,19 @@ void UMainMenuWidget::NativeConstruct()
 					W->BuildNavigation();
 				}
 
-				// Initial focus — login button, or main page default if already logged in
-				if (ChrisGameInstance && ChrisGameInstance->IsLoggedIn())
+				UWidget * ActivePage = MainSwitcher ? MainSwitcher->GetActiveWidget() : nullptr;
+
+				if (ActivePage == MultiplayerPageRoot)
+				{
+					CreateSessionButton->FocusButton();
+				}
+				else if (ActivePage == MainWidgetRoot)
 				{
 					StoryModeButton->FocusButton();
+				}
+				else if (ActivePage == StoryModeRoot)
+				{
+					StoryBackButton->FocusButton();
 				}
 				else
 				{
