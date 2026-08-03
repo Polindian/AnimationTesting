@@ -17,6 +17,9 @@ struct FPlayerMatchStats
     FString PlayerName;
 
     UPROPERTY()
+    FString UniquePlayerId;
+
+    UPROPERTY()
     int32 HeroKills = 0;
     UPROPERTY()
     int32 Deaths = 0;

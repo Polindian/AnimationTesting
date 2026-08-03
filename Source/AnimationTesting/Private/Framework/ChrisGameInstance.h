@@ -102,6 +102,9 @@ public:
 	void PlayerJoined(const FUniqueNetIdRepl& UniqueId);
 	void PlayerLeft(const FUniqueNetIdRepl& UniqueId);
 
+	bool bReturnToMultiplayerPage = false;
+
+
 private:
 	void CreateSession();
 	void OnSessionCreated(FName SessionName, bool bWasSuccessful);

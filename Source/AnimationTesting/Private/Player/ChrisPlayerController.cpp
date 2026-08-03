@@ -14,6 +14,7 @@
 #include "Widgets/ShopWidget.h"
 #include "Widgets/MatchStatsWidget.h"
 #include "Framework/ChrisGameMode.h"
+#include "Framework/ChrisGameInstance.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Weapon/SwordEquipComponent.h"
 #include "Camera/PlayerCameraManager.h"
@@ -187,6 +188,31 @@ void AChrisPlayerController::ToggleGameplayMenu()
 	}
 }
 
+void AChrisPlayerController::HandleLeaveMatch()
+{
+	if (UChrisGameInstance* GI = GetGameInstance<UChrisGameInstance>())
+	{
+		GI->bReturnToMultiplayerPage = true;
+	}
+
+	// Fade the whole screen out, then travel once it's black — travelling immediately would cut mid-fade since ClientTravel doesn't wait
+	if (MatchStatsWidget)
+	{
+		MatchStatsWidget->PlayLeaveFade(LeaveFadeDuration);
+	}
+
+	GetWorldTimerManager().SetTimer(LeaveTravelTimerHandle, this,
+		&AChrisPlayerController::DoLeaveMatchTravel, LeaveFadeDuration, false);
+}
+
+void AChrisPlayerController::DoLeaveMatchTravel()
+{
+	if (MainMenuLevel.IsNull()) { return; }
+
+	const FString LevelName = FPackageName::ObjectPathToPackageName(MainMenuLevel.ToString());
+	ClientTravel(LevelName, ETravelType::TRAVEL_Absolute);
+}
+
 void AChrisPlayerController::Client_ShowMatchStats_Implementation()
 {
 	if (!MatchStatsWidgetClass) return;
@@ -203,12 +229,18 @@ void AChrisPlayerController::Client_ShowMatchStats_Implementation()
 	{
 		MatchStatsWidget = CreateWidget<UMatchStatsWidget>(this, MatchStatsWidgetClass);
 	}
-	if (MatchStatsWidget && !MatchStatsWidget->IsInViewport())
-	{
-		MatchStatsWidget->AddToViewport(160);   // above banners (150)
-	}
+
 	if (MatchStatsWidget)
 	{
+		// Clear then bind: this runs every time the screen opens, and AddUObject would otherwise stack duplicate handlers on a reused widget
+		MatchStatsWidget->OnLeaveMatchRequested.RemoveAll(this);
+		MatchStatsWidget->OnLeaveMatchRequested.AddUObject(this, &AChrisPlayerController::HandleLeaveMatch);
+
+		if (!MatchStatsWidget->IsInViewport())
+		{
+			MatchStatsWidget->AddToViewport(160);   // above banners (150)
+		}
+
 		MatchStatsWidget->ShowStats(GetPlayerState<APlayerState>());
 	}
 
@@ -217,7 +249,6 @@ void AChrisPlayerController::Client_ShowMatchStats_Implementation()
 	GameAndUI.SetHideCursorDuringCapture(false);
 	SetInputMode(GameAndUI);
 }
-
 void AChrisPlayerController::Client_ShowBanner_Implementation(EBannerType Type, int32 RoundNumber, uint8 WinningTeamId)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[Banner] Client_ShowBanner type=%d round=%d — Class=%s"), (int32)Type, RoundNumber, BannerWidgetClass ? TEXT("SET") : TEXT("NULL"));

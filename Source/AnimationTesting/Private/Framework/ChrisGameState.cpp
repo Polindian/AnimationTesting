@@ -332,7 +332,29 @@ FPlayerMatchStats* AChrisGameState::FindOrAddStatsFor(AActor* Actor)
 	FPlayerMatchStats NewStats;
 	NewStats.OwningPlayer = PS;
 	NewStats.PlayerName = PS->GetPlayerName();
+
+	// EOS product user id — the key the leaderboard will store against
+	if (PS->GetUniqueId().IsValid())
+	{
+		NewStats.UniquePlayerId = PS->GetUniqueId()->ToString();
+	}
 	return &MatchStatsArray[MatchStatsArray.Add(NewStats)];
+}
+
+void AChrisGameState::SubmitMatchResultsToLeaderboard()
+{
+	if (!HasAuthority()) return;
+
+	for (const FPlayerMatchStats& S : MatchStatsArray)
+	{
+		if (!S.OwningPlayer) continue;
+
+		// The leaderboard needs: a stable player id and result - Wins/losses come from the game mode's round tally, so that gets passed in when this is wired up.
+		UE_LOG(LogTemp, Warning, TEXT("[Leaderboard] %s — K:%d D:%d KD:%.2f"),
+			*S.PlayerName, S.HeroKills, S.Deaths, S.GetKD());
+
+		// TODO: POST to the Flask coordinator, or write to EOS stats
+	}
 }
 
 // Called from GAP_Dead when a hero kills another hero
@@ -413,6 +435,9 @@ void AChrisGameState::FinalizeMatchStats()
 
 	// Overall rank is XP — rank 1 is the MVP
 	AssignRanks([](const FPlayerMatchStats& S) { return S.Experience; }, [](FPlayerMatchStats& S) -> int32& { return S.RankOverall; });
+
+	// Submit to the leaderboard backend now - a player who quits from the stats screen (or crashes) must not be able to dodge their result
+	SubmitMatchResultsToLeaderboard();
 
 	// Tell any listeners on the server; clients get told by OnRep instead
 	OnMatchStatsUpdated.Broadcast(MatchStatsArray);

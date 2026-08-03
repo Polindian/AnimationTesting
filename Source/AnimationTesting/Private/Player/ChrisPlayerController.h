@@ -141,7 +141,7 @@ private:
 
 public:
 	virtual void SetupInputComponent() override;
-
+   
  private:
 	UFUNCTION()
 	void ToggleGameplayMenu();
@@ -176,4 +176,16 @@ public:
 
     UPROPERTY()
     class UMatchStatsWidget* MatchStatsWidget;
+
+    void HandleLeaveMatch();
+
+    // Menu map to return to when leaving the match
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    TSoftObjectPtr<UWorld> MainMenuLevel;
+
+    void DoLeaveMatchTravel();
+    FTimerHandle LeaveTravelTimerHandle;
+
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    float LeaveFadeDuration = 1.f;
 };
