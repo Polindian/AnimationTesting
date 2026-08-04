@@ -187,7 +187,14 @@ private:
 
     void StopAllAIBehavior();
 
+
+    // --------- PRACTICE ARENA ---------
+
+  public:
+
     bool IsPracticeMode() const;
+
+  private:
 
     // Parsed once from the travel URL in InitGame
     bool bPracticeFromURL = false;
