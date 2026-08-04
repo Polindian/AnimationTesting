@@ -20,6 +20,12 @@ public:
 	void StopSpawning();
 	void DestroyAllSkeletons();
 
+	// Game mode decides with barrack needs this
+	FGenericTeamId GetBarrackTeamId() const { return BarrackTeamId; }
+
+	// Practice arena: fixed group size regardless of player count
+	void StartSpawningFixedGroup(int32 GroupSize);
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

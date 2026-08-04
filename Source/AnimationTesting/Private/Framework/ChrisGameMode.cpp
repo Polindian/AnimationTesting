@@ -12,9 +12,11 @@
 #include "GameFramework/Controller.h"
 #include "GAS/ChrisAbilitySystemComponent.h"
 #include "GAS/CHeroAttributeSet.h"
+#include "Kismet/GameplayStatics.h"
 #include "EngineUtils.h"
 #include "Framework/Flag.h"
 #include "Framework/ChrisGameState.h"
+#include "Framework/ChrisGameInstance.h"
 #include "AI/SkeletonBarrack.h"
 #include "Weapon/SwordEquipComponent.h" 
 #include "Player/ChrisPlayerState.h"
@@ -24,6 +26,32 @@
 AChrisGameMode::AChrisGameMode()
 {
 	GameSessionClass = AChrisGameSession::StaticClass();
+}
+
+void AChrisGameMode::BeginPlay()
+{
+	Super::BeginPlay();
+
+	UE_LOG(LogTemp, Warning, TEXT("[Practice] BeginPlay — flag=%d"), IsPracticeMode() ? 1 : 0);
+
+	if (IsPracticeMode())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Practice] Practice arena active"));
+	}
+}
+
+void AChrisGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
+{
+	Super::InitGame(MapName, Options, ErrorMessage);
+
+	// Runs before PostLogin, so ExpectedPlayerCount is correct by the time the first player joins
+	bPracticeFromURL = UGameplayStatics::HasOption(Options, TEXT("practice"));
+
+	if (bPracticeFromURL)
+	{
+		ExpectedPlayerCount = 1;
+		UE_LOG(LogTemp, Warning, TEXT("[Practice] Practice arena active (from URL)"));
+	}
 }
 
 APlayerController* AChrisGameMode::SpawnPlayerController(ENetRole InRemoteRole, const FString& Options)
@@ -884,12 +912,32 @@ void AChrisGameMode::StopAllAISpawning()
 
 void AChrisGameMode::StartAllAISpawning()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[Practice] Spawning — flag=%d"), IsPracticeMode() ? 1 : 0);
+	
 	int32 TotalPlayers = GetNumPlayers();
 	int32 PlayersPerTeam = FMath::Max(1, TotalPlayers / 2);
 
 	for (TActorIterator<ASkeletonBarrack> It(GetWorld()); It; ++It)
 	{
-		It->StartSpawning(PlayersPerTeam);
+		ASkeletonBarrack* Barrack = *It;
+		if (!Barrack) continue;
+
+		if (IsPracticeMode())
+		{
+			// Only the enemy team's barracks run — the player has no allied
+			// skeletons of their own in practice
+			if (Barrack->GetBarrackTeamId().GetId() == PracticePlayerTeamId)
+			{
+				continue;
+			}
+
+			// Fixed group size: solo, the normal maths would give one per group
+			Barrack->StartSpawningFixedGroup(PracticeAIGroupSize);
+		}
+		else
+		{
+			Barrack->StartSpawning(PlayersPerTeam);
+		}
 	}
 }
 
@@ -925,5 +973,20 @@ void AChrisGameMode::StopAllAIBehavior()
 	{
 		It->StopAIBehavior();
 	}
+}
+
+bool AChrisGameMode::IsPracticeMode() const
+{
+	// URL option is authoritative: it survives travel even when the game instance is rebuilt, which PIE does between maps
+	if (bPracticeFromURL)
+	{
+		return true;
+	}
+
+	if (const UChrisGameInstance* GI = GetGameInstance<UChrisGameInstance>())
+	{
+		return GI->bPracticeMode;
+	}
+	return false;
 }
 

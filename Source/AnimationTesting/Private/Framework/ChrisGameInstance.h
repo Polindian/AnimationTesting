@@ -135,4 +135,17 @@ private:
 	TSoftObjectPtr<UWorld> Lvl_ThirdPerson;
 
 	void LoadLevelAndListen(TSoftObjectPtr<UWorld>Level);
+
+
+/*********************************/
+/*         Practice Arena        */
+/*********************************/
+
+public:
+	// Practice arena: solo play against AI, no session or coordinator involved
+	void StartPracticeArena();
+
+	// Lives here because it must survive the travel into the arena.
+	bool bPracticeMode = false;
+
 };
