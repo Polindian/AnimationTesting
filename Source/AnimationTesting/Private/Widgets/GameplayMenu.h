@@ -4,57 +4,60 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Components/Button.h"
+#include "Widgets/MenuButtonWidget.h"
 #include "GameplayMenu.generated.h"
+
+class UGeneralMenuWidget;
+class USettingsWidget;
 
 UCLASS()
 class UGameplayMenu : public UUserWidget
 {
     GENERATED_BODY()
 public:
-    virtual void NativeConstruct() override;
-    FOnButtonClickedEvent& GetReturnToArenaButtonClickedEventDelegate();
+    virtual void NativeOnInitialized() override;
+
+    // Return-to-arena is still driven by the controller's toggle
+    FOnMenuButtonClicked& GetReturnToArenaButtonClickedEventDelegate();
+
+    // Called by the controller each time the menu opens, so the first button
+    // is focused for controller users
+    void FocusDefaultButton();
+
+    // Fired when the player confirms leaving — the controller handles the travel
+    FSimpleMulticastDelegate OnLeaveMatchConfirmed;
 
 private:
     UPROPERTY(meta = (BindWidget))
-    class UButton* ReturnToArenaButton;
+    class UMenuButtonWidget* ReturnToArenaButton;
 
     UPROPERTY(meta = (BindWidget))
-    class UButton* SettingsButton;
+    class UMenuButtonWidget* SettingsButton;
 
     UPROPERTY(meta = (BindWidget))
-    class UButton* LeaveMatchButton;
+    class UMenuButtonWidget* LeaveMatchButton;
 
-    UPROPERTY(meta = (BindWidget))
-    class URetainerBox* ReturnToArenaRetainer;
+    // Overlays spawned on demand, reused afterwards
+    UPROPERTY(EditDefaultsOnly, Category = "Menu")
+    TSubclassOf<USettingsWidget> SettingsWidgetClass;
 
-    UPROPERTY(meta = (BindWidget))
-    class URetainerBox* SettingsRetainer;
+    UPROPERTY()
+    USettingsWidget* SettingsWidgetInstance;
 
-    UPROPERTY(meta = (BindWidget))
-    class URetainerBox* LeaveMatchRetainer;
+    UPROPERTY(EditDefaultsOnly, Category = "Menu")
+    TSubclassOf<UGeneralMenuWidget> GeneralMenuClass;
 
-    UPROPERTY(EditDefaultsOnly, Category = "Menu Style")
-    UMaterialInterface* HoverGradientMaterial;
-
-    void SetRetainerHovered(URetainerBox* Retainer, bool bHovered);
-
-    UFUNCTION()
-    void OnReturnToArenaHovered();
-    UFUNCTION()
-    void OnReturnToArenaUnhovered();
-    UFUNCTION()
-    void OnSettingsHovered();
-    UFUNCTION()
-    void OnSettingsUnhovered();
-    UFUNCTION()
-    void OnLeaveMatchHovered();
-    UFUNCTION()
-    void OnLeaveMatchUnhovered();
+    UPROPERTY()
+    UGeneralMenuWidget* GeneralMenu;
 
     UFUNCTION()
-    void LeaveMatch();
+    void LeaveMatchClicked();
 
     UFUNCTION()
-    void GoSettingsPage();
+    void SettingsClicked();
+
+    void SettingsClosed();
+
+    // True when this is the practice arena, which has no real match to lose
+    bool IsPracticeArena() const;
 };

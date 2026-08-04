@@ -6,11 +6,14 @@
 #include "Network/ChrisNetStatics.h"
 #include "Interfaces/OnlineSessionInterface.h"
 #include "Interfaces/OnlineIdentityInterface.h"
+#include "Kismet/GameplayStatics.h"
 #include "HttpModule.h"
 
 // Only the server (dedicated or listen) should initiate a map travel
 void UChrisGameInstance::StartMatch()
 {
+	bPracticeMode = false;
+	
 	const ENetMode NetMode = GetWorld()->GetNetMode();
 
 	if (NetMode == ENetMode::NM_DedicatedServer || NetMode == ENetMode::NM_ListenServer)
@@ -601,4 +604,16 @@ void UChrisGameInstance::LoadLevelAndListen(TSoftObjectPtr<UWorld> Level)
 		UE_LOG(LogTemp, Warning, TEXT("Server travelling to: %s"), *(TravelString));
 		GetWorld()->ServerTravel(TravelString);
 	}
+}
+
+void UChrisGameInstance::StartPracticeArena()
+{
+	bPracticeMode = true;
+
+	const FString LevelName = FPackageName::ObjectPathToPackageName(Lvl_ThirdPerson.ToString());
+
+	// Pass as a URL option too: PIE can rebuild the game instance across a map change, which loses the member flag entirely
+	UGameplayStatics::OpenLevel(this, FName(*LevelName), true, TEXT("practice=1"));
+
+	UE_LOG(LogTemp, Warning, TEXT("[Practice] Flag SET before travel"));
 }

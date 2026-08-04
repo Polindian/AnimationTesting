@@ -33,6 +33,10 @@ class AChrisGameMode : public AGameModeBase
 
 public:
 	AChrisGameMode();
+    virtual void BeginPlay() override;
+
+    virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
+
     virtual APlayerController* SpawnPlayerController(ENetRole InRemoteRole, const FString& Options) override;
     virtual UClass* GetDefaultPawnClassForController_Implementation(AController* Controller) override;
     virtual APawn* SpawnDefaultPawnFor_Implementation(AController* NewPlayer, AActor* StartSpot) override;
@@ -182,4 +186,23 @@ private:
     void TeleportPlayersToStart();
 
     void StopAllAIBehavior();
+
+
+    // --------- PRACTICE ARENA ---------
+
+  public:
+
+    bool IsPracticeMode() const;
+
+  private:
+
+    // Parsed once from the travel URL in InitGame
+    bool bPracticeFromURL = false;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Practice Arena")
+    int32 PracticeAIGroupSize = 5;
+
+    // The team the player is on in practice mode — the OTHER team's barracks spawn
+    UPROPERTY(EditDefaultsOnly, Category = "Practice Arena")
+    uint8 PracticePlayerTeamId = 0;
 };

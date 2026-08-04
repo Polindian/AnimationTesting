@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+ï»¿// Christopher Naglik All Rights Reserved
 
 #include "AI/BTService_TacticalPosition.h"
 #include "AIController.h"
@@ -11,7 +11,7 @@ UBTService_TacticalPosition::UBTService_TacticalPosition()
 {
     NodeName = "Tactical Position";
 
-    // Ticks every 0.3s — positions update smoothly
+    // Ticks every 0.3s â€” positions update smoothly
     Interval = 0.3f;
     RandomDeviation = 0.05f;
 }
@@ -184,7 +184,7 @@ void UBTService_TacticalPosition::TickNode(UBehaviorTreeComponent& OwnerComp, ui
 
         if (DistToFlag <= FlagRadius)
         {
-            // CASE A: Inside the zone — spread formation
+            // CASE A: Inside the zone â€” spread formation
             // Only spread if no target 
             if (!Target || !IsValid(Target))
             {
@@ -207,7 +207,7 @@ void UBTService_TacticalPosition::TickNode(UBehaviorTreeComponent& OwnerComp, ui
         }
         else
         {
-            // CASE B: Outside the zone — path variety
+            // CASE B: Outside the zone â€” path variety
             FVector Offset = GetConsistentOffset(Pawn, PathOffsetMax);
             FVector VariedDestination = FlagCenter + Offset;
 

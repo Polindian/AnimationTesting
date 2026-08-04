@@ -168,13 +168,16 @@ void AChrisPlayerController::ToggleGameplayMenu()
 			{
 				GameplayMenuWidget->AddToViewport(200);
 				GameplayMenuWidget->GetReturnToArenaButtonClickedEventDelegate().AddDynamic(this, &AChrisPlayerController::ToggleGameplayMenu);
+				GameplayMenuWidget->OnLeaveMatchConfirmed.AddUObject(this, &AChrisPlayerController::HandleLeaveMatch);
 			}
 		}
 
 		if (GameplayMenuWidget)
 		{
 			GameplayMenuWidget->SetVisibility(ESlateVisibility::Visible);
+			GameplayMenuWidget->FocusDefaultButton();
 		}
+
 		bIsGameplayMenuOpen = true;
 
 		if (ChrisPlayerCharacter)
@@ -195,10 +198,14 @@ void AChrisPlayerController::HandleLeaveMatch()
 		GI->bReturnToMultiplayerPage = true;
 	}
 
-	// Fade the whole screen out, then travel once it's black — travelling immediately would cut mid-fade since ClientTravel doesn't wait
-	if (MatchStatsWidget)
+	// Fade the stats screen out if that's where we came from; leaving from the pause menu has no stats widget, so fall back to a camera fade
+	if (MatchStatsWidget && MatchStatsWidget->IsInViewport())
 	{
 		MatchStatsWidget->PlayLeaveFade(LeaveFadeDuration);
+	}
+	else if (PlayerCameraManager)
+	{
+		PlayerCameraManager->StartCameraFade(0.f, 1.f, LeaveFadeDuration, FLinearColor::Black, false, true);
 	}
 
 	GetWorldTimerManager().SetTimer(LeaveTravelTimerHandle, this,

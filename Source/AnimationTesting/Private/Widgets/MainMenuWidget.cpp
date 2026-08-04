@@ -123,7 +123,7 @@ void UMainMenuWidget::NativeConstruct()
 				LeaderboardsButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::LeaderboardsClickedFromMain);
 				MultiplayerLeaderboardsButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::LeaderboardsClickedFromMultiplayer);
 
-
+				PracticeArenaButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::PracticeArenaClicked);
 
 				// Both pages' back buttons lead to the same place
 				StoryBackButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::BackToMainClicked);
@@ -399,6 +399,15 @@ void UMainMenuWidget::SessionNameTooLong()
 			});
 }
 
+void UMainMenuWidget::PracticeArenaClicked()
+{
+
+	if (ChrisGameInstance)
+	{
+		ChrisGameInstance->StartPracticeArena();
+	}
+}
+
 void UMainMenuWidget::OpenVirtualKeyboard()
 {
 	if (!VirtualKeyboardClass) { return; }
@@ -449,6 +458,8 @@ void UMainMenuWidget::WireMultiplayerPageNavigation()
 	UWidget* BarBtn = SessionSearchBar->GetBarButton();
 	UWidget* TutorialBtn = TutorialBookButton->GetMainButton();
 	UWidget* LeaderboardsBtn = MultiplayerLeaderboardsButton->GetMainButton();
+	UWidget* PracticeBtn = PracticeArenaButton->GetMainButton();
+	UWidget* ReturnBtn = MultiplayerBackButton->GetMainButton();
 
 	const bool bBarVisible = SessionNameContainer->GetVisibility() != ESlateVisibility::Collapsed;
 	const bool bHasName = !SessionSearchBar->GetText().IsEmpty();
@@ -475,6 +486,7 @@ void UMainMenuWidget::WireMultiplayerPageNavigation()
 	{
 		TutorialBtn->SetNavigationRuleExplicit(EUINavigation::Right, FirstEntryButton);
 		LeaderboardsBtn->SetNavigationRuleExplicit(EUINavigation::Right, FirstEntryButton);
+		PracticeBtn->SetNavigationRuleExplicit(EUINavigation::Right, FirstEntryButton);
 	}
 
 	// Left from the bar: only when CreateLobby is a legal (enabled) target
@@ -516,17 +528,17 @@ void UMainMenuWidget::WireMultiplayerPageNavigation()
 
 	// LeaderboardsButton underneath TutorialBook — both directions
 	LeaderboardsBtn->SetNavigationRuleExplicit(EUINavigation::Up, TutorialBtn);
+	LeaderboardsBtn->SetNavigationRuleExplicit(EUINavigation::Down, PracticeBtn);
+	PracticeBtn->SetNavigationRuleExplicit(EUINavigation::Up, LeaderboardsBtn);
+	PracticeBtn->SetNavigationRuleExplicit(EUINavigation::Down, ReturnBtn);
 
-	// And let it hop right into the session list like its neighbours
-	if (FirstEntryButton)
-	{
-		LeaderboardsBtn->SetNavigationRuleExplicit(EUINavigation::Right, FirstEntryButton);
-	}
 
 	CreateBtn->BuildNavigation();
 	BarBtn->BuildNavigation();
 	TutorialBtn->BuildNavigation();
 	LeaderboardsBtn->BuildNavigation();
+	PracticeBtn->BuildNavigation();
+	ReturnBtn->BuildNavigation();
 }
 
 void UMainMenuWidget::ResetCreateSessionFlow()

@@ -15,6 +15,17 @@ ASkeletonBarrack::ASkeletonBarrack()
 
 }
 
+void ASkeletonBarrack::StartSpawningFixedGroup(int32 GroupSize)
+{
+	SkeletonPerGroup = FMath::Max(1, GroupSize);
+
+	SpawnNewGroup();
+
+	GetWorldTimerManager().SetTimer(
+		SpawnIntervalTimerHnadle, this,
+		&ASkeletonBarrack::SpawnNewGroup, GroupSpawnInterval, true);
+}
+
 // Called when the game starts or when spawned
 void ASkeletonBarrack::BeginPlay()
 {

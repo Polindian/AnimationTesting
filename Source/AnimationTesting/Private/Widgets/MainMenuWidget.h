@@ -213,6 +213,12 @@ private:
 	FOnGeneralMenuClosed& OpenGeneralMenu(EGeneralMenuType Type, const FText& Message);
 	void SessionNameTooLong();
 
+	UPROPERTY(meta = (BindWidget))
+	class UMenuButtonWidget* PracticeArenaButton;
+
+	UFUNCTION()
+	void PracticeArenaClicked();
+
 
 	/***********   Keyboard   *************/
 
