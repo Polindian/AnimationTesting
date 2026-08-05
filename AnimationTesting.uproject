@@ -14,7 +14,8 @@
 				"UMG",
 				"AIModule",
 				"EnhancedInput",
-				"CoreUObject"
+				"CoreUObject",
+				"DeveloperSettings"
 			]
 		}
 	],
