@@ -34,7 +34,7 @@ public:
 	virtual void NativeOnRemovedFromFocusPath(const FFocusEvent& InFocusEvent) override;
 
 	// Focuses the inner button — for default slot highlighting from LobbyWidget
-	void FocusSlot();
+	void FocusSlot(bool bPlaySound = false);
 
 	void SetDownNavigationTarget(UWidget* Target);
 
@@ -59,5 +59,5 @@ private:
 	UPROPERTY(meta = (BindWidget))
 	class UImage* GreenPlayerBar;
 
-	
+	bool bSuppressFocusSound = false;
 };

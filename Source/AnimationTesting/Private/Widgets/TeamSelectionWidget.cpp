@@ -5,6 +5,8 @@
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
 #include "Components/Image.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
 
 void UTeamSelectionWidget::SetSlotID(uint8 NewSlotID)
 {
@@ -29,7 +31,7 @@ void UTeamSelectionWidget::NativeConstruct()
 void UTeamSelectionWidget::NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
 	Super::NativeOnMouseEnter(InGeometry, InMouseEvent);
-	FocusSlot();
+	FocusSlot(true);
 }
 
 void UTeamSelectionWidget::NativeOnMouseLeave(const FPointerEvent& InMouseEvent)
@@ -52,7 +54,15 @@ void UTeamSelectionWidget::SetReadyVisual(bool bReady)
 void UTeamSelectionWidget::NativeOnAddedToFocusPath(const FFocusEvent& InFocusEvent)
 {
 	Super::NativeOnAddedToFocusPath(InFocusEvent);
-	if (!HoverGlow) return;
+
+	if (bSuppressFocusSound)
+	{
+		bSuppressFocusSound = false;
+	}
+	else if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+	{
+		Audio->Play2D(ChrisGameplayTags::Audio_UI_Navigate_Soft);
+	}
 
 	if (HoverGlow)
 	{
@@ -71,15 +81,13 @@ void UTeamSelectionWidget::NativeOnRemovedFromFocusPath(const FFocusEvent& InFoc
 	}
 }
 
-void UTeamSelectionWidget::FocusSlot()
+void UTeamSelectionWidget::FocusSlot(bool bPlaySound)
 {
-
 	if (!SelectButton) return;
 
-	if (SelectButton)
-	{
-		SelectButton->SetFocus();
-	}
+	bSuppressFocusSound = !bPlaySound;
+	SelectButton->SetFocus();
+	bSuppressFocusSound = false;
 }
 
 void UTeamSelectionWidget::SetDownNavigationTarget(UWidget* Target)

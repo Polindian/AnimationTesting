@@ -24,6 +24,8 @@
 #include "Network/ChrisNetStatics.h"
 #include "Player/LobbyPlayerController.h"
 #include "Player/ChrisPlayerState.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
 
 
 void ULobbyWidget::NativeConstruct()
@@ -78,7 +80,17 @@ void ULobbyWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 
 void ULobbyWidget::OnReadyUpClicked()
 {
-    SetReadyState(!bIsReady);
+    // bIsReady is still the pre-click state here
+    const bool bWillBeReady = !bIsReady;
+
+    if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+    {
+        Audio->Play2D(bWillBeReady
+            ? ChrisGameplayTags::Audio_UI_Lobby_Continue
+            : ChrisGameplayTags::Audio_UI_Leaderboard_Close);
+    }
+
+    SetReadyState(bWillBeReady);
 }
 
 void ULobbyWidget::SetReadyState(bool bReady)
@@ -140,6 +152,12 @@ void ULobbyWidget::SlotSelected(uint8 NewSlotId)
 {
     // Can't switch slots while readied up
     if (bIsReady) return;
+
+    // Below the guard so a rejected click stays silent
+    if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+    {
+        Audio->Play2D(ChrisGameplayTags::Audio_UI_Lobby_TeamSlot);
+    }
     
     UE_LOG(LogTemp, Log, TEXT("Attempted to switch to slot: %d"), NewSlotId);
     if(LobbyPlayerController)
