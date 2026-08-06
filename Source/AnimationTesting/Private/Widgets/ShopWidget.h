@@ -30,6 +30,7 @@ protected:
 private:
 
     bool bShopClosed = false;
+    bool bSuppressFocusSound = false;
 
     UFUNCTION()
     void OnContinueClicked();
@@ -166,10 +167,6 @@ private:
     // The parent material created in Step 1. Set this in the WBP class defaults.
     UPROPERTY(EditDefaultsOnly, Category = "Branch Fill")
     UMaterialInterface* BranchFillMaterial;
-
-    // Sound to play when a branch fill completes and the next skill unlocks.
-    UPROPERTY(EditDefaultsOnly, Category = "Branch Fill")
-    USoundBase* SkillUnlockSound;
 
     // How long the fill animation takes (seconds).
     UPROPERTY(EditDefaultsOnly, Category = "Branch Fill")
