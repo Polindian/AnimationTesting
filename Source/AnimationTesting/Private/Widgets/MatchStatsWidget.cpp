@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+ï»¿// Christopher Naglik All Rights Reserved
 
 #include "Widgets/MatchStatsWidget.h"
 #include "Widgets/MatchStatsPanel.h"
@@ -33,7 +33,7 @@ void UMatchStatsWidget::NativeOnInitialized()
 
 	SetIsFocusable(false);   // the button is the focus target, not the root
 
-	// Bound once per lifetime — BindToAnimationFinished stacks duplicates
+	// Bound once per lifetime â€” BindToAnimationFinished stacks duplicates
 	FWidgetAnimationDynamicEvent FadeFinished;
 	FadeFinished.BindDynamic(this, &UMatchStatsWidget::HandleFadeInFinished);
 	BindToAnimationFinished(Anim_FadeIn, FadeFinished);
@@ -61,12 +61,12 @@ void UMatchStatsWidget::ShowStats(APlayerState* LocalPlayerState)
 	PlayAnimation(Anim_FadeIn);
 }
 
-// Screen has fully arrived — now the button becomes usable and takes focus
+// Screen has fully arrived â€” now the button becomes usable and takes focus
 void UMatchStatsWidget::HandleFadeInFinished()
 {
 	LeaveMatchButton->SetIsEnabled(true);
 
-	UE_LOG(LogTemp, Warning, TEXT("[MatchStats] Fade finished — enabling button"));
+	UE_LOG(LogTemp, Warning, TEXT("[MatchStats] Fade finished â€” enabling button"));
 
 	// Deferred: enabling and focusing in the same frame can be overridden
 	GetWorld()->GetTimerManager().SetTimerForNextTick(

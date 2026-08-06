@@ -1,9 +1,11 @@
-// Christopher Naglik All Rights Reserved
+ï»¿// Christopher Naglik All Rights Reserved
 
 #include "Widgets/SessionSearchBarWidget.h"
 #include "Components/Button.h"
 #include "Components/EditableText.h"
 #include "Components/Image.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
 
 void USessionSearchBarWidget::NativeOnInitialized()
 {
@@ -21,18 +23,20 @@ FText USessionSearchBarWidget::GetText() const
 	return InputText->GetText();
 }
 
-void USessionSearchBarWidget::FocusBar()
+void USessionSearchBarWidget::FocusBar(bool bPlaySound)
 {
-	if (BarButton)
-	{
-		BarButton->SetFocus();
-	}
+	if (!BarButton) { return; }
+
+	bSuppressFocusSound = !bPlaySound;
+	BarButton->SetFocus();
+	bSuppressFocusSound = false;
 }
+
 
 void USessionSearchBarWidget::SetTextFromKeyboard(const FText& InText)
 {
 	InputText->SetText(InText);
-	// SetText firing OnTextChanged is unreliable across engine versions — broadcast manually
+	// SetText firing OnTextChanged is unreliable across engine versions â€” broadcast manually
 	OnSearchTextChanged.Broadcast(InText);
 	FocusBar();
 }
@@ -48,7 +52,7 @@ void USessionSearchBarWidget::ClearText()
 }
 
 // Preview (tunneling) so we see Enter/A BEFORE the focused BarButton converts them
-// into a button click — this is where keyboard and controller take different paths
+// into a button click â€” this is where keyboard and controller take different paths
 FReply USessionSearchBarWidget::NativeOnPreviewKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
 {
 	if (BarButton && BarButton->HasKeyboardFocus())
@@ -76,16 +80,25 @@ void USessionSearchBarWidget::NativeOnMouseEnter(const FGeometry& InGeometry, co
 {
 	Super::NativeOnMouseEnter(InGeometry, InMouseEvent);
 
-	// Hover highlights like every other control — but never steal focus mid-typing
 	if (!InputText->HasKeyboardFocus())
 	{
-		FocusBar();
+		FocusBar(true);
 	}
 }
 
 void USessionSearchBarWidget::NativeOnAddedToFocusPath(const FFocusEvent& InFocusEvent)
 {
 	Super::NativeOnAddedToFocusPath(InFocusEvent);
+
+	if (bSuppressFocusSound)
+	{
+		bSuppressFocusSound = false;
+	}
+	else if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+	{
+		Audio->Play2D(ChrisGameplayTags::Audio_UI_Navigate_Main);
+	}
+
 	if (HighlightGlow)
 	{
 		HighlightGlow->SetVisibility(ESlateVisibility::HitTestInvisible);
@@ -103,6 +116,12 @@ void USessionSearchBarWidget::NativeOnRemovedFromFocusPath(const FFocusEvent& In
 
 void USessionSearchBarWidget::HandleTextChanged(const FText& Text)
 {
+	// Only real typing reaches here â€” SetTextFromKeyboard broadcasts OnSearchTextChanged directly and deliberately skips this
+	if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+	{
+		Audio->Play2D(ChrisGameplayTags::Audio_UI_Navigate_Soft);
+	}
+
 	OnSearchTextChanged.Broadcast(Text);
 }
 
@@ -110,12 +129,15 @@ void USessionSearchBarWidget::HandleTextCommitted(const FText& Text, ETextCommit
 {
 	if (CommitMethod == ETextCommit::OnEnter)
 	{
-		// Too long: don't refocus the bar — the owner opens the Continue dialog,
-		// and its close handler brings focus back to the bar
 		if (Text.ToString().Len() > MaxLength)
 		{
 			OnMaxLengthExceeded.Broadcast();
-			return;
+			return;   // rejection stays silent
+		}
+
+		if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+		{
+			Audio->Play2D(ChrisGameplayTags::Audio_UI_Lobby_TeamSlot);
 		}
 
 		GetWorld()->GetTimerManager().SetTimerForNextTick(

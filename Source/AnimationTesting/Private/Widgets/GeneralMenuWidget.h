@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+ï»¿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -9,8 +9,8 @@
 UENUM()
 enum class EGeneralMenuType : uint8
 {
-	YesNo,      // question — Yes and No in the bottom corners
-	Continue    // notice — single CONTINUE button, bottom middle
+	YesNo,      // question â€” Yes and No in the bottom corners
+	Continue    // notice â€” single CONTINUE button, bottom middle
 };
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnGeneralMenuClosed, bool /*bConfirmed*/);
@@ -18,7 +18,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FOnGeneralMenuClosed, bool /*bConfirmed*/);
 /**
  * Reusable dialog overlay. YesNo: bConfirmed = true on Yes, false on No or B.
  * Continue: always closes with bConfirmed = true (B also dismisses).
- * OpenMenu clears and returns the closed event — bind AFTER calling it,
+ * OpenMenu clears and returns the closed event â€” bind AFTER calling it,
  * same contract as the waiting widget.
  */
 UCLASS()

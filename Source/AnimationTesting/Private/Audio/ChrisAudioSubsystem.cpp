@@ -5,6 +5,8 @@
 #include "ChrisSoundLibrary.h"
 #include "ChrisAudioSettings.h"
 #include "Kismet/GameplayStatics.h"
+#include "Engine/Engine.h"
+#include "Engine/GameInstance.h"
 #include "Components/AudioComponent.h"
 
 void UChrisAudioSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -55,4 +57,20 @@ UAudioComponent* UChrisAudioSubsystem::PlayAttached(FGameplayTag Tag, USceneComp
 		/*bStopWhenAttachedToDestroyed*/ true,
 		Def->VolumeMultiplier, Def->PitchMultiplier, 0.f,
 		Def->Attenuation, Def->Concurrency, /*bAutoDestroy*/ true);
+}
+
+UChrisAudioSubsystem* UChrisAudioSubsystem::Get(const UObject* WorldContextObject)
+{
+	if (!WorldContextObject) { return nullptr; }
+
+	// ReturnNull rather than asserting: widgets can be initialised during level
+	// transitions when there's briefly no valid world
+	if (const UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::ReturnNull))
+	{
+		if (const UGameInstance* GI = World->GetGameInstance())
+		{
+			return GI->GetSubsystem<UChrisAudioSubsystem>();
+		}
+	}
+	return nullptr;
 }

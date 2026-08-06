@@ -5,6 +5,7 @@
 #include "Components/TextBlock.h"
 #include "Components/RetainerBox.h"
 #include "Components/SizeBox.h"
+#include "Audio/ChrisAudioSubsystem.h"
 
 void UMenuButtonWidget::NativeOnInitialized()
 {
@@ -67,32 +68,54 @@ void UMenuButtonWidget::SetButtonSize(float InWidth, float InHeight)
 
 void UMenuButtonWidget::HandleClicked()
 {
+    // Play before broadcasting — a listener may switch pages and destroy this widget
+    if (ClickedSoundTag.IsValid())
+    {
+        if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+        {
+            Audio->Play2D(ClickedSoundTag);
+        }
+    }
+
     OnMenuButtonClicked.Broadcast();
     OnMenuButtonClickedWithLabel.Broadcast(ButtonLabel);
 }
 
 void UMenuButtonWidget::HandleHovered()
 {
-    FocusButton();
+    FocusButton(true);
 }
 
 void UMenuButtonWidget::HandleUnhovered()
 {
 }
 
-void UMenuButtonWidget::FocusButton()
+void UMenuButtonWidget::FocusButton(bool bPlaySound)
 {
-    if (MainButton)
-    {
-        MainButton->SetFocus();
-    }
+    if(!MainButton) { return; }
+
+    bSuppressFocusSound = !bPlaySound;
+    MainButton->SetFocus();
+
+    // If this button already had focus, SetFocus fires no event and the flag would otherwise sit true and eat the next real hover
+    bSuppressFocusSound = false;
 }
 
 void UMenuButtonWidget::NativeOnAddedToFocusPath(const FFocusEvent& InFocusEvent)
 {
     Super::NativeOnAddedToFocusPath(InFocusEvent);
 
-    if (!ButtonRetainer) return;
+    if (bSuppressFocusSound)
+    {
+        bSuppressFocusSound = false;
+    }
+    else if (HoveredSoundTag.IsValid())
+    {
+        if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+        {
+            Audio->Play2D(HoveredSoundTag);
+        }
+    }
 
     if (ButtonRetainer)
     {

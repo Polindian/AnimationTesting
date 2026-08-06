@@ -1,8 +1,10 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #include "Widgets/GeneralMenuWidget.h"
 #include "Widgets/MenuButtonWidget.h"
 #include "Components/TextBlock.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
 
 void UGeneralMenuWidget::NativeOnInitialized()
 {
@@ -17,6 +19,11 @@ void UGeneralMenuWidget::NativeOnInitialized()
 
 FOnGeneralMenuClosed& UGeneralMenuWidget::OpenMenu(EGeneralMenuType Type, const FText& Message)
 {
+	if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+	{
+		Audio->Play2D(ChrisGameplayTags::Audio_UI_Book_Close);
+	}
+
 	MenuType = Type;
 	MessageText->SetText(Message);
 
@@ -25,7 +32,7 @@ FOnGeneralMenuClosed& UGeneralMenuWidget::OpenMenu(EGeneralMenuType Type, const 
 	NoButton->SetVisibility(bYesNo ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 	ContinueButton->SetVisibility(bYesNo ? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
 
-	// Default focus: the safe option � No for questions, Continue for notices
+	// Default focus: the safe option — No for questions, Continue for notices
 	GetWorld()->GetTimerManager().SetTimerForNextTick(
 		FTimerDelegate::CreateWeakLambda(this, [this, bYesNo]()
 			{
@@ -43,6 +50,12 @@ FReply UGeneralMenuWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FK
 	// B / Backspace = back out: No for questions, dismiss for notices
 	if (Key == EKeys::BackSpace || Key == EKeys::Gamepad_FaceButton_Right)
 	{
+		// The buttons carry their own click sound
+		if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+		{
+			Audio->Play2D(ChrisGameplayTags::Audio_UI_Confirm);
+		}
+
 		CloseMenu(MenuType == EGeneralMenuType::Continue);
 		return FReply::Handled();
 	}

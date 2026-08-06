@@ -31,6 +31,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Chris|Audio")
 	UAudioComponent* PlayAttached(FGameplayTag Tag, USceneComponent* AttachTo, FName SocketName = NAME_None);
 
+	UFUNCTION(BlueprintPure, Category = "Chris|Audio", meta = (WorldContext = "WorldContextObject"))
+	static UChrisAudioSubsystem* Get(const UObject* WorldContextObject);
+
 private:
 	UPROPERTY(Transient)
 	TObjectPtr<UChrisSoundLibrary> Library = nullptr;

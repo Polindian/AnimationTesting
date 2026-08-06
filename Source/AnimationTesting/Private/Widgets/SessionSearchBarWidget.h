@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+ï»¿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -23,13 +23,13 @@ public:
 	// Fired on every text change, from typing or the virtual keyboard
 	FOnSearchTextChanged OnSearchTextChanged;
 
-	// Controller pressed A while the bar was highlighted — owner opens the OSK
+	// Controller pressed A while the bar was highlighted â€” owner opens the OSK
 	FSimpleMulticastDelegate OnVirtualKeyboardRequested;
 
 	FText GetText() const;
 
 	// Puts the bar in the highlighted (navigable) state
-	void FocusBar();
+	void FocusBar(bool bPlaySound = false);
 
 	// OSK commit path: sets text, fires the changed event, returns to highlighted
 	void SetTextFromKeyboard(const FText& InText);
@@ -39,7 +39,7 @@ public:
 
 	void ClearText();
 
-	FSimpleMulticastDelegate OnMaxLengthExceeded;   // committed a name too long — owner shows the dialog
+	FSimpleMulticastDelegate OnMaxLengthExceeded;   // committed a name too long â€” owner shows the dialog
 
 	FORCEINLINE int32 GetMaxLength() const { return MaxLength; }
 
@@ -57,7 +57,7 @@ protected:
 	virtual void NativeOnRemovedFromFocusPath(const FFocusEvent& InFocusEvent) override;
 
 private:
-	// Invisible-style button filling the bar — the navigation target
+	// Invisible-style button filling the bar â€” the navigation target
 	UPROPERTY(meta = (BindWidget))
 	class UButton* BarButton;
 
@@ -73,4 +73,6 @@ private:
 
 	UFUNCTION()
 	void HandleTextCommitted(const FText& Text, ETextCommit::Type CommitMethod);
+
+	bool bSuppressFocusSound = false;
 };

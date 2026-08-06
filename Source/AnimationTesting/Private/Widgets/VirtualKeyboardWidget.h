@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+ï»¿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -22,8 +22,8 @@ public:
 	// Resets the buffer to InitialText and takes focus. Safe on a reused instance.
 	void OpenKeyboard(const FText& InitialText);
 
-	FOnKeyboardCommitted OnCommitted;     // DONE — carries the final text
-	FSimpleMulticastDelegate OnCancelled; // B — text discarded
+	FOnKeyboardCommitted OnCommitted;     // DONE â€” carries the final text
+	FSimpleMulticastDelegate OnCancelled; // B â€” text discarded
 
 protected:
 	virtual void NativeOnInitialized() override;
@@ -46,7 +46,7 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	class UMenuButtonWidget* DoneButton;
 
-	// Your WBP_MenuButton — spawned once per key
+	// Your WBP_MenuButton â€” spawned once per key
 	UPROPERTY(EditDefaultsOnly, Category = "Keyboard")
 	TSubclassOf<UMenuButtonWidget> KeyButtonClass;
 
@@ -59,7 +59,7 @@ protected:
 private:
 	FString Buffer;
 
-	// Key that receives default focus when the keyboard opens ('G' — center of the grid)
+	// Key that receives default focus when the keyboard opens ('G' â€” center of the grid)
 	UPROPERTY()
 	class UMenuButtonWidget* HomeKey;
 
@@ -69,5 +69,5 @@ private:
 	UFUNCTION() void HandleDone();
 
 	void CancelKeyboard();
-	void RefreshPreview();
+	void RefreshPreview(bool bPlaySound = true);
 };
