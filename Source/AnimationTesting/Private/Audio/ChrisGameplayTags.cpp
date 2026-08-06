@@ -22,4 +22,5 @@ namespace ChrisGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_UI_Shop_Unlock_Skill, "audio.ui.shop.unlock.skill", "");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_UI_Shop_Unlock_Consumable, "audio.ui.shop.unlock.consumable", "");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_UI_Shop_Unlock_Upgrade, "audio.ui.shop.unlock.upgrade", "");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_UI_Reject, "audio.ui.reject", "Action refused — locked in, readied up, invalid");
 }

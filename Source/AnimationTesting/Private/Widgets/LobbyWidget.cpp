@@ -151,19 +151,22 @@ void ULobbyWidget::ClearAndPopulateTeamSelectionSlots()
 void ULobbyWidget::SlotSelected(uint8 NewSlotId)
 {
     // Can't switch slots while readied up
-    if (bIsReady) return;
+    UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this);
 
-    // Below the guard so a rejected click stays silent
-    if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+    // Can't switch slots while readied up
+    if (bIsReady)
     {
-        Audio->Play2D(ChrisGameplayTags::Audio_UI_Lobby_TeamSlot);
+        if (Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Reject); }
+        return;
     }
-    
+
+    if (Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Lobby_TeamSlot); }
+
     UE_LOG(LogTemp, Log, TEXT("Attempted to switch to slot: %d"), NewSlotId);
-    if(LobbyPlayerController)
+    if (LobbyPlayerController)
     {
         LobbyPlayerController->Server_RequestSlotSelectionChange(NewSlotId);
-	}
+    }
 }
 
 // Attempts to find and subscribe to the GameState. Retries on a timer if not yet available (network delay).
@@ -233,7 +236,7 @@ void ULobbyWidget::UpdatePlayerSelectionDisplay(const TArray<FPlayerSelection>& 
             // When locked in, disable the character selection so they can't change picks
             if (CharacterSelectionTileView)
             {
-                CharacterSelectionTileView->SetIsEnabled(!bIsLockedIn);
+                CharacterSelectionTileView->SetRenderOpacity(bIsLockedIn ? 0.4f : 1.f);
             }
 
             if (StartMatchButton)
@@ -440,7 +443,23 @@ void ULobbyWidget::PreloadHeroAssets(const TArray<UPA_CharacterDefinition*>& Def
 
 void ULobbyWidget::HeroEntryClicked(const UPA_CharacterDefinition* Definition, bool bPlaySound)
 {
-    if (bIsLockedIn || !Definition) return;
+    UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this);
+
+    // Locked in: the tiles are dimmed but still clickable, so tell the player no
+    if (bIsLockedIn)
+    {
+        if (bPlaySound && Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Reject); }
+        return;
+    }
+
+    if (!Definition) return;
+
+    // Already picked this one — reject rather than re-confirming
+    if (Definition == CurrentDisplayedDefinition)
+    {
+        if (bPlaySound && Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Reject); }
+        return;
+    }
 
     if (!ChrisPlayerState)
     {
@@ -448,14 +467,7 @@ void ULobbyWidget::HeroEntryClicked(const UPA_CharacterDefinition* Definition, b
     }
     if (!ChrisPlayerState) return;
 
-    // Below every guard, so a pick that goes nowhere stays silent
-    if (bPlaySound)
-    {
-        if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
-        {
-            Audio->Play2D(ChrisGameplayTags::Audio_UI_Lobby_TeamSlot);
-        }
-    }
+    if (bPlaySound && Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Lobby_TeamSlot); }
 
     ChrisPlayerState->Server_SetSelectedCharacterDefinition(Definition);
 }
