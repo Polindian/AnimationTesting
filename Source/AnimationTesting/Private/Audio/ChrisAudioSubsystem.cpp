@@ -63,8 +63,7 @@ UChrisAudioSubsystem* UChrisAudioSubsystem::Get(const UObject* WorldContextObjec
 {
 	if (!WorldContextObject) { return nullptr; }
 
-	// ReturnNull rather than asserting: widgets can be initialised during level
-	// transitions when there's briefly no valid world
+	// ReturnNull rather than asserting: widgets can be initialised during level transitions when there's briefly no valid world
 	if (const UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::ReturnNull))
 	{
 		if (const UGameInstance* GI = World->GetGameInstance())

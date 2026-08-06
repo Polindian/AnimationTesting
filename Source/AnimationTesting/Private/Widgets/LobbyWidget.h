@@ -86,7 +86,7 @@ private:
 	UPROPERTY(meta = (BindWidget))
 	class UTileView* CharacterSelectionTileView;
 
-	void HeroEntryClicked(const UPA_CharacterDefinition* Definition);
+
 	void WireHeroSelectionNavigation(); 
 	void TryInitHeroSelectionFocus();
 
@@ -127,4 +127,6 @@ private:
 	TSharedPtr<struct FStreamableHandle> HeroAssetPreloadHandle;
 
 	void PreloadHeroAssets(const TArray<UPA_CharacterDefinition*>& Definitions);
+
+	void HeroEntryClicked(const UPA_CharacterDefinition* Definition, bool bPlaySound = true);
 };

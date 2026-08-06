@@ -32,7 +32,7 @@ public:
 	FOnEntryHovered OnEntryHovered;   // focus arrived -> owner shows tooltip
 	FOnEntryClicked OnEntryClicked;   // clicked/A -> owner sends the pick
 
-	void FocusEntry();
+	void FocusEntry(bool bPlaySound = false);
 	UButton* GetSelectButton() const { return SelectButton; }
 
 protected:
@@ -68,4 +68,6 @@ private:
 
 	UFUNCTION()
 	void HandleClicked();
+
+	bool bSuppressFocusSound = false;
 };

@@ -283,18 +283,7 @@ void ULobbyWidget::CharacterDefinitionsLoaded()
 }
 
 
-void ULobbyWidget::HeroEntryClicked(const UPA_CharacterDefinition* Definition)
-{
-    if (bIsLockedIn || !Definition) return;
 
-    if (!ChrisPlayerState)
-    {
-        ChrisPlayerState = GetOwningPlayerState<AChrisPlayerState>();
-    }
-    if (!ChrisPlayerState) return;
-
-    ChrisPlayerState->Server_SetSelectedCharacterDefinition(Definition);
-}
 
 void ULobbyWidget::WireHeroSelectionNavigation()
 {
@@ -339,8 +328,8 @@ void ULobbyWidget::TryInitHeroSelectionFocus()
     {
         if (UCharacterEntryWidget* First = Cast<UCharacterEntryWidget>(W))
         {
-            First->FocusEntry();                               // browse highlight + tooltip
-            HeroEntryClicked(First->GetCharacterDefinition()); // one default pick
+            First->FocusEntry();     // already silent by default
+            HeroEntryClicked(First->GetCharacterDefinition(), false);
             break;
         }
     }
@@ -389,8 +378,17 @@ void ULobbyWidget::OnStartMatchButtonClicked()
 {
     if (!LobbyPlayerController) return;
 
-    bIsLockedIn = !bIsLockedIn;
+    // bIsLockedIn is still the pre-click state here
+    const bool bWillBeLockedIn = !bIsLockedIn;
 
+    if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+    {
+        Audio->Play2D(bWillBeLockedIn
+            ? ChrisGameplayTags::Audio_UI_Lobby_Continue
+            : ChrisGameplayTags::Audio_UI_Leaderboard_Close);
+    }
+
+    bIsLockedIn = bWillBeLockedIn;
     LobbyPlayerController->Server_RequestLockIn(bIsLockedIn);
 }
 
@@ -401,7 +399,7 @@ void ULobbyWidget::HandleHeroEntryGenerated(UUserWidget& EntryWidget)
         Entry->OnEntryHovered.RemoveAll(this);
         Entry->OnEntryClicked.RemoveAll(this);
         Entry->OnEntryHovered.AddUObject(this, &ULobbyWidget::HeroEntryHovered);
-        Entry->OnEntryClicked.AddUObject(this, &ULobbyWidget::HeroEntryClicked);
+        Entry->OnEntryClicked.AddUObject(this, &ULobbyWidget::HeroEntryClicked, true);
     }
 }
 
@@ -438,5 +436,27 @@ void ULobbyWidget::PreloadHeroAssets(const TArray<UPA_CharacterDefinition*>& Def
             {
                 UE_LOG(LogTemp, Warning, TEXT("Hero display assets preloaded"));
             }));
+}
+
+void ULobbyWidget::HeroEntryClicked(const UPA_CharacterDefinition* Definition, bool bPlaySound)
+{
+    if (bIsLockedIn || !Definition) return;
+
+    if (!ChrisPlayerState)
+    {
+        ChrisPlayerState = GetOwningPlayerState<AChrisPlayerState>();
+    }
+    if (!ChrisPlayerState) return;
+
+    // Below every guard, so a pick that goes nowhere stays silent
+    if (bPlaySound)
+    {
+        if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+        {
+            Audio->Play2D(ChrisGameplayTags::Audio_UI_Lobby_TeamSlot);
+        }
+    }
+
+    ChrisPlayerState->Server_SetSelectedCharacterDefinition(Definition);
 }
 
