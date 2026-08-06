@@ -20,6 +20,8 @@
 #include "Components/ScrollBoxSlot.h"
 #include "Network/ChrisNetStatics.h"
 #include "Animation/WidgetAnimation.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 void UMainMenuWidget::NativeConstruct()
@@ -191,16 +193,35 @@ void UMainMenuWidget::BackToMainClicked() { GoToPage(MainWidgetRoot); }
 
 void UMainMenuWidget::ExitGameClicked()
 {
-	UKismetSystemLibrary::QuitGame(GetWorld(), GetOwningPlayer(), EQuitPreference::Quit, false);
+	OpenGeneralMenu(EGeneralMenuType::YesNo,
+		NSLOCTEXT("MainMenu", "ConfirmExit", "ARE YOU SURE YOU WANT TO EXIT CHAMPIONS ARENA?"))
+		.AddLambda([this](bool bConfirmed)
+			{
+				SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+
+				if (bConfirmed)
+				{
+					UKismetSystemLibrary::QuitGame(GetWorld(), GetOwningPlayer(), EQuitPreference::Quit, false);
+					return;
+				}
+
+				ExitGameButton->FocusButton();
+			});
 }
 
 void UMainMenuWidget::CreateSessionButtonClicked()
 {
 		if (ChrisGameInstance && ChrisGameInstance->IsLoggedIn())
 		{
+			UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this);
+			
 			// Stage 1: field hidden -> this click only reveals the bar and arms stage 2
 			if (SessionNameContainer->GetVisibility() == ESlateVisibility::Collapsed)
 			{
+				if (Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Lobby_TeamSlot); }
+
+				SessionNameContainer->SetVisibility(ESlateVisibility::Visible);
+				
 				SessionNameContainer->SetVisibility(ESlateVisibility::Visible);
 				SessionSearchBar->FocusBar();
 
@@ -217,6 +238,8 @@ void UMainMenuWidget::CreateSessionButtonClicked()
 				SessionNameTooLong();
 				return;   // dialog instead of creating
 			}
+
+			if (Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Lobby_Continue); }
 
 			ChrisGameInstance->RequestCreateAndJoinSession(FName(SessionSearchBar->GetText().ToString()));
 			SwitchToWaitingWidget(FText::FromString("CREATING LOBBY"), true).AddDynamic(this, &UMainMenuWidget::CancelSessionCreation);
@@ -401,11 +424,20 @@ void UMainMenuWidget::SessionNameTooLong()
 
 void UMainMenuWidget::PracticeArenaClicked()
 {
+	OpenGeneralMenu(EGeneralMenuType::YesNo,
+		NSLOCTEXT("MainMenu", "ConfirmPracticeArena", "ARE YOU SURE YOU WANT TO ENTER THE PRACTICE ARENA?"))
+		.AddLambda([this](bool bConfirmed)
+			{
+				SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 
-	if (ChrisGameInstance)
-	{
-		ChrisGameInstance->StartPracticeArena();
-	}
+				if (bConfirmed)
+				{
+					if (ChrisGameInstance) { ChrisGameInstance->StartPracticeArena(); }
+					return;
+				}
+
+				PracticeArenaButton->FocusButton();
+			});
 }
 
 void UMainMenuWidget::OpenVirtualKeyboard()
@@ -685,6 +717,11 @@ void UMainMenuWidget::HideWaitingWidget()
 
 void UMainMenuWidget::GoToPage(UWidget* TargetPage)
 {
+	if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+	{
+		Audio->Play2D(ChrisGameplayTags::Audio_UI_Page_Change);
+	}
+	
 	if (!TargetPage || PendingPage) return;
 
 	PendingPage = TargetPage;
@@ -709,7 +746,6 @@ void UMainMenuWidget::OnFadeOutFinished()
 	if (PendingPage == MainWidgetRoot) { StoryModeButton->FocusButton(); }
 	else if (PendingPage == MultiplayerPageRoot) { CreateSessionButton->FocusButton(); }
 	else if (PendingPage == StoryModeRoot) { StoryBackButton->FocusButton(); }
-	else if (PendingPage == MultiplayerPageRoot)
 	{
 		ResetCreateSessionFlow();
 		CreateSessionButton->FocusButton();

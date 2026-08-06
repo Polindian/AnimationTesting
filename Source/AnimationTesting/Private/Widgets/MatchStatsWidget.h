@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+ï»¿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -18,7 +18,7 @@ class UMatchStatsWidget : public UUserWidget
 public:
     void ShowStats(APlayerState* LocalPlayerState);
 
-    // Fired when LEAVE MATCH is pressed — the owner handles the travel
+    // Fired when LEAVE MATCH is pressed â€” the owner handles the travel
     FSimpleMulticastDelegate OnLeaveMatchRequested;
 
     void PlayLeaveFade(float Duration);
@@ -37,7 +37,7 @@ private:
     UPROPERTY(meta = (BindWidget))
     class UMenuButtonWidget* LeaveMatchButton;
 
-    // Whole screen fades up together — black background and panels
+    // Whole screen fades up together â€” black background and panels
     UPROPERTY(Transient, meta = (BindWidgetAnim))
     TObjectPtr<UWidgetAnimation> Anim_FadeIn;
 

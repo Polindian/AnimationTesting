@@ -5,6 +5,8 @@
 #include "Components/Image.h"
 #include "Inventory/PA_ShopItem.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
 
 void UItemWidget::NativeConstruct()
 {
@@ -65,17 +67,28 @@ void UItemWidget::DecrementStock()
 
 void UItemWidget::OnItemClicked()
 {
+    UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this);
+
     // Locked skills (previous tier not bought) cannot be purchased.
     if (bIsLocked)
+    {
+        if (Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Reject); }
         return;
+    }
 
     // Already-owned skills (non-consumables) cannot be re-bought.
     if (bIsPurchased && ShopItem && !ShopItem->GetIsConsumable())
+    {
+        if (Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Reject); }
         return;
+    }
 
     // Existing consumable out-of-stock guard.
     if (Stock <= 0 && ShopItem && ShopItem->GetIsConsumable())
+    {
+        if (Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Reject); }
         return;
+    }
 
     if (ShopItem)
     {
@@ -90,6 +103,11 @@ FReply UItemWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const F
 
 FReply UItemWidget::NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
+    if (InMouseEvent.GetEffectingButton() != EKeys::LeftMouseButton)
+    {
+        return FReply::Unhandled();
+    }
+
     OnItemClicked();
     return FReply::Handled();
 }

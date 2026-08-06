@@ -4,6 +4,8 @@
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
 #include "Components/Image.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
 
 void USessionEntryWidget::NativeConstruct()
 {
@@ -25,21 +27,35 @@ void USessionEntryWidget::InitializeEntry(const FString& Name, const FString& Se
 
 void USessionEntryWidget::SessionEntrySelected()
 {
+	if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+	{
+		Audio->Play2D(ChrisGameplayTags::Audio_UI_Lobby_TeamSlot);
+	}
+
 	OnSessionEntrySelected.Broadcast(CachedSessionIdString);
 }
 
 void USessionEntryWidget::NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
 	Super::NativeOnMouseEnter(InGeometry, InMouseEvent);
-	FocusEntry();
+	FocusEntry(true);
 }
 
 void USessionEntryWidget::NativeOnAddedToFocusPath(const FFocusEvent& InFocusEvent)
 {
 	Super::NativeOnAddedToFocusPath(InFocusEvent);
+
+	if (bSuppressFocusSound)
+	{
+		bSuppressFocusSound = false;
+	}
+	else if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+	{
+		Audio->Play2D(ChrisGameplayTags::Audio_UI_Navigate_Soft);
+	}
+
 	if (HoverGlow)
 	{
-		// HitTestInvisible, never Visible — the glow must not steal clicks from the button
 		HoverGlow->SetVisibility(ESlateVisibility::HitTestInvisible);
 	}
 }
@@ -53,12 +69,13 @@ void USessionEntryWidget::NativeOnRemovedFromFocusPath(const FFocusEvent& InFocu
 	}
 }
 
-void USessionEntryWidget::FocusEntry()
+void USessionEntryWidget::FocusEntry(bool bPlaySound)
 {
-	if (SessionButton)
-	{
-		SessionButton->SetFocus();
-	}
+	if (!SessionButton) { return; }
+
+	bSuppressFocusSound = !bPlaySound;
+	SessionButton->SetFocus();
+	bSuppressFocusSound = false;
 }
 
 void USessionEntryWidget::SetSelectedVisual(bool bSelected)

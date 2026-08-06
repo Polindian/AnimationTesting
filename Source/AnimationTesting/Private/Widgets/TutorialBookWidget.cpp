@@ -5,6 +5,8 @@
 #include "Components/TextBlock.h"
 #include "Components/Button.h"
 #include "Widgets/MenuButtonWidget.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
 
 void UTutorialBookWidget::NativeOnInitialized()
 {
@@ -26,6 +28,12 @@ void UTutorialBookWidget::NativeOnInitialized()
 void UTutorialBookWidget::OpenBook()
 {
 	bClosing = false;
+
+	if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+	{
+		Audio->Play2D(ChrisGameplayTags::Audio_UI_Book_Open);
+	}
+
 	CurrentSpread = 0;
 	RefreshSpread();
 	PageContent->SetVisibility(ESlateVisibility::Hidden);
@@ -54,11 +62,15 @@ void UTutorialBookWidget::HandleBookAnimFinished()
 
 void UTutorialBookWidget::CloseBook()
 {
-	// Guard against Esc being spammed mid-close
 	if (bClosing) { return; }
 	bClosing = true;
 
-	// Hide content first so the shrinking book is just the cover, mirroring the open
+	// Inside the guard, so spamming Esc gives one sound not five
+	if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+	{
+		Audio->Play2D(ChrisGameplayTags::Audio_UI_Book_Close);
+	}
+
 	PageContent->SetVisibility(ESlateVisibility::Hidden);
 	PlayAnimationReverse(Anim_OpenBook);
 }
@@ -81,6 +93,12 @@ void UTutorialBookWidget::ChangeSpread(int32 Delta)
 	// Clamp handles the edges — pressing right on 10/10 or left on 1/10 just does nothing
 	const int32 NewSpread = FMath::Clamp(CurrentSpread + Delta, 0, NumSpreads() - 1);
 	if (NewSpread == CurrentSpread) { return; }
+
+	if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+	{
+		Audio->Play2D(ChrisGameplayTags::Audio_UI_Book_Flip);
+	}
+
 	CurrentSpread = NewSpread;
 	RefreshSpread();
 }

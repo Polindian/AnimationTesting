@@ -24,6 +24,8 @@
 #include "Network/ChrisNetStatics.h"
 #include "Player/LobbyPlayerController.h"
 #include "Player/ChrisPlayerState.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
 
 
 void ULobbyWidget::NativeConstruct()
@@ -78,7 +80,17 @@ void ULobbyWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 
 void ULobbyWidget::OnReadyUpClicked()
 {
-    SetReadyState(!bIsReady);
+    // bIsReady is still the pre-click state here
+    const bool bWillBeReady = !bIsReady;
+
+    if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+    {
+        Audio->Play2D(bWillBeReady
+            ? ChrisGameplayTags::Audio_UI_Lobby_Continue
+            : ChrisGameplayTags::Audio_UI_Leaderboard_Close);
+    }
+
+    SetReadyState(bWillBeReady);
 }
 
 void ULobbyWidget::SetReadyState(bool bReady)
@@ -139,13 +151,22 @@ void ULobbyWidget::ClearAndPopulateTeamSelectionSlots()
 void ULobbyWidget::SlotSelected(uint8 NewSlotId)
 {
     // Can't switch slots while readied up
-    if (bIsReady) return;
-    
+    UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this);
+
+    // Can't switch slots while readied up
+    if (bIsReady)
+    {
+        if (Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Reject); }
+        return;
+    }
+
+    if (Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Lobby_TeamSlot); }
+
     UE_LOG(LogTemp, Log, TEXT("Attempted to switch to slot: %d"), NewSlotId);
-    if(LobbyPlayerController)
+    if (LobbyPlayerController)
     {
         LobbyPlayerController->Server_RequestSlotSelectionChange(NewSlotId);
-	}
+    }
 }
 
 // Attempts to find and subscribe to the GameState. Retries on a timer if not yet available (network delay).
@@ -215,7 +236,7 @@ void ULobbyWidget::UpdatePlayerSelectionDisplay(const TArray<FPlayerSelection>& 
             // When locked in, disable the character selection so they can't change picks
             if (CharacterSelectionTileView)
             {
-                CharacterSelectionTileView->SetIsEnabled(!bIsLockedIn);
+                CharacterSelectionTileView->SetRenderOpacity(bIsLockedIn ? 0.4f : 1.f);
             }
 
             if (StartMatchButton)
@@ -265,18 +286,7 @@ void ULobbyWidget::CharacterDefinitionsLoaded()
 }
 
 
-void ULobbyWidget::HeroEntryClicked(const UPA_CharacterDefinition* Definition)
-{
-    if (bIsLockedIn || !Definition) return;
 
-    if (!ChrisPlayerState)
-    {
-        ChrisPlayerState = GetOwningPlayerState<AChrisPlayerState>();
-    }
-    if (!ChrisPlayerState) return;
-
-    ChrisPlayerState->Server_SetSelectedCharacterDefinition(Definition);
-}
 
 void ULobbyWidget::WireHeroSelectionNavigation()
 {
@@ -321,8 +331,8 @@ void ULobbyWidget::TryInitHeroSelectionFocus()
     {
         if (UCharacterEntryWidget* First = Cast<UCharacterEntryWidget>(W))
         {
-            First->FocusEntry();                               // browse highlight + tooltip
-            HeroEntryClicked(First->GetCharacterDefinition()); // one default pick
+            First->FocusEntry();     // already silent by default
+            HeroEntryClicked(First->GetCharacterDefinition(), false);
             break;
         }
     }
@@ -371,8 +381,17 @@ void ULobbyWidget::OnStartMatchButtonClicked()
 {
     if (!LobbyPlayerController) return;
 
-    bIsLockedIn = !bIsLockedIn;
+    // bIsLockedIn is still the pre-click state here
+    const bool bWillBeLockedIn = !bIsLockedIn;
 
+    if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+    {
+        Audio->Play2D(bWillBeLockedIn
+            ? ChrisGameplayTags::Audio_UI_Lobby_Continue
+            : ChrisGameplayTags::Audio_UI_Leaderboard_Close);
+    }
+
+    bIsLockedIn = bWillBeLockedIn;
     LobbyPlayerController->Server_RequestLockIn(bIsLockedIn);
 }
 
@@ -383,7 +402,7 @@ void ULobbyWidget::HandleHeroEntryGenerated(UUserWidget& EntryWidget)
         Entry->OnEntryHovered.RemoveAll(this);
         Entry->OnEntryClicked.RemoveAll(this);
         Entry->OnEntryHovered.AddUObject(this, &ULobbyWidget::HeroEntryHovered);
-        Entry->OnEntryClicked.AddUObject(this, &ULobbyWidget::HeroEntryClicked);
+        Entry->OnEntryClicked.AddUObject(this, &ULobbyWidget::HeroEntryClicked, true);
     }
 }
 
@@ -420,5 +439,36 @@ void ULobbyWidget::PreloadHeroAssets(const TArray<UPA_CharacterDefinition*>& Def
             {
                 UE_LOG(LogTemp, Warning, TEXT("Hero display assets preloaded"));
             }));
+}
+
+void ULobbyWidget::HeroEntryClicked(const UPA_CharacterDefinition* Definition, bool bPlaySound)
+{
+    UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this);
+
+    // Locked in: the tiles are dimmed but still clickable, so tell the player no
+    if (bIsLockedIn)
+    {
+        if (bPlaySound && Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Reject); }
+        return;
+    }
+
+    if (!Definition) return;
+
+    // Already picked this one — reject rather than re-confirming
+    if (Definition == CurrentDisplayedDefinition)
+    {
+        if (bPlaySound && Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Reject); }
+        return;
+    }
+
+    if (!ChrisPlayerState)
+    {
+        ChrisPlayerState = GetOwningPlayerState<AChrisPlayerState>();
+    }
+    if (!ChrisPlayerState) return;
+
+    if (bPlaySound && Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Lobby_TeamSlot); }
+
+    ChrisPlayerState->Server_SetSelectedCharacterDefinition(Definition);
 }
 

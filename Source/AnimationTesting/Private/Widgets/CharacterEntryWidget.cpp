@@ -6,6 +6,8 @@
 #include "Components/TextBlock.h"
 #include "Components/Button.h"
 #include "Character/PA_CharacterDefinition.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
 
 void UCharacterEntryWidget::NativeOnInitialized()
 {
@@ -39,24 +41,35 @@ void UCharacterEntryWidget::HandleClicked()
 	OnEntryClicked.Broadcast(CharacterDefinition);
 }
 
-void UCharacterEntryWidget::FocusEntry()
+void UCharacterEntryWidget::FocusEntry(bool bPlaySound)
 {
-	if (SelectButton)
-	{
-		SelectButton->SetFocus();
-	}
+	if (!SelectButton) { return; }
+
+	bSuppressFocusSound = !bPlaySound;
+	SelectButton->SetFocus();
+	bSuppressFocusSound = false;
 }
 
 void UCharacterEntryWidget::NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
 	Super::NativeOnMouseEnter(InGeometry, InMouseEvent);
 	// Route through focus — the focus path handler does glow + tooltip for all devices
-	FocusEntry();
+	FocusEntry(true);
 }
 
 void UCharacterEntryWidget::NativeOnAddedToFocusPath(const FFocusEvent& InFocusEvent)
 {
 	Super::NativeOnAddedToFocusPath(InFocusEvent);
+
+	if (bSuppressFocusSound)
+	{
+		bSuppressFocusSound = false;
+	}
+	else if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+	{
+		Audio->Play2D(ChrisGameplayTags::Audio_UI_Navigate_Main);
+	}
+
 	if (HoverGlow)
 	{
 		HoverGlow->SetVisibility(ESlateVisibility::HitTestInvisible);

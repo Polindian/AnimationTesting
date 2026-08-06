@@ -4,6 +4,8 @@
 #include "Widgets/LeaderboardEntryWidget.h"
 #include "Components/ScrollBox.h"
 #include "Components/ScrollBoxSlot.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
 #include "Animation/WidgetAnimation.h"
 
 void ULeaderboardWidget::NativeOnInitialized()
@@ -26,6 +28,11 @@ void ULeaderboardWidget::NativeOnInitialized()
 void ULeaderboardWidget::OpenLeaderboard()
 {
 	bClosing = false;
+
+	if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+	{
+		Audio->Play2D(ChrisGameplayTags::Audio_UI_Leaderboard_Open);
+	}
 
 	if (bDebugFill)
 	{
@@ -104,11 +111,7 @@ FReply ULeaderboardWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FK
 
 	if (Key == EKeys::BackSpace || Key == EKeys::Gamepad_FaceButton_Right)
 	{
-		if (!bClosing)
-		{
-			bClosing = true;
-			PlayAnimation(Anim_Close);
-		}
+		CloseLeaderboard();
 		return FReply::Handled();
 	}
 
@@ -127,6 +130,19 @@ void ULeaderboardWidget::HandleRowFocused(int32 RowIndex)
 	{
 		AppendPage();
 	}
+}
+
+void ULeaderboardWidget::CloseLeaderboard()
+{
+	if (bClosing) { return; }
+	bClosing = true;
+
+	if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+	{
+		Audio->Play2D(ChrisGameplayTags::Audio_UI_Leaderboard_Close);
+	}
+
+	PlayAnimation(Anim_Close);
 }
 
 // 20 fake players, pre-varied so the sort has something to do

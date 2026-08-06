@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+ï»¿// Christopher Naglik All Rights Reserved
 
 #include "Widgets/VirtualKeyboardWidget.h"
 #include "Widgets/MenuButtonWidget.h"
@@ -7,6 +7,8 @@
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Blueprint/WidgetTree.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
 
 void UVirtualKeyboardWidget::NativeOnInitialized()
 {
@@ -14,7 +16,7 @@ void UVirtualKeyboardWidget::NativeOnInitialized()
 
 	SetIsFocusable(true);
 
-	// Build the letter/number grid procedurally — 36 keys is too many to hand-place
+	// Build the letter/number grid procedurally â€” 36 keys is too many to hand-place
 	const TCHAR* Rows[] = { TEXT("1234567890"), TEXT("QWERTYUIOP"), TEXT("ASDFGHJKL"), TEXT("ZXCVBNM") };
 
 	for (const TCHAR* Row : Rows)
@@ -45,7 +47,7 @@ void UVirtualKeyboardWidget::NativeOnInitialized()
 void UVirtualKeyboardWidget::OpenKeyboard(const FText& InitialText)
 {
 	Buffer = InitialText.ToString();
-	RefreshPreview();
+	RefreshPreview(false);
 
 	// Deferred: on first open, AddToViewport happened this same frame
 	GetWorld()->GetTimerManager().SetTimerForNextTick(
@@ -60,17 +62,17 @@ FReply UVirtualKeyboardWidget::NativeOnKeyDown(const FGeometry& InGeometry, cons
 {
 	const FKey Key = InKeyEvent.GetKey();
 
-	if (Key == EKeys::Gamepad_FaceButton_Right)  // B — cancel
+	if (Key == EKeys::Gamepad_FaceButton_Right)  // B â€” cancel
 	{
 		CancelKeyboard();
 		return FReply::Handled();
 	}
-	if (Key == EKeys::Gamepad_FaceButton_Left)   // X — delete
+	if (Key == EKeys::Gamepad_FaceButton_Left)   // X â€” delete
 	{
 		HandleDelete();
 		return FReply::Handled();
 	}
-	if (Key == EKeys::Gamepad_FaceButton_Top)    // Y — space
+	if (Key == EKeys::Gamepad_FaceButton_Top)    // Y â€” space
 	{
 		HandleSpace();
 		return FReply::Handled();
@@ -107,6 +109,11 @@ void UVirtualKeyboardWidget::HandleDelete()
 
 void UVirtualKeyboardWidget::HandleDone()
 {
+	if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+	{
+		Audio->Play2D(ChrisGameplayTags::Audio_UI_Lobby_TeamSlot);
+	}
+
 	OnCommitted.Broadcast(FText::FromString(Buffer.TrimEnd()));
 	RemoveFromParent();
 }
@@ -117,8 +124,16 @@ void UVirtualKeyboardWidget::CancelKeyboard()
 	RemoveFromParent();
 }
 
-void UVirtualKeyboardWidget::RefreshPreview()
+void UVirtualKeyboardWidget::RefreshPreview(bool bPlaySound)
 {
-	// Trailing underscore doubles as a caret so an empty buffer still shows something
+	if (bPlaySound)
+	{
+		if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+		{
+			Audio->Play2D(ChrisGameplayTags::Audio_UI_Navigate_Soft);
+		}
+	}
+
 	PreviewText->SetText(FText::FromString(Buffer + TEXT("_")));
 }
+

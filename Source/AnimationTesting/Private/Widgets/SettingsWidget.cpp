@@ -4,6 +4,8 @@
 #include "Components/WidgetSwitcher.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
 #include "Widgets/MenuButtonWidget.h"
 
 void USettingsWidget::NativeOnInitialized()
@@ -41,7 +43,7 @@ void USettingsWidget::NativeOnInitialized()
 void USettingsWidget::OpenSettings()
 {
     bClosing = false;
-    SwitchToTab(0);
+    SwitchToTab(0, false);
     PlayAnimation(Anim_SlideIn);
 
     // Deferred for the same first-open reason as the book
@@ -55,16 +57,31 @@ void USettingsWidget::CloseSettings()
     if (bClosing) { return; }
     bClosing = true;
 
+    // Fires as the slide-out begins, not in HandleSlideOutFinished — by then
+    // the panel is already off-screen
+    if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+    {
+        Audio->Play2D(ChrisGameplayTags::Audio_UI_Page_Leave);
+    }
+
     PlayAnimation(Anim_SlideOut);
 }
 
-
-void USettingsWidget::SwitchToTab(int32 NewIndex)
+void USettingsWidget::SwitchToTab(int32 NewIndex, bool bPlaySound)
 {
+    const int32 PreviousIndex = CurrentTabIndex;
     CurrentTabIndex = FMath::Clamp(NewIndex, 0, TabOrder.Num() - 1);
-    TabSwitcher->SetActiveWidget(TabOrder[CurrentTabIndex]);
 
-    // Active tab gets the fill, everything else goes transparent
+    // Only sounds on an actual change — clicking the tab you're already on is silent
+    if (bPlaySound && CurrentTabIndex != PreviousIndex)
+    {
+        if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+        {
+            Audio->Play2D(ChrisGameplayTags::Audio_UI_Tab_Change);
+        }
+    }
+
+    TabSwitcher->SetActiveWidget(TabOrder[CurrentTabIndex]);
     RefreshTabBorders();
 }
 

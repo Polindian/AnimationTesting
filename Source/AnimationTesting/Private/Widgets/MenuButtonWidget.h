@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "GameplayTagContainer.h"
 #include "MenuButtonWidget.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnMenuButtonClicked);
@@ -76,13 +77,24 @@ private:
 
 public:
     // Gives this button user focus — used for default page highlighting and mouse override
-    void FocusButton();
+    // Pass false when focusing from code so the navigate sound doesn't fire on page open.
+    void FocusButton(bool bPlaySound = false);
 
 protected:
     // Focus drives the highlight now — these fire when this widget (or its inner button) gains/loses focus, whether from keyboard, gamepad, or mouse hover
     virtual void NativeOnAddedToFocusPath(const FFocusEvent& InFocusEvent) override;
     virtual void NativeOnRemovedFromFocusPath(const FFocusEvent& InFocusEvent) override;
 
+    // Plays whenever this button gains focus — mouse hover, keyboard or gamepad
+    UPROPERTY(EditAnywhere, Category = "Menu Button|Audio", meta = (Categories = "audio.ui"))
+    FGameplayTag HoveredSoundTag;
 
+    // Leave empty for buttons whose action plays its own sound (page change, open leaderboards)
+    UPROPERTY(EditAnywhere, Category = "Menu Button|Audio", meta = (Categories = "audio.ui"))
+    FGameplayTag ClickedSoundTag;
+
+
+private:
+    bool bSuppressFocusSound = false;
 
 };

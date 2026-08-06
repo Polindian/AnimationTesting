@@ -65,4 +65,6 @@ private:
 	void HandleCloseAnimFinished();
 
 	void HandleRowFocused(int32 RowIndex);
+
+	void CloseLeaderboard();
 };

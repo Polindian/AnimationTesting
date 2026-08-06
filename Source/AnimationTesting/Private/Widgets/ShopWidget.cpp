@@ -15,6 +15,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "Framework/CAssetManager.h"
 #include "Player/ChrisPlayerController.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
 
 void UShopWidget::NativeConstruct()
 {
@@ -119,16 +121,36 @@ void UShopWidget::ShopItemLoadFinished()
 
 void UShopWidget::OnItemPurchaseRequested(const UPA_ShopItem* Item)
 {
-    if (bShopClosed)
-        return;
-    
-    if (OwnerInventoryComponent && Item)
+    if (bShopClosed) return;
+    if (!OwnerInventoryComponent || !Item) return;
+
+    UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this);
+
+    const bool bSuccess = OwnerInventoryComponent->TryPurchase(Item);
+
+    if (!bSuccess)
     {
-        bool bSuccess = OwnerInventoryComponent->TryPurchase(Item);
-        if (bSuccess && Item->GetIsConsumable())
-        {
-            DecrementStockForItem(Item);
-        }
+        // One reject for all failure reasons: not enough souls, no stock, already owned
+        if (Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Reject); }
+        return;
+    }
+
+    if (Item->GetIsConsumable())
+    {
+        DecrementStockForItem(Item);
+        if (Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Shop_Unlock_Consumable); }
+        return;
+    }
+
+    // Not a consumable: FindSkillIndices separates skills from ability upgrades
+    int32 CatIdx, TierIdx;
+    const bool bIsSkill = FindSkillIndices(Item, CatIdx, TierIdx);
+
+    if (Audio)
+    {
+        Audio->Play2D(bIsSkill
+            ? ChrisGameplayTags::Audio_UI_Shop_Unlock_Skill
+            : ChrisGameplayTags::Audio_UI_Shop_Unlock_Upgrade);
     }
 }
 
@@ -392,11 +414,6 @@ void UShopWidget::TickBranchAnims(float DeltaTime)
 
 void UShopWidget::OnBranchFillComplete(const FBranchFillAnim& Anim)
 {
-    if (SkillUnlockSound)
-    {
-        UGameplayStatics::PlaySound2D(this, SkillUnlockSound);
-    }
-
     // Now update all skill lock states 
     UpdateSkillLockStates();
 }
@@ -523,15 +540,36 @@ void UShopWidget::WireShopNavigation()
 
 void UShopWidget::HandleItemFocusChanged(UItemWidget* Item, bool bFocused)
 {
-    if (bFocused) { ShowTooltipNextTo(Item, Item->GetTooltipTexture()); }
+    if (bFocused)
+    {
+        if (!bSuppressFocusSound)
+        {
+            if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+            {
+                Audio->Play2D(ChrisGameplayTags::Audio_UI_Navigate_Shop);
+            }
+        }
+        ShowTooltipNextTo(Item, Item->GetTooltipTexture());
+    }
     else { HideTooltip(); }
 }
 
 // Same for categories — separate handler only because the delegate types differ
 void UShopWidget::HandleCategoryFocusChanged(UShopCategoryWidget* Category, bool bFocused)
 {
-    if (bFocused) { ShowTooltipNextTo(Category, Category->GetTooltipTexture()); }
+    if (bFocused)
+    {
+        if (!bSuppressFocusSound)
+        {
+            if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+            {
+                Audio->Play2D(ChrisGameplayTags::Audio_UI_Navigate_Shop);
+            }
+        }
+        ShowTooltipNextTo(Category, Category->GetTooltipTexture());
+    }
     else { HideTooltip(); }
+
 }
 
 void UShopWidget::FocusDefaultItem()
@@ -540,13 +578,17 @@ void UShopWidget::FocusDefaultItem()
 
     WireShopNavigation();
 
-    // Slate directly — the UMG wrapper wasn't taking
+    // SetKeyboardFocus is synchronous, so the focus-changed broadcast lands inside this scope 
+    bSuppressFocusSound = true;
+
     TSharedPtr<SWidget> SlateWidget = Skill_Assassin1->GetCachedWidget();
     if (SlateWidget.IsValid())
     {
         FSlateApplication::Get().SetKeyboardFocus(SlateWidget, EFocusCause::SetDirectly);
         FSlateApplication::Get().SetUserFocus(0, SlateWidget, EFocusCause::SetDirectly);
     }
+
+    bSuppressFocusSound = false;
 }
 
 void UShopWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)

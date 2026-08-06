@@ -36,7 +36,7 @@ public:
 	virtual void NativeOnRemovedFromFocusPath(const FFocusEvent& InFocusEvent) override;
 
 	// Focuses the inner button — for default focus and refresh refocus from MainMenuWidget
-	void FocusEntry();
+	void FocusEntry(bool bPlaySound = false);
 
 	// Persistent "Join will use this one" indicator, independent of focus
 	void SetSelectedVisual(bool bSelected);
@@ -64,4 +64,6 @@ private:
 
 	UFUNCTION()
 	void SessionEntrySelected();
+
+	bool bSuppressFocusSound = false;
 };

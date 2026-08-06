@@ -104,9 +104,6 @@ private:
     // Which tab is currently active (index into TabOrder)
     int32 CurrentTabIndex = 0;
 
-    // Switches the TabSwitcher to the tab at the given index and refreshes borders
-    void SwitchToTab(int32 NewIndex);
-
     // Moves to the next or previous tab, wrapping around at the edges
     void ChangeTab(int32 Delta);
 
@@ -126,4 +123,7 @@ private:
     UFUNCTION() void HandleTabUnhovered();
 
     void CloseSettings();
+
+    // Switches the TabSwitcher to the tab at the given index and refreshes borders
+    void SwitchToTab(int32 NewIndex, bool bPlaySound = true);
 };
