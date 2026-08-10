@@ -1,10 +1,11 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 
 #include "ChrisGameplayTags.h"
 
 namespace ChrisGameplayTags
 {
+	// ── UI 2D ──────────────────────────────────
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_UI_Navigate_Soft, "audio.ui.navigate.soft", "Generic button hover");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_UI_Navigate_Main, "audio.ui.navigate.main", "Main menu hover");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_UI_Navigate_Shop, "audio.ui.navigate.shop", "Shop hover");
@@ -22,5 +23,22 @@ namespace ChrisGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_UI_Shop_Unlock_Skill, "audio.ui.shop.unlock.skill", "");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_UI_Shop_Unlock_Consumable, "audio.ui.shop.unlock.consumable", "");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_UI_Shop_Unlock_Upgrade, "audio.ui.shop.unlock.upgrade", "");
-	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_UI_Reject, "audio.ui.reject", "Action refused � locked in, readied up, invalid");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_UI_Reject, "audio.ui.reject", "Action refused — locked in, readied up, invalid");
+
+
+	// ── Local player 2D ──────────────────────────────────
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Player_Attack_Grunt, "audio.player.attack.grunt", "Effort vocal on a swing — per-character voice");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Player_Attack_Swoosh, "audio.player.attack.swoosh", "Blade through air — same for all characters");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Player_Hit_Light, "audio.player.hit.light", "Taking a light hit — per-character voice");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Player_Hit_Heavy, "audio.player.hit.heavy", "Taking a heavy hit — per-character voice");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Player_Combo_Hit, "audio.player.combo.hit", "Combo landed successfully");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Player_Roll_Forward, "audio.player.roll.forward", "");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Player_Roll_Backward, "audio.player.roll.backward", "");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Player_Roll_Left, "audio.player.roll.left", "Also used for forward-left and backward-left");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Player_Roll_Right, "audio.player.roll.right", "Also used for forward-right and backward-right");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Player_LowHealth, "audio.player.lowhealth", "Looping heartbeat while critically injured");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Player_LevelUp, "audio.player.levelup", "");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Player_Death, "audio.player.death", "Death screen sting, owner only");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Player_Skill_Available, "audio.player.skill.available", "Cooldown finished");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Player_Skill_Upgrade, "audio.player.skill.upgrade", "Skill upgraded in-arena, silent when maxed");
 }

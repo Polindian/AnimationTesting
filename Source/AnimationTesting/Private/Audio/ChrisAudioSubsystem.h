@@ -19,10 +19,6 @@ class ANIMATIONTESTING_API UChrisAudioSubsystem : public UGameInstanceSubsystem
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
-	/** Non-positional. Only ever heard on the machine that calls it. */
-	UFUNCTION(BlueprintCallable, Category = "Chris|Audio")
-	void Play2D(FGameplayTag Tag);
-
 	/** Positional one-shot at a fixed world point. */
 	UFUNCTION(BlueprintCallable, Category = "Chris|Audio")
 	void PlayAtLocation(FGameplayTag Tag, FVector Location);
@@ -38,6 +34,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Chris|Audio")
 	void ApplyVolumeSettings();
 
+
+	/** Non-positional. Only ever heard on the machine that calls it. */
+	UFUNCTION(BlueprintCallable, Category = "Chris|Audio")
+	void Play2D(FGameplayTag Tag, UChrisSoundLibrary* OverrideLibrary = nullptr);
 
 private:
 	UPROPERTY(Transient)

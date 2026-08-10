@@ -33,19 +33,6 @@ void UChrisAudioSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	ApplyVolumeSettings();
 }
 
-void UChrisAudioSubsystem::Play2D(FGameplayTag Tag)
-{
-	const FChrisSoundDef* Def = Library ? Library->FindSound(Tag) : nullptr;
-	if (!Def)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("ChrisAudio: no sound for tag %s"), *Tag.ToString());
-		return;
-	}
-
-	UGameplayStatics::PlaySound2D(this, Def->Sound, Def->VolumeMultiplier,
-		Def->PitchMultiplier, 0.f, Def->Concurrency);
-}
-
 void UChrisAudioSubsystem::PlayAtLocation(FGameplayTag Tag, FVector Location)
 {
 	const FChrisSoundDef* Def = Library ? Library->FindSound(Tag) : nullptr;
@@ -102,4 +89,20 @@ void UChrisAudioSubsystem::ApplyVolumeSettings()
 	ApplyBus(MasterBus, Settings->GetMasterVolume());
 	ApplyBus(MusicBus, Settings->GetMusicVolume());
 	ApplyBus(SFXBus, Settings->GetSFXVolume());
+}
+
+void UChrisAudioSubsystem::Play2D(FGameplayTag Tag, UChrisSoundLibrary* OverrideLibrary)
+{
+	// Character voice first, global library as fallback 
+	const FChrisSoundDef* Def = OverrideLibrary ? OverrideLibrary->FindSound(Tag) : nullptr;
+	if (!Def && Library) { Def = Library->FindSound(Tag); }
+
+	if (!Def)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ChrisAudio: no sound for tag %s"), *Tag.ToString());
+		return;
+	}
+
+	UGameplayStatics::PlaySound2D(this, Def->Sound, Def->VolumeMultiplier,
+		Def->PitchMultiplier, 0.f, Def->Concurrency);
 }
