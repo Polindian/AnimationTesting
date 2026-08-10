@@ -196,15 +196,26 @@ private:
 	FGenericTeamId TeamID;
 
 	
-
-
 	/********************************/
 	/*               AI             */
 	/********************************/
 
-	private:
+private:
 
-		void SetAIPerceptionStimuliSourceEnabled(bool bIsEnabled);
-		UPROPERTY()
-		class UAIPerceptionStimuliSourceComponent* PerceptionStimuliSourceComponent;
+	void SetAIPerceptionStimuliSourceEnabled(bool bIsEnabled);
+
+	UPROPERTY()
+	class UAIPerceptionStimuliSourceComponent* PerceptionStimuliSourceComponent;
+
+
+	/********************************/
+	/*             Audio            */
+	/********************************/
+public: 
+	class UChrisSoundLibrary* GetVoiceLibrary() const { return VoiceLibrary; }
+
+private:
+	// Per-character voice overrides (grunts, hit reactions)
+	UPROPERTY(EditDefaultsOnly, Category = "Audio")
+	TObjectPtr<class UChrisSoundLibrary> VoiceLibrary;
 };

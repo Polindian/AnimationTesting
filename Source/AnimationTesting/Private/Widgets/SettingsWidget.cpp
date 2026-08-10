@@ -7,6 +7,12 @@
 #include "Audio/ChrisAudioSubsystem.h"
 #include "Audio/ChrisGameplayTags.h"
 #include "Widgets/MenuButtonWidget.h"
+#include "Widgets/VolumeSliderWidget.h"
+#include "Components/Slider.h"
+#include "Components/TextBlock.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameUserSettings.h"
+
 
 void USettingsWidget::NativeOnInitialized()
 {
@@ -38,12 +44,20 @@ void USettingsWidget::NativeOnInitialized()
     // Borders are index-paired with the roots: TabBorders[i] belongs to TabOrder[i]
     TabOrder = { KeyboardTabRoot, ControllerTabRoot, AVTabRoot };
     TabBorders = { KeyboardTabBorder, ControllerTabBorder, AVTabBorder };
+
+    Row_Master->OnVolumeChanged.AddUObject(this, &USettingsWidget::HandleMasterVolumeChanged);
+    Row_Music->OnVolumeChanged.AddUObject(this, &USettingsWidget::HandleMusicVolumeChanged);
+    Row_SFX->OnVolumeChanged.AddUObject(this, &USettingsWidget::HandleSFXVolumeChanged);
+
+    WireVolumeSliderNavigation();
 }
 
 void USettingsWidget::OpenSettings()
 {
     bClosing = false;
     SwitchToTab(0, false);
+    RefreshVolumeSliders();
+
     PlayAnimation(Anim_SlideIn);
 
     // Deferred for the same first-open reason as the book
@@ -62,6 +76,11 @@ void USettingsWidget::CloseSettings()
     if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
     {
         Audio->Play2D(ChrisGameplayTags::Audio_UI_Page_Leave);
+    }
+
+    if (UChrisGameUserSettings* Settings = UChrisGameUserSettings::GetChrisSettings())
+    {
+        Settings->ApplySettings(false);
     }
 
     PlayAnimation(Anim_SlideOut);
@@ -83,6 +102,82 @@ void USettingsWidget::SwitchToTab(int32 NewIndex, bool bPlaySound)
 
     TabSwitcher->SetActiveWidget(TabOrder[CurrentTabIndex]);
     RefreshTabBorders();
+
+
+    // AV tab is the only one with interactive controls, so it takes focus.
+    // Deferred a tick — the switcher's new page has no Slate widget until it lays out.
+    if (CurrentTabIndex == 2 && Row_Master)
+    {
+        GetWorld()->GetTimerManager().SetTimerForNextTick(
+            FTimerDelegate::CreateWeakLambda(this, [this]() { Row_Master->FocusSlider(); }));
+    }
+}
+
+void USettingsWidget::HandleMasterVolumeChanged(float NewValue)
+{
+    if (UChrisGameUserSettings* Settings = UChrisGameUserSettings::GetChrisSettings())
+    {
+        Settings->SetMasterVolume(NewValue);
+    }
+
+    if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+    {
+        Audio->ApplyVolumeSettings();
+    }
+}
+
+void USettingsWidget::HandleMusicVolumeChanged(float NewValue)
+{
+    if (UChrisGameUserSettings* Settings = UChrisGameUserSettings::GetChrisSettings())
+    {
+        Settings->SetMusicVolume(NewValue);
+    }
+
+    if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+    {
+        Audio->ApplyVolumeSettings();
+    }
+}
+
+void USettingsWidget::HandleSFXVolumeChanged(float NewValue)
+{
+    if (UChrisGameUserSettings* Settings = UChrisGameUserSettings::GetChrisSettings())
+    {
+        Settings->SetSFXVolume(NewValue);
+    }
+
+    if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+    {
+        Audio->ApplyVolumeSettings();
+    }
+}
+
+void USettingsWidget::RefreshVolumeSliders()
+{
+    const UChrisGameUserSettings* Settings = UChrisGameUserSettings::GetChrisSettings();
+    if (!Settings) { return; }
+
+    Row_Master->SetVolume(Settings->GetMasterVolume());
+    Row_Music->SetVolume(Settings->GetMusicVolume());
+    Row_SFX->SetVolume(Settings->GetSFXVolume());
+}
+
+void USettingsWidget::WireVolumeSliderNavigation()
+{
+    if (!Row_Master || !Row_Music || !Row_SFX) { return; }
+
+    Row_Master->SetNavigationRuleExplicit(EUINavigation::Down, Row_Music);
+    Row_Master->SetNavigationRuleBase(EUINavigation::Up, EUINavigationRule::Stop);
+
+    Row_Music->SetNavigationRuleExplicit(EUINavigation::Up, Row_Master);
+    Row_Music->SetNavigationRuleExplicit(EUINavigation::Down, Row_SFX);
+
+    Row_SFX->SetNavigationRuleExplicit(EUINavigation::Up, Row_Music);
+    Row_SFX->SetNavigationRuleBase(EUINavigation::Down, EUINavigationRule::Stop);
+
+    Row_Master->BuildNavigation();
+    Row_Music->BuildNavigation();
+    Row_SFX->BuildNavigation();
 }
 
 void USettingsWidget::ChangeTab(int32 Delta)
@@ -91,8 +186,11 @@ void USettingsWidget::ChangeTab(int32 Delta)
     int32 NewIndex = (CurrentTabIndex + Delta + TabOrder.Num()) % TabOrder.Num();
     SwitchToTab(NewIndex);
 
-    // Clicking can move keyboard focus — retake it so keys keep working
-    SetKeyboardFocus();
+    // The AV tab hands focus to its first slider instead — taking it back here would fight that
+    if (CurrentTabIndex != 2)
+    {
+        SetKeyboardFocus();
+    }
 }
 
 // Single source of truth for tab border colours: the active tab is filled,
@@ -130,7 +228,6 @@ void USettingsWidget::HandleControllerTab()
 void USettingsWidget::HandleAVTab()
 {
     SwitchToTab(2);
-    SetKeyboardFocus();
 }
 
 // Hover fills that tab's border with the hover colour — but the ACTIVE tab

@@ -19,10 +19,6 @@ class ANIMATIONTESTING_API UChrisAudioSubsystem : public UGameInstanceSubsystem
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
-	/** Non-positional. Only ever heard on the machine that calls it. */
-	UFUNCTION(BlueprintCallable, Category = "Chris|Audio")
-	void Play2D(FGameplayTag Tag);
-
 	/** Positional one-shot at a fixed world point. */
 	UFUNCTION(BlueprintCallable, Category = "Chris|Audio")
 	void PlayAtLocation(FGameplayTag Tag, FVector Location);
@@ -34,7 +30,25 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Chris|Audio", meta = (WorldContext = "WorldContextObject"))
 	static UChrisAudioSubsystem* Get(const UObject* WorldContextObject);
 
+	/** Pushes the current saved volumes to the audio engine. Call on startup and after any slider change. */
+	UFUNCTION(BlueprintCallable, Category = "Chris|Audio")
+	void ApplyVolumeSettings();
+
+
+	/** Non-positional. Only ever heard on the machine that calls it. */
+	UFUNCTION(BlueprintCallable, Category = "Chris|Audio")
+	void Play2D(FGameplayTag Tag, UChrisSoundLibrary* OverrideLibrary = nullptr);
+
 private:
 	UPROPERTY(Transient)
 	TObjectPtr<UChrisSoundLibrary> Library = nullptr;
+
+	UPROPERTY(Transient)
+	TObjectPtr<class USoundControlBus> MasterBus = nullptr;
+
+	UPROPERTY(Transient)
+	TObjectPtr<class USoundControlBus> MusicBus = nullptr;
+
+	UPROPERTY(Transient)
+	TObjectPtr<class USoundControlBus> SFXBus = nullptr;
 };
