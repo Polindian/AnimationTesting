@@ -86,6 +86,15 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "Settings|Tabs")
     FLinearColor TabInactiveColor = FLinearColor(0, 0, 0, 0);
 
+    UPROPERTY(meta = (BindWidget))
+    TObjectPtr<class UVolumeSliderWidget> Row_Master;
+
+    UPROPERTY(meta = (BindWidget))
+    TObjectPtr<class UVolumeSliderWidget> Row_Music;
+
+    UPROPERTY(meta = (BindWidget))
+    TObjectPtr<class UVolumeSliderWidget> Row_SFX;
+
 
 /*****************************/
 /*            Tabs           */
@@ -126,4 +135,18 @@ private:
 
     // Switches the TabSwitcher to the tab at the given index and refreshes borders
     void SwitchToTab(int32 NewIndex, bool bPlaySound = true);
+
+
+/*****************************/
+/*            Audio          */
+/*****************************/
+
+    UFUNCTION() void HandleMasterVolumeChanged(float NewValue);
+    UFUNCTION() void HandleMusicVolumeChanged(float NewValue);
+    UFUNCTION() void HandleSFXVolumeChanged(float NewValue);
+
+    // Pushes saved values into the sliders and refreshes the labels
+    void RefreshVolumeSliders();
+
+    void WireVolumeSliderNavigation();
 };
