@@ -34,7 +34,21 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Chris|Audio", meta = (WorldContext = "WorldContextObject"))
 	static UChrisAudioSubsystem* Get(const UObject* WorldContextObject);
 
+	/** Pushes the current saved volumes to the audio engine. Call on startup and after any slider change. */
+	UFUNCTION(BlueprintCallable, Category = "Chris|Audio")
+	void ApplyVolumeSettings();
+
+
 private:
 	UPROPERTY(Transient)
 	TObjectPtr<UChrisSoundLibrary> Library = nullptr;
+
+	UPROPERTY(Transient)
+	TObjectPtr<class USoundControlBus> MasterBus = nullptr;
+
+	UPROPERTY(Transient)
+	TObjectPtr<class USoundControlBus> MusicBus = nullptr;
+
+	UPROPERTY(Transient)
+	TObjectPtr<class USoundControlBus> SFXBus = nullptr;
 };

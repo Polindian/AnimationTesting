@@ -18,4 +18,13 @@ public:
 
 	UPROPERTY(Config, EditAnywhere, Category = "Audio")
 	TSoftObjectPtr<UChrisSoundLibrary> SoundLibrary;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Audio")
+	TSoftObjectPtr<class USoundControlBus> MasterBus;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Audio")
+	TSoftObjectPtr<class USoundControlBus> MusicBus;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Audio")
+	TSoftObjectPtr<class USoundControlBus> SFXBus;
 };
