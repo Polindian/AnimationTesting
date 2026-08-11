@@ -54,4 +54,32 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Gameplay Abilities")
 	class UPA_GenericAbilitySystem* AbilitySystemGenerics;
+
+	/********************************/
+	/*             Audio            */
+	/********************************/
+
+public:
+	/** Called once after abilities are granted — watches every heavy ability's cooldown tags. */
+	void BindSkillCooldownAudio();
+	void StopLowHealthLoop();
+
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+
+private:
+	void SkillCooldownTagUpdated(const FGameplayTag Tag, int32 NewCount);
+
+	UPROPERTY(Transient)
+	TObjectPtr<class UAudioComponent> LowHealthAudio;
+
+	// Shared by the vignette and the audio loop so they can't drift apart
+	UPROPERTY(EditDefaultsOnly, Category = "Low Health")
+	float LowHealthThreshold = 0.3f;
+
+	// Above this the loop stops — the gap stops it stuttering around the line
+	UPROPERTY(EditDefaultsOnly, Category = "Low Health")
+	float LowHealthAudioStopThreshold = 0.35f;
+
+
 };

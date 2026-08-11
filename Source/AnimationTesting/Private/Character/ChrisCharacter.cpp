@@ -19,6 +19,8 @@
 #include "Weapon/SwordEquipComponent.h"
 #include "Widgets/ValueGauge.h"
 #include "Components/WidgetComponent.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
 
 
 // Sets default values
@@ -56,6 +58,7 @@ void AChrisCharacter::ServerSideInit()
 void AChrisCharacter::ClientSideInit()
 {
 	ChrisAbilitySystemComponent->InitAbilityActorInfo(this, this);
+	ChrisAbilitySystemComponent->BindSkillCooldownAudio();
 }
 
 bool AChrisCharacter::IsLocallyControlledByPlayer() const
@@ -155,15 +158,26 @@ void AChrisCharacter::DeathTagUpdated(const FGameplayTag Tag, int32 NewCount)
 {
 	if (NewCount != 0)
 	{
+		if (IsLocallyControlledByPlayer())
+		{
+			if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+			{
+				Audio->Play2D(ChrisGameplayTags::Audio_Player_Death);
+			}
+		}
+
 		StartDeathSequence();
+
+		if (ChrisAbilitySystemComponent)
+		{
+			ChrisAbilitySystemComponent->StopLowHealthLoop();
+		}
 	}
 	else
 	{
 		Respawn();
 	}
 }
-
-
 
 void AChrisCharacter::ConfigureOverheadStatusWidget()
 {
@@ -419,6 +433,8 @@ void AChrisCharacter::OnRecoverFromFallBack()
 {
 }
 
+
+
 bool AChrisCharacter::IsDead() const
 {
 	return GetAbilitySystemComponent()->HasMatchingGameplayTag(UChrisAbilitySystemStatics::GetDeadStatsTag());
@@ -483,7 +499,11 @@ void AChrisCharacter::Respawn()
 		bSuppressRespawnInput = false;
 		return;
 	}
-	
+
+	if (ChrisAbilitySystemComponent)
+	{
+		ChrisAbilitySystemComponent->StopLowHealthLoop();
+	}
 	OnRespawn();
 	SetAIPerceptionStimuliSourceEnabled(true);
 	SetRagdollEnabled(false);

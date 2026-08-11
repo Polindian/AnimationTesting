@@ -11,6 +11,15 @@ class USoundBase;
 class USoundAttenuation;
 class USoundConcurrency;
 
+/** How a tagged sound is played. Shared by the cue notify and the anim notify. */
+UENUM()
+enum class EChrisCueSoundMode : uint8
+{
+	OwnerOnly2D,
+	WorldAtLocation,
+	WorldAttached
+};
+
 /** Everything about how one sound plays, editable in the sound library asset. */
 USTRUCT(BlueprintType)
 struct FChrisSoundDef

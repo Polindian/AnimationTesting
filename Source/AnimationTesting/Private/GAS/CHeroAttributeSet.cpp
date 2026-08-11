@@ -4,6 +4,8 @@
 #include "GAS/CHeroAttributeSet.h"
 #include "Net/UnrealNetwork.h"
 #include "GameplayEffectExtension.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
 
 void UCHeroAttributeSet::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -50,6 +52,23 @@ void UCHeroAttributeSet::OnRep_NextLevelExperience(const FGameplayAttributeData&
 void UCHeroAttributeSet::OnRep_Level(const FGameplayAttributeData& OldValue)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UCHeroAttributeSet, Level, OldValue);
+
+	
+	if (OldValue.GetCurrentValue() >= 1.f && GetLevel() > OldValue.GetCurrentValue())
+	{
+		if (const AActor* Owner = GetOwningActor())
+		{
+			if (const APawn* Pawn = Cast<APawn>(Owner))
+			{
+				if (!Pawn->IsLocallyControlled()) { return; }
+			}
+
+			if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(Owner))
+			{
+				Audio->Play2D(ChrisGameplayTags::Audio_Player_LevelUp);
+			}
+		}
+	}
 }
 
 void UCHeroAttributeSet::OnRep_UpgradePoint(const FGameplayAttributeData& OldValue)

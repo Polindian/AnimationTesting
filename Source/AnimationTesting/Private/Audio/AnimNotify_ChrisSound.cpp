@@ -1,5 +1,4 @@
-// Christopher Naglik All Rights Reserved
-
+ï»¿// Christopher Naglik All Rights Reserved
 
 #include "AnimNotify_ChrisSound.h"
 #include "ChrisAudioSubsystem.h"
@@ -19,26 +18,47 @@ void UAnimNotify_ChrisSound::Notify(USkeletalMeshComponent* MeshComp, UAnimSeque
 	if (!World) { return; }
 
 	// Montage editor preview has no controller, so the local check would silence
-	// everything — play unconditionally there or you can't place notifies by ear
+	// everything â€” play unconditionally there or you can't place notifies by ear
 	const bool bIsPreview = (World->WorldType == EWorldType::EditorPreview);
 
 	AChrisCharacter* Character = Cast<AChrisCharacter>(MeshComp->GetOwner());
 
-	if (!bIsPreview && bLocalOnly)
+	UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(MeshComp);
+	if (!Audio) { return; }
+
+	switch (Mode)
 	{
-		// Replicated montages run on every machine — without this, all five clients
+	case EChrisCueSoundMode::OwnerOnly2D:
+	{
+		// Replicated montages run on every machine â€” without this, all clients
 		// hear the attacker's grunt
-		if (!Character || !Character->IsLocallyControlledByPlayer())
+		if (!bIsPreview && (!Character || !Character->IsLocallyControlledByPlayer()))
 		{
 			return;
 		}
+
+		UChrisSoundLibrary* Voice = (bUseCharacterVoice && Character)
+			? Character->GetVoiceLibrary()
+			: nullptr;
+
+		Audio->Play2D(SoundTag, Voice);
+		break;
 	}
 
-	UChrisSoundLibrary* Voice = (bUseCharacterVoice && Character)? Character->GetVoiceLibrary() : nullptr;
-
-	if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(MeshComp))
+	case EChrisCueSoundMode::WorldAtLocation:
 	{
-		Audio->Play2D(SoundTag, Voice);
+		// No local check: the montage plays everywhere, so the sound should too
+		Audio->PlayAtLocation(SoundTag, MeshComp->GetComponentLocation());
+		break;
+	}
+
+	case EChrisCueSoundMode::WorldAttached:
+	{
+		// Attached to the mesh rather than the root so it can target a weapon
+		// socket and follows the animation exactly
+		Audio->PlayAttached(SoundTag, MeshComp);
+		break;
+	}
 	}
 }
 
