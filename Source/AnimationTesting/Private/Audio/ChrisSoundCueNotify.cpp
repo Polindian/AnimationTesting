@@ -58,3 +58,10 @@ bool UChrisSoundCueNotify::OnExecute_Implementation(AActor* MyTarget, const FGam
 
 	return false;
 }
+
+bool UChrisSoundCueNotify::OnActive_Implementation(AActor* MyTarget, const FGameplayCueParameters& Parameters) const
+{
+	OnExecute_Implementation(MyTarget, Parameters);
+
+	return false;
+}

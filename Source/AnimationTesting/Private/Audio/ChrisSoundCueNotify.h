@@ -22,6 +22,8 @@ class ANIMATIONTESTING_API UChrisSoundCueNotify : public UGameplayCueNotify_Stat
 public:
 	virtual bool OnExecute_Implementation(AActor* MyTarget, const FGameplayCueParameters& Parameters) const override;
 
+	virtual bool OnActive_Implementation(AActor* MyTarget, const FGameplayCueParameters& Parameters) const override;
+
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Chris Sound", meta = (Categories = "audio"))
 	FGameplayTag SoundTag;
