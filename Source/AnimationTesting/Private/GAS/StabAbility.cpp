@@ -11,6 +11,8 @@
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "GameplayTagsManager.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
 
 
 UStabAbility::UStabAbility()
@@ -207,6 +209,14 @@ void UStabAbility::HandleComboCommit(FGameplayEventData EventData)
     // Only advance if this is the correct input for the current section
     if (RequiredInputTag && *RequiredInputTag == EventData.EventTag)
     {
+        if (IsLocallyControlled())
+        {
+            if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(GetAvatarActorFromActorInfo()))
+            {
+                Audio->Play2D(ChrisGameplayTags::Audio_Player_Combo_Hit);
+            }
+        }
+
         OwnerAnimInstance->Montage_SetNextSection(CurrentSection, NextComboName, RightStabMontage);
     }
 }

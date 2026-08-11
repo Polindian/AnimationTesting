@@ -11,6 +11,8 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GAS/ChrisAbilitySystemStatics.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
 
 
 UGA_Combo::UGA_Combo()
@@ -155,6 +157,15 @@ void UGA_Combo::TryCommitNextCombo()
     {
         return;
     }
+
+    if (IsLocallyControlled())
+    {
+        if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(GetAvatarActorFromActorInfo()))
+        {
+            Audio->Play2D(ChrisGameplayTags::Audio_Player_Combo_Hit);
+        }
+    }
+
     OwnerAnimInstance->Montage_SetNextSection(OwnerAnimInstance->Montage_GetCurrentSection(ComboMontage), NextComboName, ComboMontage);
 }
 

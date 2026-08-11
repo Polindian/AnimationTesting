@@ -106,3 +106,14 @@ void UChrisAudioSubsystem::Play2D(FGameplayTag Tag, UChrisSoundLibrary* Override
 	UGameplayStatics::PlaySound2D(this, Def->Sound, Def->VolumeMultiplier,
 		Def->PitchMultiplier, 0.f, Def->Concurrency);
 }
+
+UAudioComponent* UChrisAudioSubsystem::PlayLooping2D(FGameplayTag Tag, UChrisSoundLibrary* OverrideLibrary)
+{
+	const FChrisSoundDef* Def = OverrideLibrary ? OverrideLibrary->FindSound(Tag) : nullptr;
+	if (!Def && Library) { Def = Library->FindSound(Tag); }
+	if (!Def) { return nullptr; }
+
+	// bAutoDestroy false: the caller owns this and reuses it, so it must survive being stopped
+	return UGameplayStatics::SpawnSound2D(this, Def->Sound, Def->VolumeMultiplier,
+		Def->PitchMultiplier, 0.f, Def->Concurrency, false, false);
+}

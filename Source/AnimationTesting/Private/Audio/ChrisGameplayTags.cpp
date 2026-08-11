@@ -41,4 +41,8 @@ namespace ChrisGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Player_Death, "audio.player.death", "Death screen sting, owner only");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Player_Skill_Available, "audio.player.skill.available", "Cooldown finished");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Player_Skill_Upgrade, "audio.player.skill.upgrade", "Skill upgraded in-arena, silent when maxed");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_HeavyAttack_Cooldown, "ability.heavyattack.cooldown", "");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_HeavyAttack1_Cooldown, "ability.heavyattack1.cooldown", "");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_HeavyAttack2_Cooldown, "ability.heavyattack2.cooldown", "");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_HeavyAttack3_Cooldown, "ability.heavyattack3.cooldown", "");
 }

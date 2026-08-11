@@ -10,6 +10,10 @@
 #include "GameplayEffectExtension.h"
 #include "GAS/PA_GenericAbilitySystem.h"
 #include "Components/PostProcessComponent.h"
+#include "Character/ChrisCharacter.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
+#include "Components/AudioComponent.h"
 
 UChrisAbilitySystemComponent::UChrisAbilitySystemComponent()
 {
@@ -211,6 +215,11 @@ void UChrisAbilitySystemComponent::Client_AbilitySpecLevelUpdated_Implementation
 	{
 		Spec->Level = NewLevel;
 		AbilitySpecDirtiedCallbacks.Broadcast(*Spec);
+
+		if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(GetOwner()))
+		{
+			Audio->Play2D(ChrisGameplayTags::Audio_Player_Skill_Upgrade);
+		}
 	}
 }
 
@@ -243,7 +252,7 @@ void UChrisAbilitySystemComponent::HealthUpdated(const FOnAttributeChangeData& C
 	// with gradient depending on low health intensity
 	// ======================================================
 	APawn* OwnerPawn = Cast<APawn>(GetOwner());
-	if (OwnerPawn && OwnerPawn->IsLocallyControlled())
+	if (OwnerPawn && OwnerPawn->IsLocallyControlled() && OwnerPawn->IsPlayerControlled())
 	{
 		bool bFoundMaxHealth = false;
 		float MaxHealth = GetGameplayAttributeValue(
@@ -252,7 +261,31 @@ void UChrisAbilitySystemComponent::HealthUpdated(const FOnAttributeChangeData& C
 		if (bFoundMaxHealth && MaxHealth > 0.f)
 		{
 			float HealthPercent = ChangeData.NewValue / MaxHealth;
-			float LowHealthThreshold = 0.3f;
+
+			// Respawn restores health in several steps and some land in the low band while the dead tag is still up 
+			if (HasMatchingGameplayTag(UChrisAbilitySystemStatics::GetDeadStatsTag()))
+			{
+				StopLowHealthLoop();
+			}
+			else if (HealthPercent > 0.f && HealthPercent <= LowHealthThreshold)
+			{
+				if (!LowHealthAudio)
+				{
+					if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(GetOwner()))
+					{
+						LowHealthAudio = Audio->PlayLooping2D(ChrisGameplayTags::Audio_Player_LowHealth);
+
+						UE_LOG(LogTemp, Warning, TEXT("[LowHealth] START at %.1f%%  dead=%d  gotComponent=%d"),
+							HealthPercent * 100.f,
+							HasMatchingGameplayTag(UChrisAbilitySystemStatics::GetDeadStatsTag()) ? 1 : 0,
+							LowHealthAudio != nullptr ? 1 : 0);
+					}
+				}
+			}
+			else if (HealthPercent <= 0.f || HealthPercent >= LowHealthAudioStopThreshold)
+			{
+				StopLowHealthLoop();
+			}
 
 			// Find the tagged PostProcessComponent
 			UPostProcessComponent* LowHealthPP = nullptr;
@@ -344,6 +377,9 @@ void UChrisAbilitySystemComponent::HealthUpdated(const FOnAttributeChangeData& C
 	}
 }
 
+
+
+
 void UChrisAbilitySystemComponent::ManaUpdated(const FOnAttributeChangeData& ChangeData)
 {
 	if (!GetOwner() || !GetOwner()->HasAuthority()) return;
@@ -424,4 +460,53 @@ void UChrisAbilitySystemComponent::ExperienceUpdated(const FOnAttributeChangeDat
 	SetNumericAttributeBase(UCHeroAttributeSet::GetPrevLevelExperienceAttribute(), PreviousLevelExperience);
 	SetNumericAttributeBase(UCHeroAttributeSet::GetNextLevelExperienceAttribute(), NextLevelExperience);
 	SetNumericAttributeBase(UCHeroAttributeSet::GetUpgradePointAttribute(), NewUpgradePoint);
+}
+
+void UChrisAbilitySystemComponent::BindSkillCooldownAudio()
+{
+	static const TArray<FGameplayTag> HeavyCooldownTags = {
+		ChrisGameplayTags::Ability_HeavyAttack_Cooldown,
+		ChrisGameplayTags::Ability_HeavyAttack1_Cooldown,
+		ChrisGameplayTags::Ability_HeavyAttack2_Cooldown,
+		ChrisGameplayTags::Ability_HeavyAttack3_Cooldown
+	};
+
+	for (const FGameplayTag& CooldownTag : HeavyCooldownTags)
+	{
+		RegisterGameplayTagEvent(CooldownTag)
+			.AddUObject(this, &UChrisAbilitySystemComponent::SkillCooldownTagUpdated);
+	}
+}
+
+void UChrisAbilitySystemComponent::StopLowHealthLoop()
+{
+	if (LowHealthAudio)
+	{
+		LowHealthAudio->Stop();
+		LowHealthAudio->DestroyComponent();
+		LowHealthAudio = nullptr;
+	}
+}
+
+void UChrisAbilitySystemComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	UE_LOG(LogTemp, Warning, TEXT("[LowHealth] STOP  wasPlaying=%d"), LowHealthAudio != nullptr ? 1 : 0);
+	
+	StopLowHealthLoop();
+
+	Super::EndPlay(EndPlayReason);
+}
+
+void UChrisAbilitySystemComponent::SkillCooldownTagUpdated(const FGameplayTag Tag, int32 NewCount)
+{
+	// Count hits zero when the cooldown effect expires
+	if (NewCount != 0) { return; }
+
+	const APawn* OwnerPawn = Cast<APawn>(GetOwner());
+	if (!OwnerPawn || !OwnerPawn->IsLocallyControlled()) { return; }
+
+	if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(GetOwner()))
+	{
+		Audio->Play2D(ChrisGameplayTags::Audio_Player_Skill_Available);
+	}
 }

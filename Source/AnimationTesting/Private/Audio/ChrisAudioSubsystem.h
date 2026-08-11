@@ -39,6 +39,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Chris|Audio")
 	void Play2D(FGameplayTag Tag, UChrisSoundLibrary* OverrideLibrary = nullptr);
 
+	/** Returns a component for looping sounds. */
+	UFUNCTION(BlueprintCallable, Category = "Chris|Audio")
+	class UAudioComponent* PlayLooping2D(FGameplayTag Tag, UChrisSoundLibrary* OverrideLibrary = nullptr);
+
 private:
 	UPROPERTY(Transient)
 	TObjectPtr<UChrisSoundLibrary> Library = nullptr;

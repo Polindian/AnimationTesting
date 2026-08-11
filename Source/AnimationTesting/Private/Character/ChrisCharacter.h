@@ -218,4 +218,5 @@ private:
 	// Per-character voice overrides (grunts, hit reactions)
 	UPROPERTY(EditDefaultsOnly, Category = "Audio")
 	TObjectPtr<class UChrisSoundLibrary> VoiceLibrary;
+
 };
