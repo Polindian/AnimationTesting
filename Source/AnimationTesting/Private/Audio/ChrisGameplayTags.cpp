@@ -45,4 +45,25 @@ namespace ChrisGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_HeavyAttack1_Cooldown, "ability.heavyattack1.cooldown", "");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_HeavyAttack2_Cooldown, "ability.heavyattack2.cooldown", "");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_HeavyAttack3_Cooldown, "ability.heavyattack3.cooldown", "");
+
+
+	// ── World 3D ─────────────────────────────────────────
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_World_Equip, "audio.world.equip", "Weapon drawn — 3D, everyone in range");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_World_Unequip, "audio.world.unequip", "Weapon sheathed");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_World_GroundHit, "audio.world.groundhit", "Weapon striking the ground");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_World_Skill_Smash, "audio.world.skill.smash", "");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_World_Skill_Stun, "audio.world.skill.stun", "");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_World_Skill_Thrust, "audio.world.skill.thrust", "Follows the actor, so it sweeps past stationary players");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_World_Skill_Shoot, "audio.world.skill.shoot", "Firing, at the shooter");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_World_Skill_Shoot_Impact, "audio.world.skill.shoot.impact", "Projectile landing, at the target");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_World_Consumable_ElixirOfLife, "audio.world.consumable.elixiroflife", "");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_World_Consumable_BloodSerum, "audio.world.consumable.bloodserum", "");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_World_Consumable_WardensPhial, "audio.world.consumable.wardensphial", "");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_World_Consumable_Quicksilver, "audio.world.consumable.quicksilver", "");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_World_Consumable_Nightflare, "audio.world.consumable.nightflare", "");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_World_Skeleton_Death, "audio.world.skeleton.death", "");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_World_Skeleton_Scream, "audio.world.skeleton.scream", "Idle chatter, not the death scream");
 }

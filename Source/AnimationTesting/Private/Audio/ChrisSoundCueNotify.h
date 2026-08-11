@@ -1,16 +1,18 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameplayCueNotify_Static.h"
 #include "GameplayTagContainer.h"
+#include "ChrisSoundLibrary.h"
 #include "ChrisSoundCueNotify.generated.h"
 
+
 /**
- * Plays a sound from the sound library when its cue fires.
- * Cues replicate to every client, so bOwnerOnly2D restricts playback to the
- * target's own machine for sounds that should be personal.
+ * Plays a sound from the sound library when its gameplay cue fires.
+ * Cues execute on every relevant client, so OwnerOnly2D exists for sounds
+ * that should stay personal to the target.
  */
 UCLASS()
 class ANIMATIONTESTING_API UChrisSoundCueNotify : public UGameplayCueNotify_Static
@@ -24,11 +26,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Chris Sound", meta = (Categories = "audio"))
 	FGameplayTag SoundTag;
 
-	/** Only the target hears it, non-positional. Untick for world sounds everyone hears. */
 	UPROPERTY(EditDefaultsOnly, Category = "Chris Sound")
-	bool bOwnerOnly2D = true;
+	EChrisCueSoundMode Mode = EChrisCueSoundMode::OwnerOnly2D;
 
-	/** Checks the target character's voice library before the global one */
+	/** Checks the target character's voice library before the global one. 2D mode only. */
 	UPROPERTY(EditDefaultsOnly, Category = "Chris Sound")
 	bool bUseCharacterVoice = true;
 };

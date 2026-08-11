@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+ï»¿// Christopher Naglik All Rights Reserved
 
 
 #include "ChrisSoundCueNotify.h"
@@ -11,26 +11,49 @@ bool UChrisSoundCueNotify::OnExecute_Implementation(AActor* MyTarget, const FGam
 {
 	if (!MyTarget || !SoundTag.IsValid()) { return false; }
 
-	AChrisCharacter* Character = Cast<AChrisCharacter>(MyTarget);
+	UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(MyTarget);
+	if (!Audio) { return false; }
 
-	if (bOwnerOnly2D)
+	switch (Mode)
 	{
-		// Cues fire on every client — without this, all five players hear the
-		// victim's grunt. IsPlayerControlled excludes AI on the server.
+	case EChrisCueSoundMode::OwnerOnly2D:
+	{
+		// Cues execute on every client. IsPlayerControlled excludes AI, which
+		// counts as locally controlled on the server.
 		const APawn* Pawn = Cast<APawn>(MyTarget);
 		if (!Pawn || !Pawn->IsLocallyControlled() || !Pawn->IsPlayerControlled())
 		{
 			return false;
 		}
+
+		AChrisCharacter* Character = Cast<AChrisCharacter>(MyTarget);
+		UChrisSoundLibrary* Voice = (bUseCharacterVoice && Character)
+			? Character->GetVoiceLibrary()
+			: nullptr;
+
+		Audio->Play2D(SoundTag, Voice);
+		break;
 	}
 
-	UChrisSoundLibrary* Voice = (bUseCharacterVoice && Character)
-		? Character->GetVoiceLibrary()
-		: nullptr;
-
-	if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(MyTarget))
+	case EChrisCueSoundMode::WorldAtLocation:
 	{
-		Audio->Play2D(SoundTag, Voice);
+		// Parameters carries the impact point when the cue was fired with target
+		// data; otherwise fall back to the actor's own position
+		FVector Location = MyTarget->GetActorLocation();
+		if (!Parameters.Location.IsNearlyZero())
+		{
+			Location = FVector(Parameters.Location);
+		}
+
+		Audio->PlayAtLocation(SoundTag, Location);
+		break;
+	}
+
+	case EChrisCueSoundMode::WorldAttached:
+	{
+		Audio->PlayAttached(SoundTag, MyTarget->GetRootComponent());
+		break;
+	}
 	}
 
 	return false;

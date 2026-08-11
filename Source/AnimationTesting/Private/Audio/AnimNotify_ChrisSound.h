@@ -1,11 +1,13 @@
-// Christopher Naglik All Rights Reserved
+ï»¿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Animation/AnimNotifies/AnimNotify.h"
 #include "GameplayTagContainer.h"
+#include "ChrisSoundLibrary.h"
 #include "AnimNotify_ChrisSound.generated.h"
+
 
 UCLASS(const, hidecategories = Object, collapsecategories, meta = (DisplayName = "Chris Sound"))
 class ANIMATIONTESTING_API UAnimNotify_ChrisSound : public UAnimNotify
@@ -21,9 +23,8 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Chris Sound", meta = (Categories = "audio"))
 	FGameplayTag SoundTag;
 
-	/** Off means every machine running this montage hears it — only for shared world sounds */
 	UPROPERTY(EditAnywhere, Category = "Chris Sound")
-	bool bLocalOnly = true;
+	EChrisCueSoundMode Mode = EChrisCueSoundMode::OwnerOnly2D;
 
 	/** Checks the character's voice library before the global one */
 	UPROPERTY(EditAnywhere, Category = "Chris Sound")
