@@ -161,6 +161,8 @@ void UMainMenuWidget::NativeConstruct()
 				{
 					PopulateDebugSessionEntries();
 				}
+
+				UpdateMultiplayerWind();
 }
 
 FReply UMainMenuWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
@@ -275,6 +277,8 @@ void UMainMenuWidget::SwitchToMultiplayerPage()
 	{
 		MainSwitcher->SetActiveWidget(MultiplayerPageRoot);
 	}
+
+	UpdateMultiplayerWind();
 }
 
 void UMainMenuWidget::JoinSessionFailed()
@@ -438,6 +442,23 @@ void UMainMenuWidget::PracticeArenaClicked()
 
 				PracticeArenaButton->FocusButton();
 			});
+}
+
+void UMainMenuWidget::UpdateMultiplayerWind()
+{
+	const bool bOnMultiplayerPage = (MainSwitcher && MainSwitcher->GetActiveWidget() == MultiplayerPageRoot);
+
+	if (bOnMultiplayerPage && !WindAudio)
+	{
+		if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+		{
+			WindAudio = Audio->PlayLooping2DFadeIn(ChrisGameplayTags::Audio_Ambience_MultiplayerWind, 2.f);
+		}
+	}
+	else if (!bOnMultiplayerPage && WindAudio)
+	{
+		UChrisAudioSubsystem::StopLoopingSound(WindAudio, 2.f);
+	}
 }
 
 void UMainMenuWidget::OpenVirtualKeyboard()
@@ -752,6 +773,8 @@ void UMainMenuWidget::OnFadeOutFinished()
 	}
 
 	PendingPage = nullptr;
+
+	UpdateMultiplayerWind();
 
 	GetWorld()->GetTimerManager().SetTimer(
 		FadeHoldTimerHandle, this, &UMainMenuWidget::OnFadeHoldFinished, FadeHoldDuration);

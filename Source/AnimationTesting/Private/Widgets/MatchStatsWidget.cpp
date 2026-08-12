@@ -6,6 +6,9 @@
 #include "Framework/ChrisGameState.h"
 #include "GameFramework/PlayerState.h"
 #include "Animation/WidgetAnimation.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
+
 
 void UMatchStatsWidget::PlayLeaveFade(float Duration)
 {
@@ -59,6 +62,11 @@ void UMatchStatsWidget::ShowStats(APlayerState* LocalPlayerState)
 	if (Mine && PlayerPanel) { PlayerPanel->SetStats(*Mine, PlayerCount); }
 
 	PlayAnimation(Anim_FadeIn);
+
+	if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+	{
+		Audio->Play2D(ChrisGameplayTags::Audio_UI_MatchStats);
+	}
 }
 
 // Screen has fully arrived — now the button becomes usable and takes focus

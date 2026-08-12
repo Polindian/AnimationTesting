@@ -21,6 +21,7 @@
 #include "Weapon/SwordEquipComponent.h" 
 #include "Player/ChrisPlayerState.h"
 #include "Network/ChrisGameSession.h"
+#include "Framework/ChrisGameState.h"
 
 
 AChrisGameMode::AChrisGameMode()
@@ -790,6 +791,11 @@ void AChrisGameMode::StartShopPhase()
 	CurrentPhase = EMatchPhase::ShopPhase;
 	ContinueVoters.Empty(); // Reset votes from previous round
 
+	if (AChrisGameState* GS = GetGameState<AChrisGameState>())
+	{
+		GS->SetArenaAmbienceActive(true);
+	}
+
 	UE_LOG(LogTemp, Log, TEXT("[MatchFlow] Shop phase started. Duration: %.0fs"), ShopDuration);
 
 	// After ShopDuration, auto-transition even if nobody voted.
@@ -823,6 +829,11 @@ void AChrisGameMode::StartTransitionToArena()
 {
 	CurrentPhase = EMatchPhase::TransitionToArena;
 	float HalfTransition = TransitionDuration / 2.f;
+
+	if (AChrisGameState* GS = GetGameState<AChrisGameState>())
+	{
+		GS->SetArenaAmbienceActive(false);
+	}
 
 	UE_LOG(LogTemp, Log, TEXT("[MatchFlow] Fading to black (%.1fs) for arena transition"), HalfTransition);
 

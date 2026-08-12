@@ -105,5 +105,35 @@ private:
 	void SubmitMatchResultsToLeaderboard();
 
 
+/*************************/
+/*   Arena Ambience      */
+/*************************/
+
+public:
+	// Server only. Replicates to every client, which starts or stops the loop locally.
+	void SetArenaAmbienceActive(bool bActive);
+
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	
+private:
+	UPROPERTY(ReplicatedUsing = OnRep_ArenaAmbienceActive)
+	bool bArenaAmbienceActive = false;
+
+	UFUNCTION()
+	void OnRep_ArenaAmbienceActive();
+
+	// Applies the current state locally — called from OnRep on clients and
+	// directly on the server, which never gets an OnRep of its own
+	void ApplyArenaAmbienceState();
+
+	UPROPERTY(Transient)
+	UAudioComponent* ArenaAmbienceAudio = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Audio")
+	float AmbienceFadeInTime = 3.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Audio")
+	float AmbienceFadeOutTime = 3.f;
+
 
 };

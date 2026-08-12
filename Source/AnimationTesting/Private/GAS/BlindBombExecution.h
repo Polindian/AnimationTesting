@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+ï»¿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -28,9 +28,5 @@ public:
         FGameplayEffectCustomExecutionOutput& OutExecutionOutput) const override;
 
 private:
-    // The GE to apply to each blinded enemy.
-    // We load this by class path so it doesn't need to be a UPROPERTY
-    // on the execution calc — execution calcs are CDOs (class default objects)
-    // and don't support per-instance editor properties.
-    // Instead we'll reference it via a soft class path loaded at runtime.
+   
 };

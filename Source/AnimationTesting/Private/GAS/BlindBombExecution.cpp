@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+ï»¿// Christopher Naglik All Rights Reserved
 
 #include "GAS/BlindBombExecution.h"
 #include "AbilitySystemComponent.h"
@@ -10,7 +10,7 @@ void UBlindBombExecution::Execute_Implementation(
     FGameplayEffectCustomExecutionOutput& OutExecutionOutput) const
 {
     // ======================================================
-    // GET THE CASTER (source) — this is the player who used
+    // GET THE CASTER (source) â€” this is the player who used
     // the consumable. The execution runs on them.
     // ======================================================
     UAbilitySystemComponent* SourceASC = ExecutionParams.GetSourceAbilitySystemComponent();
@@ -63,7 +63,7 @@ void UBlindBombExecution::Execute_Implementation(
     // ======================================================
     // APPLY GE_BLINDED to each enemy in range.
     // We build the spec from the source ASC so the "source"
-    // context is correctly set to the caster — this means
+    // context is correctly set to the caster â€” this means
     // the Gameplay Cue fires on each TARGET's client.
     // ======================================================
     TSet<AActor*> BlindedActors;

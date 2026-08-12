@@ -27,6 +27,9 @@ public:
 	void StartMatch();
 	virtual void Init() override;
 
+	// Survives travel, so the same hint doesn't come up twice running
+	int32 LastHintIndex = -1;
+
 
 /*********************************/
 /*             Login             */

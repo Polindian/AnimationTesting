@@ -9,6 +9,9 @@
 #include "Framework/ChrisGameState.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/ChrisPlayerCharacter.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
+
 
 AFlag::AFlag()
 {
@@ -79,6 +82,11 @@ void AFlag::ApplyBannerState()
         // Start fresh with new color
         NC->SetVariableLinearColor(FName("Colour"), Color);
         NC->Activate(true);
+
+        if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+        {
+            Audio->PlayAtLocation(ChrisGameplayTags::Audio_World_FlagSmash, GetActorLocation());
+        }
 
         // After 4 seconds (slam done), freeze in place
         GetWorldTimerManager().SetTimer(BannerPauseTimerHandle, [NC]()

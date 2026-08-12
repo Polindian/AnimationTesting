@@ -117,3 +117,29 @@ UAudioComponent* UChrisAudioSubsystem::PlayLooping2D(FGameplayTag Tag, UChrisSou
 	return UGameplayStatics::SpawnSound2D(this, Def->Sound, Def->VolumeMultiplier,
 		Def->PitchMultiplier, 0.f, Def->Concurrency, false, false);
 }
+
+UAudioComponent* UChrisAudioSubsystem::PlayLooping2DFadeIn(FGameplayTag Tag, float FadeInTime)
+{
+	const FChrisSoundDef* Def = Library ? Library->FindSound(Tag) : nullptr;
+	if (!Def) { return nullptr; }
+
+	// bAutoDestroy false — we hold this and fade it out ourselves later
+	UAudioComponent* Component = UGameplayStatics::SpawnSound2D(this, Def->Sound, Def->VolumeMultiplier,
+		Def->PitchMultiplier, 0.f, Def->Concurrency, false, false);
+
+	if (Component)
+	{
+		Component->FadeIn(FadeInTime, Def->VolumeMultiplier);
+	}
+
+	return Component;
+}
+
+void UChrisAudioSubsystem::StopLoopingSound(UAudioComponent*& Component, float FadeOutTime)
+{
+	if (!Component) { return; }
+
+	// FadeOut destroys it when it reaches silence, so we just drop our reference
+	Component->FadeOut(FadeOutTime, 0.f);
+	Component = nullptr;
+}

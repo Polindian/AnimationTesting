@@ -45,6 +45,7 @@ namespace ChrisGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_HeavyAttack1_Cooldown, "ability.heavyattack1.cooldown", "");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_HeavyAttack2_Cooldown, "ability.heavyattack2.cooldown", "");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_HeavyAttack3_Cooldown, "ability.heavyattack3.cooldown", "");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Player_Blinded, "audio.player.blinded", "Nightflare blind, victim only");
 
 
 	// ── World 3D ─────────────────────────────────────────
@@ -66,4 +67,14 @@ namespace ChrisGameplayTags
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_World_Skeleton_Death, "audio.world.skeleton.death", "");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_World_Skeleton_Scream, "audio.world.skeleton.scream", "Idle chatter, not the death scream");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_World_Skeleton_DeathScream, "audio.world.skeleton.deathscream", "Always plays on death, separate from the idle pool");
+
+
+
+	// ── General ─────────────────────────────────────────
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Ambience_Arena, "audio.ambience.arena", "Looping arena bed, shop phase into the round");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Ambience_MultiplayerWind, "audio.ambience.multiplayerwind", "Looping wind on the multiplayer page");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_UI_Banner, "audio.ui.banner", "Sting timed to the banner open animation");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_UI_MatchStats, "audio.ui.matchstats", "");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_World_FlagSmash, "audio.world.flagsmash", "Flags slamming at round start and on capture");
 }
