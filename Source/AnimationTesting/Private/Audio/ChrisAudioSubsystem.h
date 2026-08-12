@@ -43,6 +43,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Chris|Audio")
 	class UAudioComponent* PlayLooping2D(FGameplayTag Tag, UChrisSoundLibrary* OverrideLibrary = nullptr);
 
+
+	/** Looping 2D with a fade in. Caller owns the component and must stop it. */
+	UFUNCTION(BlueprintCallable, Category = "Chris|Audio")
+	class UAudioComponent* PlayLooping2DFadeIn(FGameplayTag Tag, float FadeInTime);
+
+	/** Fades out and destroys. Safe with null. */
+	UFUNCTION(BlueprintCallable, Category = "Chris|Audio")
+	static void StopLoopingSound(class UAudioComponent*& Component, float FadeOutTime);
+
 private:
 	UPROPERTY(Transient)
 	TObjectPtr<UChrisSoundLibrary> Library = nullptr;

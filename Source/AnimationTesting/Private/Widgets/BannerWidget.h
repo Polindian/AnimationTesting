@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+ï»¿// Christopher Naglik All Rights Reserved
 #pragma once
 
 #include "CoreMinimal.h"
@@ -12,7 +12,7 @@ class UWidgetAnimation;
 UENUM()
 enum class EBannerType : uint8
 {
-	RoundNumber,   // "ROUND 1/2/3" — start of every round
+	RoundNumber,   // "ROUND 1/2/3" â€” start of every round
 	RoundResult,   // "ROUND WON" / "ROUND LOST"
 	MatchResult,   // "MATCH WON" / "MATCH LOST"
 	TeamTriumph    // "RED TEAM TRIUMPH" / "BLUE TEAM TRIUMPH"
@@ -31,11 +31,11 @@ public:
 protected:
 	virtual void NativeOnInitialized() override;
 
-	// The text image that changes per banner — the scroll art itself is static in the WBP
+	// The text image that changes per banner â€” the scroll art itself is static in the WBP
 	UPROPERTY(meta = (BindWidget))
 	class UImage* BannerContent;
 
-	// Root of the whole banner — scaled from the centre by the animations
+	// Root of the whole banner â€” scaled from the centre by the animations
 	UPROPERTY(meta = (BindWidget))
 	class UWidget* BannerRoot;
 
@@ -45,7 +45,7 @@ protected:
 	UPROPERTY(Transient, meta = (BindWidgetAnim))
 	TObjectPtr<UWidgetAnimation> Anim_Close;
 
-	// ROUND 1, ROUND 2, ROUND 3 — index 0 is round 1
+	// ROUND 1, ROUND 2, ROUND 3 â€” index 0 is round 1
 	UPROPERTY(EditDefaultsOnly, Category = "Banner")
 	TArray<UTexture2D*> RoundTextures;
 

@@ -1,14 +1,16 @@
-// Christopher Naglik All Rights Reserved
+ï»¿// Christopher Naglik All Rights Reserved
 #include "Widgets/BannerWidget.h"
 #include "Components/Image.h"
 #include "Animation/WidgetAnimation.h"
 #include "Engine/Texture2D.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
 
 void UBannerWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
-	// Bound once per lifetime — BindToAnimationFinished stacks duplicates otherwise
+	// Bound once per lifetime â€” BindToAnimationFinished stacks duplicates otherwise
 	FWidgetAnimationDynamicEvent OpenFinished;
 	OpenFinished.BindDynamic(this, &UBannerWidget::HandleOpenFinished);
 	BindToAnimationFinished(Anim_Open, OpenFinished);
@@ -49,7 +51,7 @@ UTexture2D* UBannerWidget::ResolveTexture(EBannerType Type, int32 RoundNumber, u
 		return RoundTextures.IsValidIndex(RoundNumber - 1) ? RoundTextures[RoundNumber - 1] : nullptr;
 
 	case EBannerType::RoundResult:
-		// 255 = draw, so nobody won or lost — same banner for both teams
+		// 255 = draw, so nobody won or lost â€” same banner for both teams
 		if (WinningTeamId == 255) { return RoundDrawTexture; }
 		return bLocalPlayerWon ? RoundWonTexture : RoundLostTexture;
 
@@ -57,7 +59,7 @@ UTexture2D* UBannerWidget::ResolveTexture(EBannerType Type, int32 RoundNumber, u
 		return bLocalPlayerWon ? MatchWonTexture : MatchLostTexture;
 
 	case EBannerType::TeamTriumph:
-		// Team 0 = Red, Team 1 = Blue — matches your flag system's TeamOne/TeamTwo
+		// Team 0 = Red, Team 1 = Blue â€” matches your flag system's TeamOne/TeamTwo
 		return (WinningTeamId == 0) ? RedTeamTriumphTexture : BlueTeamTriumphTexture;
 	}
 	return nullptr;
@@ -74,17 +76,22 @@ void UBannerWidget::PlayNextInQueue()
 
 	bIsPlaying = true;
 
-	// Anim_Close ends at 0 opacity — restore before opening again
+	// Anim_Close ends at 0 opacity â€” restore before opening again
 	BannerRoot->SetRenderOpacity(1.f);
 
 	BannerContent->SetBrushFromTexture(BannerQueue[0], false);
 	BannerQueue.RemoveAt(0);
 
+	if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+	{
+		Audio->Play2D(ChrisGameplayTags::Audio_UI_Banner);
+	}
+
 	BannerRoot->SetVisibility(ESlateVisibility::HitTestInvisible);
 	PlayAnimation(Anim_Open);
 }
 
-// Fully open — hold, then close
+// Fully open â€” hold, then close
 void UBannerWidget::HandleOpenFinished()
 {
 	GetWorld()->GetTimerManager().SetTimer(HoldTimerHandle,
@@ -92,7 +99,7 @@ void UBannerWidget::HandleOpenFinished()
 		HoldDuration, false);
 }
 
-// Fully closed — next queued banner, or go idle
+// Fully closed â€” next queued banner, or go idle
 void UBannerWidget::HandleCloseFinished()
 {
 	PlayNextInQueue();

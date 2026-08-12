@@ -10,6 +10,7 @@
 #include "OnlineSessionSettings.h"
 #include "MainMenuWidget.generated.h"
 
+class UAudioComponent;
 
 /**
  * 
@@ -219,6 +220,12 @@ private:
 	UFUNCTION()
 	void PracticeArenaClicked();
 
+	UPROPERTY(Transient)
+	UAudioComponent* WindAudio = nullptr;
+
+	// Called whenever the active page changes, from any path
+	void UpdateMultiplayerWind();
+
 
 	/***********   Keyboard   *************/
 
@@ -294,4 +301,5 @@ private:
 	// A second button on the multiplayer page
 	UPROPERTY(meta = (BindWidget))
 	class UMenuButtonWidget* MultiplayerLeaderboardsButton;
+
 };

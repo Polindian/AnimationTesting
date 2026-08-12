@@ -13,6 +13,9 @@
 #include "GAS/CHeroAttributeSet.h"
 #include "AbilitySystemInterface.h"
 #include "AbilitySystemComponent.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
+#include "Components/AudioComponent.h"
 
 void AChrisGameState::RequestPlayerSelectionChange(const APlayerState* RequestingPlayer, uint8 DesiredSlot)
 {
@@ -123,6 +126,7 @@ void AChrisGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME_CONDITION_NOTIFY(AChrisGameState, PlayerSelectionArray, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME(AChrisGameState, HeroSelectionTimeRemaining);
 	DOREPLIFETIME_CONDITION_NOTIFY(AChrisGameState, MatchStatsArray, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME(AChrisGameState, bArenaAmbienceActive);
 }
 
 const TArray<FPlayerSelection>& AChrisGameState::GetPlayerSelection() const
@@ -355,6 +359,51 @@ void AChrisGameState::SubmitMatchResultsToLeaderboard()
 
 		// TODO: POST to the Flask coordinator, or write to EOS stats
 	}
+}
+
+void AChrisGameState::SetArenaAmbienceActive(bool bActive)
+{
+	if (!HasAuthority() || bArenaAmbienceActive == bActive) { return; }
+
+	bArenaAmbienceActive = bActive;
+
+	// OnRep doesn't fire on the server - listen server needs this
+	ApplyArenaAmbienceState();
+}
+
+void AChrisGameState::OnRep_ArenaAmbienceActive()
+{
+	ApplyArenaAmbienceState();
+}
+
+void AChrisGameState::ApplyArenaAmbienceState()
+{
+	// Nobody is listening on a dedicated server
+	if (GetNetMode() == NM_DedicatedServer) { return; }
+
+	if (bArenaAmbienceActive)
+	{
+		if (!ArenaAmbienceAudio)
+		{
+			if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+			{
+				ArenaAmbienceAudio = Audio->PlayLooping2DFadeIn(
+					ChrisGameplayTags::Audio_Ambience_Arena, AmbienceFadeInTime);
+			}
+		}
+	}
+	else
+	{
+		UChrisAudioSubsystem::StopLoopingSound(ArenaAmbienceAudio, AmbienceFadeOutTime);
+	}
+}
+
+void AChrisGameState::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	// Travelling out mid-round would otherwise leave the loop running
+	UChrisAudioSubsystem::StopLoopingSound(ArenaAmbienceAudio, 0.f);
+
+	Super::EndPlay(EndPlayReason);
 }
 
 // Called from GAP_Dead when a hero kills another hero
