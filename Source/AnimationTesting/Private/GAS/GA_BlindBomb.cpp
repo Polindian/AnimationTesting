@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #include "GAS/GA_BlindBomb.h"
 #include "AbilitySystemBlueprintLibrary.h"

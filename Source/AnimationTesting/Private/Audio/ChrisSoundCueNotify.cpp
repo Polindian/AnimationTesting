@@ -37,7 +37,7 @@ bool UChrisSoundCueNotify::OnExecute_Implementation(AActor* MyTarget, const FGam
 
 	case EChrisCueSoundMode::WorldAtLocation:
 	{
-		// Parameters carries the impact point when the cue was fired with target
+		// Parameters carries the impact point when the cue was fired with targetT
 		// data; otherwise fall back to the actor's own position
 		FVector Location = MyTarget->GetActorLocation();
 		if (!Parameters.Location.IsNearlyZero())

@@ -174,6 +174,7 @@ private:
 	void StartDeathSequence();
 	void Respawn();
 
+protected:
 	virtual void OnDead();
 	virtual void OnRespawn();
 

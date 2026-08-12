@@ -51,6 +51,7 @@ namespace ChrisGameplayTags
 	ANIMATIONTESTING_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_HeavyAttack1_Cooldown);
 	ANIMATIONTESTING_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_HeavyAttack2_Cooldown);
 	ANIMATIONTESTING_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_HeavyAttack3_Cooldown);
+	ANIMATIONTESTING_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Audio_Player_Blinded);
 
 
 	// ── World 3D ─────────────────────────────────────────
@@ -72,6 +73,7 @@ namespace ChrisGameplayTags
 
 	ANIMATIONTESTING_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Audio_World_Skeleton_Death);
 	ANIMATIONTESTING_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Audio_World_Skeleton_Scream);
+	ANIMATIONTESTING_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Audio_World_Skeleton_DeathScream);
 }
 
 

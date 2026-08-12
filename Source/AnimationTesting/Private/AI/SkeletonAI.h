@@ -48,4 +48,31 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Gameplay Abilities")
 	class UPA_GenericAbilitySystem* AbilitySystemGenerics;
 
+
+/*********************************/
+/*            Audio              */
+/*********************************/
+public:
+	virtual void OnDead() override;
+	virtual void OnRespawn() override;
+
+private:
+	void ScheduleNextScream();
+	void TryScream();
+
+	FTimerHandle ScreamTimerHandle;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Audio")
+	float ScreamIntervalMin = 3.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Audio")
+	float ScreamIntervalMax = 5.f;
+
+	// Skeletons further than this from the local player don't scream at all —
+	// no point spending a voice on something inaudible
+	UPROPERTY(EditDefaultsOnly, Category = "Audio")
+	float ScreamMaxDistance = 4000.f;
+
+	bool IsNearLocalPlayer(float MaxDistance) const;
+
 };
