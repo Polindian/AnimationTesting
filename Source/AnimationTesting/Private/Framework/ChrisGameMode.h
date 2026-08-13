@@ -16,6 +16,7 @@ UENUM(BlueprintType)
 enum class EMatchPhase : uint8
 {
     WaitingForPlayers,    // Waiting for enough players to join
+	WaitingForPlayersLoaded,  // Everyone joined, holding on the loading screen
     RoundIntro,           // Banner logic before countdown
     Countdown,            // 5,4,3,2,1,FIGHT! - input disabled
     InRound,              // Active gameplay - input enabled, timer running
@@ -205,4 +206,34 @@ private:
     // The team the player is on in practice mode — the OTHER team's barracks spawn
     UPROPERTY(EditDefaultsOnly, Category = "Practice Arena")
     uint8 PracticePlayerTeamId = 0;
+
+
+    // --------- LOADING SCREEN ---------
+public:
+    // Called by each client once its loading screen is up
+    void ReportPlayerLoaded(class AChrisPlayerController* PC);
+
+private:
+    void StartLoadingHold();
+    void TryFinishLoadingHold();
+    void FinishLoadingHold();
+
+    TSet<TWeakObjectPtr<AChrisPlayerController>> LoadedPlayers;
+    bool bLoadingMinTimeElapsed = false;
+
+    FTimerHandle LoadingMinTimeHandle;
+    FTimerHandle LoadingTimeoutHandle;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Match Timing")
+    float LoadingScreenMinDuration = 15.f;
+
+    // A client that never reports in shouldn't stall the match forever
+    UPROPERTY(EditDefaultsOnly, Category = "Match Timing")
+    float LoadingScreenTimeout = 25.f;
+
+    // Gap between the loading screen dismissing and the round 1 banner
+    UPROPERTY(EditDefaultsOnly, Category = "Match Timing")
+    float PostLoadingBannerDelay = 3.f;
+
+    bool bLoadingHoldFinished = false;
 };

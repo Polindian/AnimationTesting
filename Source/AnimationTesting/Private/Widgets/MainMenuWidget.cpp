@@ -23,6 +23,8 @@
 #include "Audio/ChrisAudioSubsystem.h"
 #include "Audio/ChrisGameplayTags.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "MediaPlayer.h"
+#include "MediaSource.h"
 
 void UMainMenuWidget::NativeConstruct()
 {
@@ -162,6 +164,11 @@ void UMainMenuWidget::NativeConstruct()
 					PopulateDebugSessionEntries();
 				}
 
+				if (BackgroundMediaPlayer)
+				{
+					BackgroundMediaPlayer->OnMediaOpened.AddDynamic(this, &UMainMenuWidget::HandleBackgroundMediaOpened);
+				}
+
 				UpdateMultiplayerWind();
 }
 
@@ -187,6 +194,19 @@ FReply UMainMenuWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyE
 	}
 
 	return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
+}
+
+void UMainMenuWidget::NativeDestruct()
+{
+	UChrisAudioSubsystem::StopLoopingSound(WindAudio, 0.f);
+
+	if (BackgroundMediaPlayer)
+	{
+		BackgroundMediaPlayer->OnMediaOpened.RemoveAll(this);
+		BackgroundMediaPlayer->Close();
+	}
+
+	Super::NativeDestruct();
 }
 
 void UMainMenuWidget::StoryModeClicked() { GoToPage(StoryModeRoot); }
@@ -459,6 +479,32 @@ void UMainMenuWidget::UpdateMultiplayerWind()
 	{
 		UChrisAudioSubsystem::StopLoopingSound(WindAudio, 2.f);
 	}
+
+	// Video decoding is expensive, so it only runs while the page is actually up
+	if (BackgroundMediaPlayer && BackgroundMediaSource)
+	{
+		if (bOnMultiplayerPage && !bBackgroundVideoPlaying)
+		{
+			BackgroundMediaPlayer->SetNativeVolume(0.f);
+			BackgroundMediaPlayer->OpenSource(BackgroundMediaSource);
+			bBackgroundVideoPlaying = true;
+		}
+		else if (!bOnMultiplayerPage && bBackgroundVideoPlaying)
+		{
+			BackgroundMediaPlayer->Close();
+			bBackgroundVideoPlaying = false;
+		}
+	}
+}
+
+void UMainMenuWidget::HandleBackgroundMediaOpened(FString OpenedUrl)
+{
+	if (!BackgroundMediaPlayer) { return; }
+
+	UE_LOG(LogTemp, Warning, TEXT("[MultiplayerBG] Media opened: %s"), *OpenedUrl);
+
+	BackgroundMediaPlayer->SetLooping(true);
+	BackgroundMediaPlayer->Play();
 }
 
 void UMainMenuWidget::OpenVirtualKeyboard()

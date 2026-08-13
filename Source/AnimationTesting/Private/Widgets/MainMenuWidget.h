@@ -25,6 +25,8 @@ public:
 
 	virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
 
+	virtual void NativeDestruct() override;
+
 
 	/*****************************/
 	/*          Main             */
@@ -225,6 +227,17 @@ private:
 
 	// Called whenever the active page changes, from any path
 	void UpdateMultiplayerWind();
+
+	UPROPERTY(EditDefaultsOnly, Category = "Multiplayer Page")
+	TObjectPtr<class UMediaPlayer> BackgroundMediaPlayer;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Multiplayer Page")
+	TObjectPtr<class UMediaSource> BackgroundMediaSource;
+
+	bool bBackgroundVideoPlaying = false;
+
+	UFUNCTION()
+	void HandleBackgroundMediaOpened(FString OpenedUrl);
 
 
 	/***********   Keyboard   *************/
