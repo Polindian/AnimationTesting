@@ -21,6 +21,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/PlayerState.h"
 #include "Animation/AnimInstance.h"
+#include "Widgets/LoadingScreenWidget.h"
 
 
 
@@ -219,6 +220,59 @@ void AChrisPlayerController::DoLeaveMatchTravel()
 	const FString LevelName = FPackageName::ObjectPathToPackageName(MainMenuLevel.ToString());
 	ClientTravel(LevelName, ETravelType::TRAVEL_Absolute);
 }
+
+void AChrisPlayerController::Server_ReportLoaded_Implementation()
+{
+	if (AChrisGameMode* GM = GetWorld()->GetAuthGameMode<AChrisGameMode>())
+	{
+		GM->ReportPlayerLoaded(this);
+	}
+}
+
+void AChrisPlayerController::Client_DismissLoadingScreen_Implementation()
+{
+	SetIgnoreMoveInput(false);
+	SetIgnoreLookInput(false);
+
+	if (LoadingScreenWidget)
+	{
+		LoadingScreenWidget->DismissWithFade();
+		LoadingScreenWidget = nullptr;
+	}
+}
+
+void AChrisPlayerController::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (!IsLocalController()) { return; }
+
+	ShowLoadingScreen();
+
+	// Deferred a tick so the widget is actually on screen before the server's
+	// hold clock can start counting against us
+	GetWorldTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this]()
+		{
+			Server_ReportLoaded();
+		}));
+}
+
+void AChrisPlayerController::ShowLoadingScreen()
+{
+	if (LoadingScreenWidget || !LoadingScreenWidgetClass) { return; }
+
+	LoadingScreenWidget = CreateWidget<ULoadingScreenWidget>(this, LoadingScreenWidgetClass);
+	if (!LoadingScreenWidget) { return; }
+
+	// High Z so it sits over the gameplay HUD and anything else already up
+	LoadingScreenWidget->AddToViewport(1000);
+	LoadingScreenWidget->ShowRandomHint();
+
+	// Players shouldn't be able to move around behind the screen
+	SetIgnoreMoveInput(true);
+	SetIgnoreLookInput(true);
+}
+
 
 void AChrisPlayerController::Client_ShowMatchStats_Implementation()
 {

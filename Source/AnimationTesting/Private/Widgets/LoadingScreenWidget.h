@@ -30,7 +30,19 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Hints", meta = (MultiLine = true))
 	TArray<FText> Hints;
 
+	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
+
 private:
 	UFUNCTION()
 	void HandleFadeOutFinished();
+
+	UPROPERTY(Transient)
+	class UAudioComponent* LoadingAudio = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Audio")
+	float AudioFadeInTime = 1.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Audio")
+	float AudioFadeOutTime = 1.f;
 };

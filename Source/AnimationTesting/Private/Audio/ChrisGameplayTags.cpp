@@ -77,4 +77,5 @@ namespace ChrisGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_UI_Banner, "audio.ui.banner", "Sting timed to the banner open animation");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_UI_MatchStats, "audio.ui.matchstats", "");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_World_FlagSmash, "audio.world.flagsmash", "Flags slamming at round start and on capture");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Ambience_LoadingScreen, "audio.ambience.loadingscreen", "Loops while the loading screen is up");
 }

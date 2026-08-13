@@ -188,4 +188,27 @@ public:
 
     UPROPERTY(EditDefaultsOnly, Category = "UI")
     float LeaveFadeDuration = 1.f;
+
+
+
+    // --------- LOADING SCREEN ---------
+
+public:
+    UFUNCTION(Server, Reliable)
+    void Server_ReportLoaded();
+
+    UFUNCTION(Client, Reliable)
+    void Client_DismissLoadingScreen();
+
+protected:
+    virtual void BeginPlay() override;
+
+private:
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    TSubclassOf<class ULoadingScreenWidget> LoadingScreenWidgetClass;
+
+    UPROPERTY()
+    class ULoadingScreenWidget* LoadingScreenWidget;
+
+    void ShowLoadingScreen();
 };

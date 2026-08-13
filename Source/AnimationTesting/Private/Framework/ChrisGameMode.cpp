@@ -230,9 +230,7 @@ void AChrisGameMode::PostLogin(APlayerController* NewPlayer)
 	// Only start if we have enough players AND we haven't started yet.
 	if (CurrentPlayerCount >= ExpectedPlayerCount && CurrentPhase == EMatchPhase::WaitingForPlayers)
 	{
-		// 2 second delay: lets the last player's pawn fully initialize
-		// (ServerSideInit, widget spawning, etc.) before we start the countdown.
-		GetWorldTimerManager().SetTimer(PhaseTimerHandle, this, &AChrisGameMode::StartRoundIntro, 2.f, false);
+		StartLoadingHold();
 	}
 }
 
@@ -1001,3 +999,54 @@ bool AChrisGameMode::IsPracticeMode() const
 	return false;
 }
 
+void AChrisGameMode::StartLoadingHold()
+{
+	CurrentPhase = EMatchPhase::WaitingForPlayersLoaded;
+
+	GetWorldTimerManager().SetTimer(LoadingMinTimeHandle,
+		FTimerDelegate::CreateWeakLambda(this, [this]()
+			{
+				bLoadingMinTimeElapsed = true;
+				TryFinishLoadingHold();
+			}), LoadingScreenMinDuration, false);
+
+	GetWorldTimerManager().SetTimer(LoadingTimeoutHandle, this,
+		&AChrisGameMode::FinishLoadingHold, LoadingScreenTimeout, false);
+}
+
+void AChrisGameMode::ReportPlayerLoaded(AChrisPlayerController* PC)
+{
+	if (!PC) { return; }
+
+	// May arrive before the hold has started — the set is checked again later
+	LoadedPlayers.Add(PC);
+	TryFinishLoadingHold();
+}
+
+void AChrisGameMode::TryFinishLoadingHold()
+{
+	if (CurrentPhase != EMatchPhase::WaitingForPlayersLoaded) { return; }
+	if (!bLoadingMinTimeElapsed) { return; }
+	if (LoadedPlayers.Num() < GetNumPlayers()) { return; }
+
+	FinishLoadingHold();
+}
+
+void AChrisGameMode::FinishLoadingHold()
+{
+	if (CurrentPhase != EMatchPhase::WaitingForPlayersLoaded) { return; }
+	if (bLoadingHoldFinished) { return; }
+	bLoadingHoldFinished = true;
+
+	GetWorldTimerManager().ClearTimer(LoadingMinTimeHandle);
+	GetWorldTimerManager().ClearTimer(LoadingTimeoutHandle);
+
+	ForEachPlayerController([](AChrisPlayerController* PC)
+		{
+			PC->Client_DismissLoadingScreen();
+		});
+
+	// Let the screen finish fading and give the arena a bit of time before the banner
+	GetWorldTimerManager().SetTimer(PhaseTimerHandle, this,
+		&AChrisGameMode::StartRoundIntro, PostLoadingBannerDelay, false);
+}

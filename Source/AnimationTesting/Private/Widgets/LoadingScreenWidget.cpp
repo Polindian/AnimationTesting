@@ -5,6 +5,9 @@
 #include "Components/TextBlock.h"
 #include "Animation/WidgetAnimation.h"
 #include "Framework/ChrisGameInstance.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Components/AudioComponent.h"
+#include "Audio/ChrisGameplayTags.h"
 
 void ULoadingScreenWidget::NativeOnInitialized()
 {
@@ -36,6 +39,8 @@ void ULoadingScreenWidget::ShowRandomHint()
 
 void ULoadingScreenWidget::DismissWithFade()
 {
+	UChrisAudioSubsystem::StopLoopingSound(LoadingAudio, AudioFadeOutTime);
+
 	if (Anim_FadeOut)
 	{
 		PlayAnimation(Anim_FadeOut);
@@ -44,6 +49,27 @@ void ULoadingScreenWidget::DismissWithFade()
 	{
 		RemoveFromParent();
 	}
+}
+
+void ULoadingScreenWidget::NativeConstruct()
+{
+	Super::NativeConstruct();
+
+	if (LoadingAudio) { return; }
+
+	if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+	{
+		LoadingAudio = Audio->PlayLooping2DFadeIn(
+			ChrisGameplayTags::Audio_Ambience_LoadingScreen, AudioFadeInTime);
+	}
+}
+
+void ULoadingScreenWidget::NativeDestruct()
+{
+	// Safety net for any path that removes the widget without dismissing it
+	UChrisAudioSubsystem::StopLoopingSound(LoadingAudio, 0.f);
+
+	Super::NativeDestruct();
 }
 
 void ULoadingScreenWidget::HandleFadeOutFinished()
