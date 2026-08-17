@@ -26,6 +26,9 @@ protected:
 	UPROPERTY(Transient, meta = (BindWidgetAnim))
 	TObjectPtr<UWidgetAnimation> Anim_FadeOut;
 
+	UPROPERTY(Transient, meta = (BindWidgetAnim))
+	TObjectPtr<UWidgetAnimation> Anim_ZoomIn;
+
 	// Filled in the WBP's class defaults — one is picked at random per load
 	UPROPERTY(EditDefaultsOnly, Category = "Hints", meta = (MultiLine = true))
 	TArray<FText> Hints;

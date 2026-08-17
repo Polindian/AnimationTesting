@@ -62,6 +62,11 @@ void ULoadingScreenWidget::NativeConstruct()
 		LoadingAudio = Audio->PlayLooping2DFadeIn(
 			ChrisGameplayTags::Audio_Ambience_LoadingScreen, AudioFadeInTime);
 	}
+
+	if (Anim_ZoomIn)
+	{
+		PlayAnimation(Anim_ZoomIn);
+	}
 }
 
 void ULoadingScreenWidget::NativeDestruct()
