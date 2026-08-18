@@ -48,7 +48,7 @@ public:
 	ATTRIBUTE_ACCESSORS(UChrisAttributeSet, StackedOddsChance)
 	ATTRIBUTE_ACCESSORS(UChrisAttributeSet, LoadedDiceActive)
 	ATTRIBUTE_ACCESSORS(UChrisAttributeSet, LoadedDiceHitCounter)
-	ATTRIBUTE_ACCESSORS	(UChrisAttributeSet, StasisWardReduction)
+	ATTRIBUTE_ACCESSORS(UChrisAttributeSet, StasisWardReduction)
 	ATTRIBUTE_ACCESSORS(UChrisAttributeSet, HeavyDamageReduction)
 	ATTRIBUTE_ACCESSORS(UChrisAttributeSet, DominionBonus)
 	ATTRIBUTE_ACCESSORS(UChrisAttributeSet, StealthStrikeActive)

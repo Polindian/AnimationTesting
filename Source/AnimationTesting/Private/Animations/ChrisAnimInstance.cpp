@@ -9,6 +9,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GAS/ChrisAbilitySystemStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "GAS/ChrisAttributeSet.h"
 
 void UChrisAnimInstance::NativeInitializeAnimation()
 {
@@ -22,6 +23,12 @@ void UChrisAnimInstance::NativeInitializeAnimation()
 	if (OwnerASC)
 	{
 		OwnerASC->RegisterGameplayTagEvent(UChrisAbilitySystemStatics::GetAimStatsTag()).AddUObject(this, &UChrisAnimInstance::OwnerAimTagChanged);
+
+        OwnerASC->GetGameplayAttributeValueChangeDelegate(UChrisAttributeSet::GetMoveSpeedAttribute()).AddUObject(this, &UChrisAnimInstance::MoveSpeedAttributeChanged);
+
+        bool bFound = false;
+        const float Current = OwnerASC->GetGameplayAttributeValue(UChrisAttributeSet::GetMoveSpeedAttribute(), bFound);
+        if (bFound) { CachedMoveSpeed = Current; }
 	}
 }
 
@@ -55,14 +62,10 @@ void UChrisAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
             float AbsYaw = FMath::Abs(RawYaw);
 
             float TargetSpeed;
-            if (AbsYaw <= 67.5f)
-                TargetSpeed = ForwardMoveSpeed;
-            else if (AbsYaw <= 112.5f)
-                TargetSpeed = StrafeMoveSpeed;
-            else if (AbsYaw <= 157.5f)
-                TargetSpeed = BackDiagonalMoveSpeed;
-            else
-                TargetSpeed = BackwardMoveSpeed;
+            if (AbsYaw <= 67.5f)        TargetSpeed = CachedMoveSpeed * ForwardSpeedMultiplier;
+            else if (AbsYaw <= 112.5f)  TargetSpeed = CachedMoveSpeed * StrafeSpeedMultiplier;
+            else if (AbsYaw <= 157.5f)  TargetSpeed = CachedMoveSpeed * BackDiagonalSpeedMultiplier;
+            else                        TargetSpeed = CachedMoveSpeed * BackwardSpeedMultiplier;
 
             OwnerMovementComp->MaxWalkSpeed = FMath::FInterpTo(
                 OwnerMovementComp->MaxWalkSpeed,
@@ -134,4 +137,9 @@ bool UChrisAnimInstance::ShouldDoFullBody() const
 void UChrisAnimInstance::OwnerAimTagChanged(const FGameplayTag Tag, int32 NewCount)
 {
 	bIsAiming = NewCount != 0;
+}
+
+void UChrisAnimInstance::MoveSpeedAttributeChanged(const FOnAttributeChangeData& Data)
+{
+    CachedMoveSpeed = Data.NewValue;
 }

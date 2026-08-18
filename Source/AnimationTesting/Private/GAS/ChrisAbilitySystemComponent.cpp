@@ -14,6 +14,8 @@
 #include "Audio/ChrisAudioSubsystem.h"
 #include "Audio/ChrisGameplayTags.h"
 #include "Components/AudioComponent.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 UChrisAbilitySystemComponent::UChrisAbilitySystemComponent()
 {

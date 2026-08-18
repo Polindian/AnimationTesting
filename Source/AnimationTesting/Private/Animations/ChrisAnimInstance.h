@@ -94,16 +94,17 @@ private:
 	float RightSpeed = 0.f;
 
 	UPROPERTY(EditAnywhere, Category = "Movement|Speed")
-	float ForwardMoveSpeed = 750.f;
-
+	float ForwardSpeedMultiplier = 1.0f;
 	UPROPERTY(EditAnywhere, Category = "Movement|Speed")
-	float StrafeMoveSpeed = 720.f;
-
+	float StrafeSpeedMultiplier = 0.96f;
 	UPROPERTY(EditAnywhere, Category = "Movement|Speed")
-	float BackwardMoveSpeed = 600.f;
-
+	float BackwardSpeedMultiplier = 0.8f;
 	UPROPERTY(EditAnywhere, Category = "Movement|Speed")
-	float BackDiagonalMoveSpeed = 550.f;
+	float BackDiagonalSpeedMultiplier = 0.733f;
+
+	float CachedMoveSpeed = 750.f;
+
+	void MoveSpeedAttributeChanged(const FOnAttributeChangeData& Data);
 
 	UPROPERTY(EditAnywhere, Category = "Movement")
 	FGameplayTag SpeedOverrideTag;
