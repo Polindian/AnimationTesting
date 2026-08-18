@@ -52,6 +52,8 @@ namespace ChrisGameplayTags
 	ANIMATIONTESTING_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_HeavyAttack2_Cooldown);
 	ANIMATIONTESTING_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_HeavyAttack3_Cooldown);
 	ANIMATIONTESTING_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Audio_Player_Blinded);
+	ANIMATIONTESTING_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Audio_Player_Smash_Caster);
+
 
 
 	// ── World 3D ─────────────────────────────────────────

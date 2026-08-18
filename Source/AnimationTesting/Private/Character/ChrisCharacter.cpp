@@ -391,6 +391,7 @@ void AChrisCharacter::OnAimStateChanged(bool bIsAiming)
 
 void AChrisCharacter::MoveSpeedUpdated(const FOnAttributeChangeData& Data)
 {
+	UE_LOG(LogTemp, Warning, TEXT("MoveSpeedUpdated: %f on %s"), Data.NewValue, *GetName());
 	GetCharacterMovement()->MaxWalkSpeed = Data.NewValue;
 }
 

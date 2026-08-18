@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GAS/ChrisGameplayAbility.h"
 #include "GAS/ChrisGameplayAbilityTypes.h"
+#include "GameplayTagContainer.h"
 #include "StabAbility.generated.h"
 
 /**
@@ -100,4 +101,17 @@ private:
 
     UPROPERTY(EditAnywhere, Category = "Movement|Speed")
     float BlendToSpeed = 600.f;
+
+    // ======================================================
+    // CASTER AUDIO + VFX Scaling 
+    //
+    // Optional 2D sound layered on top of the replicated 3D
+    // skill sound, heard only by the player who cast it.
+    // Skill VFX become bigger depending on smash level 
+    // ======================================================
+    UPROPERTY(EditDefaultsOnly, Category = "Audio")
+    FGameplayTag CasterSoundTag;
+
+    UPROPERTY(EditDefaultsOnly, Category = "VFX")
+    FGameplayTag ImpactCueTag;
 };

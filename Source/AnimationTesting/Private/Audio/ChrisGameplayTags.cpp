@@ -46,6 +46,7 @@ namespace ChrisGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_HeavyAttack2_Cooldown, "ability.heavyattack2.cooldown", "");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_HeavyAttack3_Cooldown, "ability.heavyattack3.cooldown", "");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Player_Blinded, "audio.player.blinded", "Nightflare blind, victim only");
+	UE_DEFINE_GAMEPLAY_TAG(Audio_Player_Smash_Caster, "audio.player.smash.caster");
 
 
 	// ── World 3D ─────────────────────────────────────────
