@@ -105,14 +105,45 @@ const FGenericDamageEffectDefinition* UStabAbility::GetDamageEffectDefinitionFor
 void UStabAbility::StartCombo(FGameplayEventData EventData)
 {
     // Freeze movement on ground impact for smash / stun
-        if (RadiusAttribute.IsValid())
+    if (RadiusAttribute.IsValid())
+    {
+        if (ACharacter* OwnerChar = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
         {
-            if (ACharacter* OwnerChar = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
+            OwnerChar->GetCharacterMovement()->MaxWalkSpeed = 15.f;
+        }
+
+        if (CasterSoundTag.IsValid() && IsLocallyControlled())
+        {
+            if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(GetAvatarActorFromActorInfo()))
             {
-                OwnerChar->GetCharacterMovement()->MaxWalkSpeed = 15.f;
+                Audio->Play2D(CasterSoundTag);
             }
         }
 
+        // Impact VFX — server fires, GAS replicates to all clients
+        if (ImpactCueTag.IsValid() && K2_HasAuthority())
+        {
+            UAbilitySystemComponent* CueASC = GetAbilitySystemComponentFromActorInfo();
+            if (CueASC)
+            {
+                bool bFound = false;
+                const float Radius = CueASC->GetGameplayAttributeValue(RadiusAttribute, bFound);
+
+                FGameplayCueParameters CueParams;
+                CueParams.RawMagnitude = bFound ? Radius : 0.f;
+                if (ACharacter* OwnerChar = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
+                {
+                    CueParams.Location = OwnerChar->GetMesh()->GetSocketLocation(TEXT("target_JumpSmashEnd"));
+                }
+                CueParams.Instigator = GetAvatarActorFromActorInfo();
+
+                UE_LOG(LogTemp, Warning, TEXT("SMASH CUE: firing %s, radius %f"),
+                    *ImpactCueTag.ToString(), CueParams.RawMagnitude);
+
+                CueASC->ExecuteGameplayCue(ImpactCueTag, CueParams);
+            }
+        }
+    }
 
     if (K2_HasAuthority())
     {
@@ -264,6 +295,7 @@ void UStabAbility::HandleComboDamageEvent(FGameplayEventData EventData)
             }
         }
 
+        
         // Perform the sphere sweep at the location(s) provided by the anim notify.
         // Pass ShouldDrawDebug() so the debug sphere actually renders in-game.
         TArray<FHitResult> TargetHitResults = GetHitResultFromSweepLocationTargetData(

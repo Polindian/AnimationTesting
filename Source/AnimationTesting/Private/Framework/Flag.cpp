@@ -227,10 +227,6 @@ void AFlag::Tick(float DeltaTime)
         PlayTeamCaptureBanner(Ownership);
     }
 
-    UE_LOG(LogTemp, Log, TEXT("Flag: %.1f%% %s | T1 Rate: %.1f | T2 Rate: %.1f"),
-        CapturePercent,
-        Ownership == EFlagOwnership::TeamOne ? TEXT("Red") : (Ownership == EFlagOwnership::TeamTwo ? TEXT("Blue") : TEXT("Neutral")),
-        TeamOneCaptureRate, TeamTwoCaptureRate);
 }
 
 float AFlag::GetActorCaptureWeight(AActor* Actor) const
