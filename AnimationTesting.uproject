@@ -15,7 +15,8 @@
 				"AIModule",
 				"EnhancedInput",
 				"CoreUObject",
-				"DeveloperSettings"
+				"DeveloperSettings",
+				"NiagaraAnimNotifies"
 			]
 		}
 	],

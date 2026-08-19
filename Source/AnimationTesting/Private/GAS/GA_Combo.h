@@ -66,4 +66,7 @@ private:
     UPROPERTY(EditDefaultsOnly, Category = "Movement")
     float AttackMoveSpeed = 50.f;
 
+
+    UPROPERTY(EditDefaultsOnly, Category = "VFX")
+    TSubclassOf<UGameplayEffect> ComboFlashEffect;
 };

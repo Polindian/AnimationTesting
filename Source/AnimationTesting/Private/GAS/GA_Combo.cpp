@@ -166,6 +166,16 @@ void UGA_Combo::TryCommitNextCombo()
         }
     }
 
+
+    if (ComboFlashEffect && K2_HasAuthority())
+    {
+        FGameplayEffectSpecHandle Spec = MakeOutgoingGameplayEffectSpec(ComboFlashEffect, 1.f);
+        if (Spec.IsValid())
+        {
+            ApplyGameplayEffectSpecToOwner(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, Spec);
+        }
+    }
+
     OwnerAnimInstance->Montage_SetNextSection(OwnerAnimInstance->Montage_GetCurrentSection(ComboMontage), NextComboName, ComboMontage);
 }
 

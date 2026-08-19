@@ -77,6 +77,10 @@ namespace ChrisGameplayTags
 	ANIMATIONTESTING_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Audio_World_Skeleton_Scream);
 	ANIMATIONTESTING_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Audio_World_Skeleton_DeathScream);
 
+	ANIMATIONTESTING_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Audio_Player_Stun_Open);
+	ANIMATIONTESTING_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Audio_Player_Stun_Loop);
+	ANIMATIONTESTING_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Audio_Player_Stun_Close);
+
 
 
 	// ── General ─────────────────────────────────────────

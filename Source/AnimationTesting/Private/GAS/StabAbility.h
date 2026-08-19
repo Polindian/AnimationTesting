@@ -114,4 +114,17 @@ private:
 
     UPROPERTY(EditDefaultsOnly, Category = "VFX")
     FGameplayTag ImpactCueTag;
+
+    // ======================================================
+   // VFX DURATION EFFECT
+   //
+   // Duration-only GE applied to the caster so a looping cue
+   // (stun) lives exactly as long as the ability's effect.
+   // ======================================================
+    UPROPERTY(EditDefaultsOnly, Category = "VFX")
+    TSubclassOf<UGameplayEffect> VFXDurationEffect;
+
+
+    UPROPERTY(EditDefaultsOnly, Category = "VFX")
+    TSubclassOf<UGameplayEffect> ComboFlashEffect;
 };
