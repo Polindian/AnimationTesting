@@ -143,6 +143,20 @@ void UStabAbility::StartCombo(FGameplayEventData EventData)
                 CueASC->ExecuteGameplayCue(ImpactCueTag, CueParams);
             }
         }
+
+        // Duration GE that drives the looping stun cue (open / loop / close)
+        if (VFXDurationEffect && K2_HasAuthority())
+        {
+            FGameplayEffectSpecHandle VFXSpec = MakeOutgoingGameplayEffectSpec(
+                VFXDurationEffect, GetAbilityLevel(CurrentSpecHandle, CurrentActorInfo));
+
+            if (VFXSpec.IsValid())
+            {
+                ApplyGameplayEffectSpecToOwner(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, VFXSpec);
+                UE_LOG(LogTemp, Warning, TEXT("STUN VFX GE applied at level %d"),
+                    GetAbilityLevel(CurrentSpecHandle, CurrentActorInfo));
+            }
+        }
     }
 
     if (K2_HasAuthority())

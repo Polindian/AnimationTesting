@@ -70,6 +70,10 @@ namespace ChrisGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_World_Skeleton_Scream, "audio.world.skeleton.scream", "Idle chatter, not the death scream");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_World_Skeleton_DeathScream, "audio.world.skeleton.deathscream", "Always plays on death, separate from the idle pool");
 
+	UE_DEFINE_GAMEPLAY_TAG(Audio_Player_Stun_Open, "audio.player.stun.open");
+	UE_DEFINE_GAMEPLAY_TAG(Audio_Player_Stun_Loop, "audio.player.stun.loop");
+	UE_DEFINE_GAMEPLAY_TAG(Audio_Player_Stun_Close, "audio.player.stun.close");
+
 
 
 	// ── General ─────────────────────────────────────────
