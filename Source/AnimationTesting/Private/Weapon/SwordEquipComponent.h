@@ -64,6 +64,9 @@ class USwordEquipComponent : public UActorComponent
 
         void ResetToUnequipped();
 
+        UFUNCTION(BlueprintCallable, Category = "Swords")
+        TArray<class UMeshComponent*> GetSwordMeshes() const;
+
 private:
     // ---------- Socket names ----------
     UPROPERTY(EditDefaultsOnly, Category = "Swords|Sockets")

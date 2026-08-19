@@ -123,4 +123,8 @@ private:
    // ======================================================
     UPROPERTY(EditDefaultsOnly, Category = "VFX")
     TSubclassOf<UGameplayEffect> VFXDurationEffect;
+
+
+    UPROPERTY(EditDefaultsOnly, Category = "VFX")
+    TSubclassOf<UGameplayEffect> ComboFlashEffect;
 };

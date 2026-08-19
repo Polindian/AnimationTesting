@@ -171,6 +171,14 @@ void USwordEquipComponent::ResetToUnequipped()
     UpdateEquippedTag();
 }
 
+TArray<class UMeshComponent*> USwordEquipComponent::GetSwordMeshes() const
+{
+    TArray<UMeshComponent*> Meshes;
+    if (LeftSword) { Meshes.Add(LeftSword); }
+    if (RightSword) { Meshes.Add(RightSword); }
+    return Meshes;
+}
+
 // -----------------------------------------------------------------------
 // Attachment helpers
 // -----------------------------------------------------------------------

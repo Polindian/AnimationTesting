@@ -262,6 +262,15 @@ void UStabAbility::HandleComboCommit(FGameplayEventData EventData)
             }
         }
 
+        if (ComboFlashEffect && K2_HasAuthority())
+        {
+            FGameplayEffectSpecHandle Spec = MakeOutgoingGameplayEffectSpec(ComboFlashEffect, 1.f);
+            if (Spec.IsValid())
+            {
+                ApplyGameplayEffectSpecToOwner(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, Spec);
+            }
+        }
+
         OwnerAnimInstance->Montage_SetNextSection(CurrentSection, NextComboName, RightStabMontage);
     }
 }
