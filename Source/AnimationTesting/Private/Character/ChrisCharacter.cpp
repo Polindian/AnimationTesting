@@ -18,9 +18,10 @@
 #include "Player/ChrisPlayerCharacter.h"
 #include "Weapon/SwordEquipComponent.h"
 #include "Widgets/ValueGauge.h"
-#include "Components/WidgetComponent.h"
 #include "Audio/ChrisAudioSubsystem.h"
 #include "Audio/ChrisGameplayTags.h"
+#include "Components/MeshComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
 
 
 // Sets default values
@@ -539,10 +540,12 @@ void AChrisCharacter::Respawn()
 
 void AChrisCharacter::OnDead()
 {
+	OnDeathDissolve();
 }
 
 void AChrisCharacter::OnRespawn()
 {
+	OnRespawnResetDissolve();
 }
 
 void AChrisCharacter::SetGenericTeamId(const FGenericTeamId& NewTeamID)
@@ -582,3 +585,113 @@ void AChrisCharacter::SetAIPerceptionStimuliSourceEnabled(bool bIsEnabled)
 	}
 }
 
+void AChrisCharacter::ApplyDissolveMaterial(UMaterialInterface* DissolveMaterial)
+{
+	if (!DissolveMaterial) return;
+
+	DissolveMeshes.Reset();
+	OriginalMaterials.Reset();
+	OriginalMaterialCounts.Reset();
+	DissolveMIDs.Reset();
+
+	TArray<UMeshComponent*> Meshes;
+	GetComponents<UMeshComponent>(Meshes);
+
+	for (UMeshComponent* MeshComp : Meshes)
+	{
+		if (!MeshComp) continue;
+
+		// Grooms need the Hair shading model — handled separately
+		if (MeshComp->GetClass()->GetName().Contains(TEXT("Groom")))
+		{
+			continue;
+		}
+
+		const int32 NumMats = MeshComp->GetNumMaterials();
+
+		DissolveMeshes.Add(MeshComp);
+		OriginalMaterialCounts.Add(NumMats);
+
+		for (int32 i = 0; i < NumMats; ++i)
+		{
+			OriginalMaterials.Add(MeshComp->GetMaterial(i));
+
+			UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(DissolveMaterial, this);
+			MeshComp->SetMaterial(i, MID);
+			DissolveMIDs.Add(MID);
+		}
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("[Dissolve] swapped %d materials across %d meshes"),
+		DissolveMIDs.Num(), DissolveMeshes.Num());
+}
+
+void AChrisCharacter::SetDissolveAmount(float Amount)
+{
+	for (UMaterialInstanceDynamic* MID : DissolveMIDs)
+	{
+		if (MID)
+		{
+			MID->SetScalarParameterValue(DissolveParameterName, Amount);
+		}
+	}
+}
+
+void AChrisCharacter::HideGrooms(bool bShouldHide)
+{
+	if (bShouldHide)
+	{
+		HiddenGrooms.Reset();
+
+		TArray<UMeshComponent*> Meshes;
+		GetComponents<UMeshComponent>(Meshes);
+
+		for (UMeshComponent* MeshComp : Meshes)
+		{
+			if (MeshComp && MeshComp->GetClass()->GetName().Contains(TEXT("Groom")))
+			{
+				MeshComp->SetHiddenInGame(true);
+				HiddenGrooms.Add(MeshComp);
+			}
+		}
+	}
+	else
+	{
+		for (UMeshComponent* Groom : HiddenGrooms)
+		{
+			if (Groom) { Groom->SetHiddenInGame(false); }
+		}
+		HiddenGrooms.Reset();
+	}
+}
+
+void AChrisCharacter::RestoreOriginalMaterials()
+{
+	int32 MatIndex = 0;
+
+	for (int32 m = 0; m < DissolveMeshes.Num(); ++m)
+	{
+		UMeshComponent* MeshComp = DissolveMeshes[m];
+		const int32 Count = OriginalMaterialCounts.IsValidIndex(m) ? OriginalMaterialCounts[m] : 0;
+
+		for (int32 i = 0; i < Count; ++i, ++MatIndex)
+		{
+			if (MeshComp && OriginalMaterials.IsValidIndex(MatIndex))
+			{
+				MeshComp->SetMaterial(i, OriginalMaterials[MatIndex]);
+			}
+		}
+	}
+
+	HideGrooms(false);
+
+	DissolveMeshes.Reset();
+	OriginalMaterials.Reset();
+	OriginalMaterialCounts.Reset();
+	DissolveMIDs.Reset();
+}
+
+int32 AChrisCharacter::GetTeamIdForBP() const
+{
+	return (int32)GetGenericTeamId().GetId();
+}
