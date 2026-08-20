@@ -45,6 +45,15 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Shoot")
 	TSubclassOf<class AProjectileActor> ProjectileClass;
 
+	// Alternate projectile used when the shooter has the Deadeye upgrade.
+	// Spawned server-side, so its class replicates to every client.
+	UPROPERTY(EditDefaultsOnly, Category = "Shoot")
+	TSubclassOf<class AProjectileActor> DeadeyeProjectileClass;
+
+	// Hit effect used when Deadeye is active — carries its own impact cue.
+	UPROPERTY(EditDefaultsOnly, Category = "Shoot")
+	TSubclassOf<UGameplayEffect> DeadeyeProjectileHitEffect;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Shoot")
 	float ShootProjectileSpeed = 3000.f;
 
@@ -78,5 +87,7 @@ private:
 	void ShootProjectile(FGameplayEventData Payload);
 
 	bool bEventTasksCreated = false;
+
+	bool IsDeadeyeActive() const;
 	
 };

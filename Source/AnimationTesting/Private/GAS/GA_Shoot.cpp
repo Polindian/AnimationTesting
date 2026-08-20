@@ -121,7 +121,6 @@ void UGA_Shoot::ShootProjectile(FGameplayEventData Payload)
 		SpawnParams.Owner = OwnerAvatarActor;
 		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-
 		// Spawn at hand_r socket directly
 		FVector SocketLocation = OwnerAvatarActor->GetActorLocation(); // fallback
 		ACharacter* ShootingCharacter = Cast<ACharacter>(OwnerAvatarActor);
@@ -131,11 +130,23 @@ void UGA_Shoot::ShootProjectile(FGameplayEventData Payload)
 			UE_LOG(LogTemp, Warning, TEXT("[GA_Shoot] Projectile spawn at: %s"), *SocketLocation.ToString());
 		}
 
-		AProjectileActor* Projectile = GetWorld()->SpawnActor<AProjectileActor>(ProjectileClass, SocketLocation, OwnerAvatarActor->GetActorRotation(), SpawnParams);
+		// Deadeye swaps the projectile for a different-looking one. Spawned server-side, so the class replicates to all clients.
+		TSubclassOf<AProjectileActor> ClassToSpawn = ProjectileClass;
+		TSubclassOf<UGameplayEffect> HitEffect = ProjectileHitEffect;
+
+		if (IsDeadeyeActive())
+		{
+			if (DeadeyeProjectileClass) { ClassToSpawn = DeadeyeProjectileClass; }
+			if (DeadeyeProjectileHitEffect) { HitEffect = DeadeyeProjectileHitEffect; }
+		}
+
+		AProjectileActor* Projectile = GetWorld()->SpawnActor<AProjectileActor>(
+			ClassToSpawn, SocketLocation, OwnerAvatarActor->GetActorRotation(), SpawnParams);
+
 		if (Projectile)
 		{
-			Projectile->ShootProjectile(ShootProjectileSpeed, ShootProjectileRange, nullptr, GetOwnerTeamId(), 
-				MakeOutgoingGameplayEffectSpec(ProjectileHitEffect, GetAbilityLevel(CurrentSpecHandle, CurrentActorInfo)));
+			Projectile->ShootProjectile(ShootProjectileSpeed, ShootProjectileRange, nullptr, GetOwnerTeamId(),
+				MakeOutgoingGameplayEffectSpec(HitEffect, GetAbilityLevel(CurrentSpecHandle, CurrentActorInfo)));
 		}
 	}
 
@@ -160,6 +171,18 @@ void UGA_Shoot::ShootProjectile(FGameplayEventData Payload)
 			ASC->AbilityCommittedCallbacks.Broadcast(this);
 		}
 	}
+}
+
+bool UGA_Shoot::IsDeadeyeActive() const
+{
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	{
+		bool bFound = false;
+		const float Flag = ASC->GetGameplayAttributeValue(
+			UChrisAttributeSet::GetDeadeyeActiveAttribute(), bFound);
+		return bFound && Flag > 0.f;
+	}
+	return false;
 }
 
 float UGA_Shoot::GetLeveledCooldownDuration() const
