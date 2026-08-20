@@ -220,4 +220,57 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Audio")
 	TObjectPtr<class UChrisSoundLibrary> VoiceLibrary;
 
+
+
+// ======================================================
+// DEATH DISSOLVE
+//
+// Every mesh material is swapped for a dynamic instance of a
+// single dissolve material at death, then restored on respawn.
+// Swapping avoids editing the MetaHuman masters (which use
+// Material Attributes and can't take MF_Disintegration), and
+// costs one cheap shader instead of many complex ones.
+// Grooms can't take a swapped material, so they're hidden.
+// ======================================================
+public:
+	UFUNCTION(BlueprintImplementableEvent, Category = "Death")
+	void OnDeathDissolve();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Death")
+	void OnRespawnResetDissolve();
+
+	UFUNCTION(BlueprintCallable, Category = "Death")
+	void ApplyDissolveMaterial(UMaterialInterface* DissolveMaterial);
+
+	UFUNCTION(BlueprintCallable, Category = "Death")
+	void SetDissolveAmount(float Amount);
+
+	UFUNCTION(BlueprintCallable, Category = "Death")
+	void HideGrooms(bool bShouldHide);
+
+	UFUNCTION(BlueprintCallable, Category = "Death")
+	void RestoreOriginalMaterials();
+
+	UFUNCTION(BlueprintPure, Category = "Team")
+	int32 GetTeamIdForBP() const;
+
+
+private:
+	UPROPERTY(EditDefaultsOnly, Category = "Death")
+	FName DissolveParameterName = "Dissolve Amount";
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<class UMeshComponent>> DissolveMeshes;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<class UMaterialInterface>> OriginalMaterials;
+
+	UPROPERTY(Transient)
+	TArray<int32> OriginalMaterialCounts;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<class UMaterialInstanceDynamic>> DissolveMIDs;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<class UMeshComponent>> HiddenGrooms;
 };
