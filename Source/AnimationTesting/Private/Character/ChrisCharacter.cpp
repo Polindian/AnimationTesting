@@ -333,6 +333,8 @@ void AChrisCharacter::StartDeathSequence()
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
 	SetAIPerceptionStimuliSourceEnabled(false);
 
+	OnDeathDissolve();
+
 }
 
 void AChrisCharacter::StunTagUpdated(const FGameplayTag Tag, int32 NewCount)
@@ -516,6 +518,8 @@ void AChrisCharacter::Respawn()
 	GetMesh()->GetAnimInstance()->StopAllMontages(0.f);
 	SetStatusGaugeEnabled(true);
 
+	OnRespawnResetDissolve();
+
 	// Reset sword equip state so player respawns unequipped
 	if (USwordEquipComponent* SwordComp = FindComponentByClass<USwordEquipComponent>())
 	{
@@ -540,12 +544,10 @@ void AChrisCharacter::Respawn()
 
 void AChrisCharacter::OnDead()
 {
-	OnDeathDissolve();
 }
 
 void AChrisCharacter::OnRespawn()
 {
-	OnRespawnResetDissolve();
 }
 
 void AChrisCharacter::SetGenericTeamId(const FGenericTeamId& NewTeamID)
