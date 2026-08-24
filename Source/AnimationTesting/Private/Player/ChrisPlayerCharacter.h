@@ -21,6 +21,9 @@ public:
 	virtual void PawnClientRestart() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	void SetInputEnabled(bool bEnabled) { SetInputEnabledFromPlayerController(bEnabled); }
+
 private:
 	UPROPERTY(VisibleDefaultsOnly, Category = "View")
 	class USpringArmComponent* CameraBoom;
