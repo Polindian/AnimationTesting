@@ -113,52 +113,76 @@ void AChrisPlayerCharacter::HandleAbilityInput(const FInputActionValue& InputAct
 		if (InputID == EChrisAbilityInputID::BasicAttack)
 		{
 			UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, UChrisAbilitySystemStatics::GetBasicAttackInputPressedTag(), FGameplayEventData());
-			Server_SendGameplayEventToSelf(UChrisAbilitySystemStatics::GetBasicAttackInputPressedTag(), FGameplayEventData());
+			if (!HasAuthority())
+			{
+				Server_SendGameplayEventToSelf(UChrisAbilitySystemStatics::GetBasicAttackInputPressedTag(), FGameplayEventData());
+			}
 		}
 		
 		if (InputID == EChrisAbilityInputID::BasicAttack1)
 		{
 			UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, UChrisAbilitySystemStatics::GetBasicAttack1InputPressedTag(), FGameplayEventData());
-			Server_SendGameplayEventToSelf(UChrisAbilitySystemStatics::GetBasicAttack1InputPressedTag(), FGameplayEventData());
+			if (!HasAuthority())
+			{
+				Server_SendGameplayEventToSelf(UChrisAbilitySystemStatics::GetBasicAttack1InputPressedTag(), FGameplayEventData());
+			}
 		}
 
 		// Stab Attacks
 		if (InputID == EChrisAbilityInputID::BasicAttack2)
 		{
 			UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, UChrisAbilitySystemStatics::GetBasicAttack2InputPressedTag(), FGameplayEventData());
-			Server_SendGameplayEventToSelf(UChrisAbilitySystemStatics::GetBasicAttack2InputPressedTag(), FGameplayEventData());
+			if (!HasAuthority())
+			{
+				Server_SendGameplayEventToSelf(UChrisAbilitySystemStatics::GetBasicAttack2InputPressedTag(), FGameplayEventData());
+			}
 		}
 
 		if (InputID == EChrisAbilityInputID::BasicAttack3)
 		{
 			UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, UChrisAbilitySystemStatics::GetBasicAttack3InputPressedTag(), FGameplayEventData());
-			Server_SendGameplayEventToSelf(UChrisAbilitySystemStatics::GetBasicAttack3InputPressedTag(), FGameplayEventData());
+			if (!HasAuthority())
+			{
+				Server_SendGameplayEventToSelf(UChrisAbilitySystemStatics::GetBasicAttack3InputPressedTag(), FGameplayEventData());
+			}
 		}
 
 		// Swipe Attacks
 		if (InputID == EChrisAbilityInputID::BasicAttack4)
 		{
 			UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, UChrisAbilitySystemStatics::GetBasicAttack4InputPressedTag(), FGameplayEventData());
-			Server_SendGameplayEventToSelf(UChrisAbilitySystemStatics::GetBasicAttack4InputPressedTag(), FGameplayEventData());
+			if (!HasAuthority())
+			{
+				Server_SendGameplayEventToSelf(UChrisAbilitySystemStatics::GetBasicAttack4InputPressedTag(), FGameplayEventData());
+			}
 		}
 
 		if (InputID == EChrisAbilityInputID::BasicAttack5)
 		{
 			UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, UChrisAbilitySystemStatics::GetBasicAttack5InputPressedTag(), FGameplayEventData());
-			Server_SendGameplayEventToSelf(UChrisAbilitySystemStatics::GetBasicAttack5InputPressedTag(), FGameplayEventData());
+			if (!HasAuthority())
+			{
+				Server_SendGameplayEventToSelf(UChrisAbilitySystemStatics::GetBasicAttack5InputPressedTag(), FGameplayEventData());
+			}
 		}
 
 		// Dodge Hit Attacks
 		if (InputID == EChrisAbilityInputID::BasicAttack6)
 		{
 			UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, UChrisAbilitySystemStatics::GetBasicAttack6InputPressedTag(), FGameplayEventData());
-			Server_SendGameplayEventToSelf(UChrisAbilitySystemStatics::GetBasicAttack6InputPressedTag(), FGameplayEventData());
+			if (!HasAuthority())
+			{
+				Server_SendGameplayEventToSelf(UChrisAbilitySystemStatics::GetBasicAttack6InputPressedTag(), FGameplayEventData());
+			}
 		}
 
 		if (InputID == EChrisAbilityInputID::BasicAttack7)
 		{
 			UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, UChrisAbilitySystemStatics::GetBasicAttack7InputPressedTag(), FGameplayEventData());
-			Server_SendGameplayEventToSelf(UChrisAbilitySystemStatics::GetBasicAttack7InputPressedTag(), FGameplayEventData());
+			if (!HasAuthority())
+			{
+				Server_SendGameplayEventToSelf(UChrisAbilitySystemStatics::GetBasicAttack7InputPressedTag(), FGameplayEventData());
+			}
 		}
 
 		// Smash

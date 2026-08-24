@@ -273,4 +273,17 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<class UMeshComponent>> HiddenGrooms;
+
+
+	/********************************/
+	/*         Sword Trail          */
+	/********************************/
+
+	public:
+		UFUNCTION(BlueprintPure, Category = "VFX")
+		class UParticleSystem* GetSwordTrailTemplate(int32 Slot) const;
+
+	private:
+		UPROPERTY(EditDefaultsOnly, Category = "VFX")
+		TArray<TObjectPtr<class UParticleSystem>> SwordTrailTemplates;
 };
