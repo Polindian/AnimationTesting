@@ -67,6 +67,9 @@ class USwordEquipComponent : public UActorComponent
         UFUNCTION(BlueprintCallable, Category = "Swords")
         TArray<class UMeshComponent*> GetSwordMeshes() const;
 
+        UFUNCTION(BlueprintCallable, Category = "Swords|VFX")
+        void SetSwordVFXActive(bool bActive);
+
 private:
     // ---------- Socket names ----------
     UPROPERTY(EditDefaultsOnly, Category = "Swords|Sockets")
@@ -171,4 +174,26 @@ private:
 
     UPROPERTY(EditDefaultsOnly, Category = "Swords|Setup")
     bool bStartEquipped = false;
+
+
+    // ---------- Equipped weapon VFX ----------
+   
+    UPROPERTY(EditDefaultsOnly, Category = "Swords|VFX")
+    TObjectPtr<class UParticleSystem> EquippedSwordVFX;
+
+    UPROPERTY(Transient)
+    TObjectPtr<class UParticleSystemComponent> LeftSwordVFX;
+
+    UPROPERTY(Transient)
+    TObjectPtr<class UParticleSystemComponent> RightSwordVFX;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Swords|VFX")
+    float SwordVFXScale = 0.3f;
+
+    // Optional socket on the sword mesh
+    UPROPERTY(EditDefaultsOnly, Category = "Swords|VFX")
+    FName SwordVFXSocket = NAME_None;
+
+
+    void CreateSwordVFX();
 };

@@ -697,3 +697,8 @@ int32 AChrisCharacter::GetTeamIdForBP() const
 {
 	return (int32)GetGenericTeamId().GetId();
 }
+
+UParticleSystem* AChrisCharacter::GetSwordTrailTemplate(int32 Slot) const
+{
+	return SwordTrailTemplates.IsValidIndex(Slot) ? SwordTrailTemplates[Slot] : nullptr;
+}
