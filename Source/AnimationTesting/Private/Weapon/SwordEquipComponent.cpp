@@ -7,6 +7,8 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "GAS/ChrisAbilitySystemStatics.h"
+#include "Kismet/GameplayStatics.h"
+#include "Particles/ParticleSystemComponent.h"
 
 USwordEquipComponent::USwordEquipComponent()
 {
@@ -26,12 +28,15 @@ void USwordEquipComponent::BeginPlay()
         OwnerMesh = OwnerChar->GetMesh();
     }
 
+    CreateSwordVFX();
+
     if (LeftSword && RightSword && OwnerMesh)
     {
         if (bStartEquipped)
         {
             // AI path: 
             EquipState = ESwordEquipState::Equipped;
+            SetSwordVFXActive(true);
         }
         else
         {
@@ -74,6 +79,46 @@ bool USwordEquipComponent::IsTransitioning() const
     return (EquipState == ESwordEquipState::Equipping || EquipState == ESwordEquipState::Unequipping);
 }
 
+void USwordEquipComponent::CreateSwordVFX()
+{
+    if (!EquippedSwordVFX) return;
+
+    // Cosmetic only
+    if (GetWorld() && GetWorld()->GetNetMode() == NM_DedicatedServer) return;
+
+    if (LeftSword)
+    {
+        LeftSwordVFX = UGameplayStatics::SpawnEmitterAttached(
+            EquippedSwordVFX, LeftSword, SwordVFXSocket,
+            FVector::ZeroVector, FRotator::ZeroRotator,
+            EAttachLocation::SnapToTarget,
+            false,                      // bAutoDestroy
+            EPSCPoolMethod::None,
+            false);                     // bAutoActivateSystem
+
+        if (LeftSwordVFX)
+        {
+            LeftSwordVFX->SetRelativeScale3D(FVector(SwordVFXScale));
+        }
+    }
+
+    if (RightSword)
+    {
+        RightSwordVFX = UGameplayStatics::SpawnEmitterAttached(
+            EquippedSwordVFX, RightSword, SwordVFXSocket,
+            FVector::ZeroVector, FRotator::ZeroRotator,
+            EAttachLocation::SnapToTarget,
+            false,
+            EPSCPoolMethod::None,
+            false);
+
+        if (RightSwordVFX)
+        {
+            RightSwordVFX->SetRelativeScale3D(FVector(SwordVFXScale));
+        }
+    }
+}
+
 // -----------------------------------------------------------------------
 // Public interface
 // -----------------------------------------------------------------------
@@ -111,6 +156,13 @@ void USwordEquipComponent::ExecutePhaseAction(ESwordPhaseAction Action)
             else
                 return;
         }
+
+        // Swords leaving the back — light them up for the flight in
+        if (EquipState == ESwordEquipState::Equipping)
+        {
+            SetSwordVFXActive(true);
+        }
+
         DetachSwordsToMeshRoot();
         StartPhase(ESwordFlyPhase::Throw);
         break;
@@ -147,6 +199,8 @@ void USwordEquipComponent::FinalizeUnequip()
     CurrentPhase = ESwordFlyPhase::None;
     SetComponentTickEnabled(false);
 
+    SetSwordVFXActive(false);
+
     AttachSwordsToSockets(LeftSheathSocket, RightSheathSocket);
     EquipState = ESwordEquipState::Unequipped;
     UpdateEquippedTag();
@@ -177,6 +231,18 @@ TArray<class UMeshComponent*> USwordEquipComponent::GetSwordMeshes() const
     if (LeftSword) { Meshes.Add(LeftSword); }
     if (RightSword) { Meshes.Add(RightSword); }
     return Meshes;
+}
+
+void USwordEquipComponent::SetSwordVFXActive(bool bActive)
+{
+    if (LeftSwordVFX)
+    {
+        bActive ? LeftSwordVFX->Activate(true) : LeftSwordVFX->Deactivate();
+    }
+    if (RightSwordVFX)
+    {
+        bActive ? RightSwordVFX->Activate(true) : RightSwordVFX->Deactivate();
+    }
 }
 
 // -----------------------------------------------------------------------
