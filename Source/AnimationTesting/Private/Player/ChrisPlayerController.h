@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -215,7 +215,7 @@ private:
     // --------- DEATH & BANNER ---------
 
     private:
-    // Delay between dying and the banner appearing � lets the death animation
+    // Delay between dying and the banner appearing — lets the death animation
     // and ragdoll read before the screen gets covered
     UPROPERTY(EditDefaultsOnly, Category = "Banner")
     float DeathBannerDelay = 1.f;
