@@ -23,6 +23,7 @@ void UShopWidget::NativeConstruct()
     Super::NativeConstruct();
     LoadShopItems();
     InitBranchMaterials();
+    BuildSkillWidgetGrid();
 
     if (APawn* OwnerPawn = GetOwningPlayerPawn())
     {
@@ -187,6 +188,7 @@ void UShopWidget::DecrementStockForItem(const UPA_ShopItem* Item)
         }
     }
 }
+
 void UShopWidget::RestoreShopState()
 {
     if (!OwnerInventoryComponent) return;
@@ -243,6 +245,16 @@ void UShopWidget::RestoreShopState()
                     }
                 }
             }
+
+            // Shimmer on every owned tier, including the last one
+            for (int32 Tier = 0; Tier < Categories[Cat].Num(); ++Tier)
+            {
+                UItemWidget* SkillWidget = Categories[Cat][Tier];
+                if (SkillWidget && SkillWidget->GetShopItem() && OwnerInventoryComponent->HasPurchased(SkillWidget->GetShopItem()))
+                {
+                    ApplySkillShimmer(Cat, Tier);
+                }
+            }
         }
     }
 }
@@ -286,29 +298,43 @@ void UShopWidget::OnSkillPurchasedCallback(const UPA_ShopItem* Item)
     {
         // Not a skill (consumable) — just refresh states normally.
         UpdateSkillLockStates();
-        UpdateAbilityUpgradeStates();
+        UpdateAbilityUpgradeStates(Item);
         return;
     }
 
     StartBranchFillAnim(CatIdx, TierIdx);
-
-    
 }
 
-void UShopWidget::UpdateAbilityUpgradeStates()
+void UShopWidget::UpdateAbilityUpgradeStates(const UPA_ShopItem* JustPurchasedItem)
 {
-    TArray<UItemWidget*> Upgrades = {
-       Bonebreaker, Shockwave, Scorched, Deadeye
-    };
+    if (!OwnerInventoryComponent) return;
+
+    TArray<UItemWidget*> Upgrades = { Bonebreaker, Shockwave, Scorched, Deadeye };
 
     for (UItemWidget* UpgradeWidget : Upgrades)
     {
-        if (!UpgradeWidget || !UpgradeWidget->GetShopItem())
-            continue;
+        if (!UpgradeWidget || !UpgradeWidget->GetShopItem()) continue;
 
         const bool bPurchased = OwnerInventoryComponent->HasPurchased(UpgradeWidget->GetShopItem());
-        // No lock system for upgrades — always available, never locked.
         UpgradeWidget->SetSkillState(bPurchased, /*bLocked=*/ false);
+
+        if (!bPurchased)
+        {
+            UpgradeWidget->SetShimmerActive(false);
+            continue;
+        }
+
+        UpgradeWidget->PrepareShimmer(FLinearColor::White, true);
+
+        // Only the item just bought spins; everything else reveals immediately
+        if (JustPurchasedItem && UpgradeWidget->GetShopItem() == JustPurchasedItem)
+        {
+            UpgradeWidget->PlayPurchaseSpin();
+        }
+        else
+        {
+            UpgradeWidget->RevealShimmer();
+        }
     }
 }
 
@@ -416,6 +442,8 @@ void UShopWidget::OnBranchFillComplete(const FBranchFillAnim& Anim)
 {
     // Now update all skill lock states 
     UpdateSkillLockStates();
+
+    ApplySkillShimmer(Anim.CategoryIndex, Anim.TierIndex);
 }
 
 bool UShopWidget::FindSkillIndices(const UPA_ShopItem* Item, int32& OutCategory, int32& OutTier) const
@@ -536,6 +564,27 @@ void UShopWidget::WireShopNavigation()
 
     // --- Continue ---
     SetNav(Continue, Nightflare, AbilityUpgradesHeader, CategoryHeader_Tank, CategoryHeader_Magician);
+}
+
+void UShopWidget::BuildSkillWidgetGrid()
+{
+    SkillWidgetGrid.Empty();
+    SkillWidgetGrid.Add({ Skill_Assassin1, Skill_Assassin2, Skill_Assassin3 });
+    SkillWidgetGrid.Add({ Skill_Gambler1,  Skill_Gambler2,  Skill_Gambler3 });
+    SkillWidgetGrid.Add({ Skill_Tank1,     Skill_Tank2,     Skill_Tank3 });
+    SkillWidgetGrid.Add({ Skill_Magician1, Skill_Magician2, Skill_Magician3 });
+}
+
+void UShopWidget::ApplySkillShimmer(int32 Category, int32 Tier)
+{
+    if (!SkillWidgetGrid.IsValidIndex(Category)) return;
+    if (!SkillWidgetGrid[Category].IsValidIndex(Tier)) return;
+    if (!CategoryColors.IsValidIndex(Category)) return;
+
+    if (UItemWidget* Widget = SkillWidgetGrid[Category][Tier])
+    {
+        Widget->SetShimmerActive(true, CategoryColors[Category], false);
+    }
 }
 
 void UShopWidget::HandleItemFocusChanged(UItemWidget* Item, bool bFocused)

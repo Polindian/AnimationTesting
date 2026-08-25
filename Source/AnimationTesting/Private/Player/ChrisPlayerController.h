@@ -211,4 +211,18 @@ private:
     class ULoadingScreenWidget* LoadingScreenWidget;
 
     void ShowLoadingScreen();
+
+    // --------- DEATH & BANNER ---------
+
+    private:
+    // Delay between dying and the banner appearing — lets the death animation
+    // and ragdoll read before the screen gets covered
+    UPROPERTY(EditDefaultsOnly, Category = "Banner")
+    float DeathBannerDelay = 1.f;
+
+    FTimerHandle DeathBannerTimerHandle;
+
+public:
+    void ShowDeathBanner();
+    void CancelDeathBanner();
 };
