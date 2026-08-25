@@ -225,6 +225,17 @@ private:
 
     static void SetNav(UWidget* From, UWidget* Up, UWidget* Down, UWidget* Left, UWidget* Right);
     void WireShopNavigation();
+
+
+    /******************************/
+    /*            VFX             */
+    /******************************/
+private:
+    TArray<TArray<UItemWidget*>> SkillWidgetGrid;
+
+    void BuildSkillWidgetGrid();
+    void ApplySkillShimmer(int32 Category, int32 Tier);
+
 };
 
 

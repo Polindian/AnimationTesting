@@ -23,6 +23,7 @@ void UShopWidget::NativeConstruct()
     Super::NativeConstruct();
     LoadShopItems();
     InitBranchMaterials();
+    BuildSkillWidgetGrid();
 
     if (APawn* OwnerPawn = GetOwningPlayerPawn())
     {
@@ -187,6 +188,7 @@ void UShopWidget::DecrementStockForItem(const UPA_ShopItem* Item)
         }
     }
 }
+
 void UShopWidget::RestoreShopState()
 {
     if (!OwnerInventoryComponent) return;
@@ -243,6 +245,16 @@ void UShopWidget::RestoreShopState()
                     }
                 }
             }
+
+            // Shimmer on every owned tier, including the last one
+            for (int32 Tier = 0; Tier < Categories[Cat].Num(); ++Tier)
+            {
+                UItemWidget* SkillWidget = Categories[Cat][Tier];
+                if (SkillWidget && SkillWidget->GetShopItem() && OwnerInventoryComponent->HasPurchased(SkillWidget->GetShopItem()))
+                {
+                    ApplySkillShimmer(Cat, Tier);
+                }
+            }
         }
     }
 }
@@ -292,7 +304,11 @@ void UShopWidget::OnSkillPurchasedCallback(const UPA_ShopItem* Item)
 
     StartBranchFillAnim(CatIdx, TierIdx);
 
-    
+    int32 Cat = -1, Tier = -1;
+    if (FindSkillIndices(Item, Cat, Tier))
+    {
+        ApplySkillShimmer(Cat, Tier);
+    }
 }
 
 void UShopWidget::UpdateAbilityUpgradeStates()
@@ -307,8 +323,20 @@ void UShopWidget::UpdateAbilityUpgradeStates()
             continue;
 
         const bool bPurchased = OwnerInventoryComponent->HasPurchased(UpgradeWidget->GetShopItem());
+
         // No lock system for upgrades — always available, never locked.
         UpgradeWidget->SetSkillState(bPurchased, /*bLocked=*/ false);
+    }
+
+    if (!OwnerInventoryComponent) return;
+
+    for (UItemWidget* Widget : Upgrades)
+    {
+        if (Widget && Widget->GetShopItem())
+        {
+            const bool bOwned = OwnerInventoryComponent->HasPurchased(Widget->GetShopItem());
+            Widget->SetShimmerActive(bOwned, FLinearColor::White, true);
+        }
     }
 }
 
@@ -536,6 +564,27 @@ void UShopWidget::WireShopNavigation()
 
     // --- Continue ---
     SetNav(Continue, Nightflare, AbilityUpgradesHeader, CategoryHeader_Tank, CategoryHeader_Magician);
+}
+
+void UShopWidget::BuildSkillWidgetGrid()
+{
+    SkillWidgetGrid.Empty();
+    SkillWidgetGrid.Add({ Skill_Assassin1, Skill_Assassin2, Skill_Assassin3 });
+    SkillWidgetGrid.Add({ Skill_Gambler1,  Skill_Gambler2,  Skill_Gambler3 });
+    SkillWidgetGrid.Add({ Skill_Tank1,     Skill_Tank2,     Skill_Tank3 });
+    SkillWidgetGrid.Add({ Skill_Magician1, Skill_Magician2, Skill_Magician3 });
+}
+
+void UShopWidget::ApplySkillShimmer(int32 Category, int32 Tier)
+{
+    if (!SkillWidgetGrid.IsValidIndex(Category)) return;
+    if (!SkillWidgetGrid[Category].IsValidIndex(Tier)) return;
+    if (!CategoryColors.IsValidIndex(Category)) return;
+
+    if (UItemWidget* Widget = SkillWidgetGrid[Category][Tier])
+    {
+        Widget->SetShimmerActive(true, CategoryColors[Category], false);
+    }
 }
 
 void UShopWidget::HandleItemFocusChanged(UItemWidget* Item, bool bFocused)

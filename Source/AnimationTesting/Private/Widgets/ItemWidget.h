@@ -101,4 +101,36 @@ private:
     float FocusScale = 1.1f;
 
 
+   /******************************/
+   /*             VFX            */
+   /******************************/
+
+public:
+    // Shows the purchased shimmer in the given colour.
+    void SetShimmerActive(bool bActive, FLinearColor Colour = FLinearColor::White, bool bDiamond = false);
+
+    UFUNCTION(BlueprintImplementableEvent, Category = "Shop")
+    void PlayPurchaseSpin();
+
+private:
+    UPROPERTY(meta = (BindWidgetOptional))
+    class UImage* ShimmerImage;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Shimmer")
+    UMaterialInterface* ShimmerMaterialRing;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Shimmer")
+    UMaterialInterface* ShimmerMaterialDiamond;
+    UPROPERTY()
+    UMaterialInstanceDynamic* ShimmerMID;
+
+    bool bShimmerIsDiamond = false;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Shimmer")
+    float ShimmerScaleRing = 1.2f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Shimmer")
+    float ShimmerScaleDiamond = 1.1f;
+
+  
 };

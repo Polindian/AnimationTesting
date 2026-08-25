@@ -17,6 +17,11 @@ void UItemWidget::NativeConstruct()
     {
         LockIcon->SetVisibility(ESlateVisibility::Collapsed);
     }
+
+    if (ShimmerImage)
+    {
+        ShimmerImage->SetVisibility(ESlateVisibility::Collapsed);
+    }
 }
 
 void UItemWidget::SetIcon(UTexture2D* IconTexture)
@@ -191,4 +196,41 @@ FReply UItemWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent
         return FReply::Handled();
     }
     return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
+}
+
+
+void UItemWidget::SetShimmerActive(bool bActive, FLinearColor Colour, bool bDiamond)
+{
+    UE_LOG(LogTemp, Warning, TEXT("[Shimmer] %s active=%d image=%d ring=%d diamond=%d"),
+        *GetName(), bActive, ShimmerImage != nullptr,
+        ShimmerMaterialRing != nullptr, ShimmerMaterialDiamond != nullptr);
+    
+    if (!ShimmerImage) return;
+
+    if (!bActive)
+    {
+        ShimmerImage->SetVisibility(ESlateVisibility::Collapsed);
+        return;
+    }
+
+    if (!ShimmerMID || bShimmerIsDiamond != bDiamond)
+    {
+        UMaterialInterface* Source = bDiamond ? ShimmerMaterialDiamond : ShimmerMaterialRing;
+        if (!Source) return;
+
+        ShimmerMID = UMaterialInstanceDynamic::Create(Source, this);
+        bShimmerIsDiamond = bDiamond;
+
+        FSlateBrush Brush;
+        Brush.SetResourceObject(ShimmerMID);
+        Brush.DrawAs = ESlateBrushDrawType::Image;
+        ShimmerImage->SetBrush(Brush);          
+    }
+
+   
+    const float Scale = bDiamond ? ShimmerScaleDiamond : ShimmerScaleRing;
+    ShimmerImage->SetRenderScale(FVector2D(Scale, Scale));
+
+    ShimmerMID->SetVectorParameterValue(FName("GlowColour"), Colour);
+    ShimmerImage->SetVisibility(ESlateVisibility::HitTestInvisible);
 }
