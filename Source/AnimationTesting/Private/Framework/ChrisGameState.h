@@ -102,6 +102,12 @@ private:
 	// Returns null for AI, which has no PlayerState — so AI never accrues stats.
 	FPlayerMatchStats* FindOrAddStatsFor(AActor* Actor);
 
+	// The actual create-or-find, keyed on the PlayerState itself
+	FPlayerMatchStats* FindOrAddStatsForPlayerState(class APlayerState* PS);
+
+	// Guarantees one entry per real player, however passive they were
+	void SeedStatsForAllPlayers();
+
 	void SubmitMatchResultsToLeaderboard();
 
 
