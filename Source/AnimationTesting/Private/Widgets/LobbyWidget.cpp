@@ -26,6 +26,10 @@
 #include "Player/ChrisPlayerState.h"
 #include "Audio/ChrisAudioSubsystem.h"
 #include "Audio/ChrisGameplayTags.h"
+#include "Widgets/GeneralMenuWidget.h"
+#include "Framework/ChrisGameInstance.h"
+#include "Camera/PlayerCameraManager.h"
+#include "Misc/PackageName.h"
 
 
 void ULobbyWidget::NativeConstruct()
@@ -472,3 +476,132 @@ void ULobbyWidget::HeroEntryClicked(const UPA_CharacterDefinition* Definition, b
     ChrisPlayerState->Server_SetSelectedCharacterDefinition(Definition);
 }
 
+FReply ULobbyWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
+{
+    const FKey Key = InKeyEvent.GetKey();
+
+    // Same key as the in-match pause menu, plus Start on a gamepad. Key events
+    // bubble up from whichever slot or hero tile has focus, so this fires from
+    // either page of the switcher
+    if (Key == EKeys::P || Key == EKeys::Gamepad_Special_Right)
+    {
+        OpenLeaveConfirmation();
+        return FReply::Handled();
+    }
+
+    return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
+}
+
+void ULobbyWidget::OpenLeaveConfirmation()
+{
+    if (bIsLeaveMenuOpen || !GeneralMenuClass) { return; }
+
+    // Note it before the dialog takes focus, not after
+    CaptureFocusedSlot();
+
+    GeneralMenuWidget = CreateWidget<UGeneralMenuWidget>(GetOwningPlayer(), GeneralMenuClass);
+    if (!GeneralMenuWidget) { return; }
+
+    bIsLeaveMenuOpen = true;
+    GeneralMenuWidget->AddToViewport(200);
+
+    // OpenMenu clears the delegate and hands it back, so the bind comes after
+    GeneralMenuWidget->OpenMenu(EGeneralMenuType::YesNo,
+        FText::FromString(TEXT("Are you sure you want to leave the match?\nIt will count as a loss on your record.")))
+        .AddUObject(this, &ULobbyWidget::HandleLeaveMenuClosed);
+}
+
+void ULobbyWidget::HandleLeaveMenuClosed(bool bConfirmed)
+{
+    // The dialog removes itself on close either way
+    bIsLeaveMenuOpen = false;
+    GeneralMenuWidget = nullptr;
+
+    if (!bConfirmed)
+    {
+        RestoreLobbyFocus();
+        return;
+    }
+
+    // Mirrors AChrisPlayerController::HandleLeaveMatch so both routes land
+    // on the multiplayer page rather than the main menu root
+    if (UChrisGameInstance* GI = GetGameInstance<UChrisGameInstance>())
+    {
+        GI->bReturnToMultiplayerPage = true;
+    }
+
+    if (APlayerController* PC = GetOwningPlayer())
+    {
+        if (PC->PlayerCameraManager)
+        {
+            PC->PlayerCameraManager->StartCameraFade(0.f, 1.f, LeaveFadeDuration, FLinearColor::Black, false, true);
+        }
+    }
+
+    GetWorld()->GetTimerManager().SetTimer(LeaveTravelTimerHandle, this,
+        &ULobbyWidget::DoLeaveLobbyTravel, LeaveFadeDuration, false);
+}
+
+void ULobbyWidget::DoLeaveLobbyTravel()
+{
+    if (MainMenuLevel.IsNull()) { return; }
+
+    const FString LevelName = FPackageName::ObjectPathToPackageName(MainMenuLevel.ToString());
+
+    if (APlayerController* PC = GetOwningPlayer())
+    {
+        PC->ClientTravel(LevelName, ETravelType::TRAVEL_Absolute);
+    }
+}
+
+// The slot's inner button holds the actual focus, not the slot widget itself,
+// so a descendant check is needed as well as a direct one
+void ULobbyWidget::CaptureFocusedSlot()
+{
+    FocusedSlotIndexBeforeMenu = INDEX_NONE;
+
+    APlayerController* PC = GetOwningPlayer();
+    if (!PC) { return; }
+
+    for (int32 i = 0; i < TeamSelectionSlots.Num(); ++i)
+    {
+        UTeamSelectionWidget* InSlot = TeamSelectionSlots[i];
+        if (!InSlot) { continue; }
+
+        if (InSlot->HasUserFocus(PC) || InSlot->HasUserFocusedDescendants(PC))
+        {
+            FocusedSlotIndexBeforeMenu = i;
+            return;
+        }
+    }
+}
+
+// Without this a controller player is left with focus nowhere after backing out,
+// and the D-pad stops doing anything at all
+void ULobbyWidget::RestoreLobbyFocus()
+{
+    // Deferred: the dialog removes itself as it closes, and setting focus in the same frame gets overridden as Slate tears it down
+    GetWorld()->GetTimerManager().SetTimerForNextTick(
+        FTimerDelegate::CreateWeakLambda(this, [this]()
+            {
+                const bool bOnTeamPage = MainSwitcher && MainSwitcher->GetActiveWidget() == TeamSelectionRoot;
+
+                if (bOnTeamPage)
+                {
+                    // Fall back to the first slot if nothing was focused — better
+                    const int32 Index = TeamSelectionSlots.IsValidIndex(FocusedSlotIndexBeforeMenu)
+                        ? FocusedSlotIndexBeforeMenu : 0;
+
+                    if (TeamSelectionSlots.IsValidIndex(Index) && TeamSelectionSlots[Index])
+                    {
+                        TeamSelectionSlots[Index]->FocusSlot();
+                    }
+                }
+                else
+                {
+                    TryInitHeroSelectionFocus();
+                }
+
+                FocusedSlotIndexBeforeMenu = INDEX_NONE;
+            }));
+}

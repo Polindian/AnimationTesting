@@ -32,6 +32,9 @@ void UShopWidget::NativeConstruct()
         if (OwnerInventoryComponent)
         {
             OwnerInventoryComponent->OnSkillPurchased.AddUObject(this, &UShopWidget::OnSkillPurchasedCallback);
+            OwnerInventoryComponent->OnSkillPurchased.AddUObject(this, &UShopWidget::OnSkillPurchasedCallback);
+            OwnerInventoryComponent->OnPurchaseFailed.AddUObject(this, &UShopWidget::HandlePurchaseFailed);
+            OwnerInventoryComponent->OnConsumablePurchaseCountChanged.AddUObject(this, &UShopWidget::HandleConsumableCountChanged);
         }
     }
 
@@ -122,10 +125,17 @@ void UShopWidget::ShopItemLoadFinished()
 
 void UShopWidget::OnItemPurchaseRequested(const UPA_ShopItem* Item)
 {
-    if (bShopClosed) return;
-    if (!OwnerInventoryComponent || !Item) return;
-
     UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this);
+
+    // Closed during the fade-in and after the timer or Continue — the server
+    // would reject these anyway, so reject them here where we can say so
+    if (!bPurchasingOpen)
+    {
+        if (Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Reject); }
+        return;
+    }
+
+    if (!OwnerInventoryComponent || !Item) return;
 
     const bool bSuccess = OwnerInventoryComponent->TryPurchase(Item);
 
@@ -138,7 +148,9 @@ void UShopWidget::OnItemPurchaseRequested(const UPA_ShopItem* Item)
 
     if (Item->GetIsConsumable())
     {
-        DecrementStockForItem(Item);
+        // Stock is NOT touched here — HandleConsumableCountChanged owns the display
+        // and gets an absolute count from the server. On a listen server that
+        // arrives synchronously, so a decrement here would double up
         if (Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Shop_Unlock_Consumable); }
         return;
     }
@@ -155,6 +167,7 @@ void UShopWidget::OnItemPurchaseRequested(const UPA_ShopItem* Item)
     }
 }
 
+
 void UShopWidget::LoadShopItems()
 {
     UCAssetManager::Get().LoadShopItems(FStreamableDelegate::CreateUObject(this, &UShopWidget::ShopItemLoadFinished));
@@ -165,29 +178,7 @@ void UShopWidget::StartTimer(float Duration)
     EndTime = GetWorld()->GetTimeSeconds() + Duration;
 }
 
-void UShopWidget::DecrementStockForItem(const UPA_ShopItem* Item)
-{
-    TArray<TPair<UItemWidget*, UTextBlock*>> ConsumableSlots = {
-        {ElixirOfLife, ElixirOfLifeStockText},
-        {BloodSerum, BloodSerumStockText},
-        {WardensPhial, WardensPhialStockText},
-        {Quicksilver, QuicksilverStockText},
-        {Nightflare, NightflareStockText}
-    };
 
-    for (auto& Pair : ConsumableSlots)
-    {
-        if (Pair.Key && Pair.Key->GetShopItem() == Item)
-        {
-            Pair.Key->DecrementStock();
-            if (Pair.Value)
-            {
-                Pair.Value->SetText(FText::AsNumber(Pair.Key->GetStock()));
-            }
-            break;
-        }
-    }
-}
 
 void UShopWidget::RestoreShopState()
 {
@@ -201,12 +192,12 @@ void UShopWidget::RestoreShopState()
         {Nightflare, NightflareStockText}
     };
 
-    // Restore consumable stock based on how many the player already owns
+    // Restore consumable stock based on how many the player already bought
     for (auto& Pair : ConsumableSlots)
     {
         if (Pair.Key && Pair.Key->GetShopItem() && Pair.Key->GetShopItem()->GetIsConsumable())
         {
-            int32 Owned = OwnerInventoryComponent->GetConsumableCount(Pair.Key->GetShopItem());
+            int32 Owned = OwnerInventoryComponent->GetConsumablePurchaseCount(Pair.Key->GetShopItem());
             int32 MaxStock = Pair.Key->GetShopItem()->GetMaxStackCount();
             int32 Remaining = FMath::Max(0, MaxStock - Owned);
             Pair.Key->SetStock(Remaining);
@@ -655,7 +646,7 @@ void UShopWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 
         if (Remaining <= 0.f)
         {
-            bShopClosed = true;
+            bPurchasingOpen = false;
         }
     }
 
@@ -668,11 +659,63 @@ void UShopWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 
 void UShopWidget::OnContinueClicked()
 {
-    bShopClosed = true;
+    bPurchasingOpen = false;
     
     AChrisPlayerController* PC = Cast<AChrisPlayerController>(GetOwningPlayer());
     if (PC)
     {
         PC->Server_VoteContinue();
+    }
+}
+
+// The server refused after we'd already shown success — undo the optimistic UI
+void UShopWidget::HandlePurchaseFailed(const UPA_ShopItem* Item)
+{
+    if (!Item) return;
+
+    // Consumable stock needs no rollback now — it only ever moves on the
+    // server's count, which never went up for a refused purchase
+    if (!Item->GetIsConsumable())
+    {
+        // The component has already cleared its local PurchasedItems entry
+        UpdateSkillLockStates();
+        UpdateAbilityUpgradeStates();
+    }
+
+    if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+    {
+        Audio->Play2D(ChrisGameplayTags::Audio_UI_Reject);
+    }
+}
+
+
+
+// The server's purchase count is the truth — this overwrites whatever the
+// optimistic click-time guess left on screen, whichever way it was wrong
+void UShopWidget::HandleConsumableCountChanged(const UPA_ShopItem* Item, int32 NewCount)
+{
+    if (!Item) { return; }
+
+    const int32 Remaining = FMath::Max(0, Item->GetMaxStackCount() - NewCount);
+
+    TArray<TPair<UItemWidget*, UTextBlock*>> ConsumableSlots = {
+        {ElixirOfLife, ElixirOfLifeStockText},
+        {BloodSerum, BloodSerumStockText},
+        {WardensPhial, WardensPhialStockText},
+        {Quicksilver, QuicksilverStockText},
+        {Nightflare, NightflareStockText}
+    };
+
+    for (auto& Pair : ConsumableSlots)
+    {
+        if (Pair.Key && Pair.Key->GetShopItem() == Item)
+        {
+            Pair.Key->SetStock(Remaining);
+            if (Pair.Value)
+            {
+                Pair.Value->SetText(FText::AsNumber(Remaining));
+            }
+            break;
+        }
     }
 }

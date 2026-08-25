@@ -23,6 +23,9 @@ public:
 
     void PlayLeaveFade(float Duration);
 
+    // Called when something else (the pause menu) stole focus and gave it back
+    void FocusLeaveButton();
+
 protected:
     virtual void NativeOnInitialized() override;
 

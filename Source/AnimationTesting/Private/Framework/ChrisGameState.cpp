@@ -6,6 +6,7 @@
 #include "Network/ChrisNetStatics.h"
 #include "Framework/ChrisGameInstance.h"
 #include "Framework/CAssetManager.h"
+#include "Framework/ChrisGameMode.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/PlayerState.h"
 #include "GameFramework/Pawn.h"
@@ -315,8 +316,6 @@ void AChrisGameState::OnRep_PlayerSelectionArray()
 // for the player who dealt it).
 FPlayerMatchStats* AChrisGameState::FindOrAddStatsFor(AActor* Actor)
 {
-	if (!HasAuthority() || !Actor) return nullptr;
-
 	// A PlayerState is the only thing that survives respawns and round resets, so it's what identifies a player across the whole match
 	APlayerState* PS = nullptr;
 	if (APawn* Pawn = Cast<APawn>(Actor)) { PS = Pawn->GetPlayerState(); }
@@ -325,13 +324,18 @@ FPlayerMatchStats* AChrisGameState::FindOrAddStatsFor(AActor* Actor)
 	// No PlayerState means AI or a world actor — nothing to track
 	if (!PS) return nullptr;
 
-	// If we have already found an entry fo this player, hand back a pointer to it
+	return FindOrAddStatsForPlayerState(PS);
+}
+
+FPlayerMatchStats* AChrisGameState::FindOrAddStatsForPlayerState(APlayerState* PS)
+{
+	if (!PS) return nullptr;
+
+	// If we have already found an entry for this player, hand back a pointer to it
 	FPlayerMatchStats* Found = MatchStatsArray.FindByPredicate(
 		[PS](const FPlayerMatchStats& S) { return S.OwningPlayer == PS; });
 
 	if (Found) return Found;
-
-	// First time we've seen this player — create their entry now. Entries are created lazily rather than up front so late joiners are handled for free.
 
 	FPlayerMatchStats NewStats;
 	NewStats.OwningPlayer = PS;
@@ -342,25 +346,46 @@ FPlayerMatchStats* AChrisGameState::FindOrAddStatsFor(AActor* Actor)
 	{
 		NewStats.UniquePlayerId = PS->GetUniqueId()->ToString();
 	}
+
 	return &MatchStatsArray[MatchStatsArray.Add(NewStats)];
+}
+
+void AChrisGameState::SeedStatsForAllPlayers()
+{
+	if (!HasAuthority()) return;
+
+	for (APlayerState* PS : PlayerArray)
+	{
+		// Bots have no leaderboard identity, spectators didn't play
+		if (!PS || PS->IsABot() || PS->IsOnlyASpectator()) { continue; }
+
+		FindOrAddStatsForPlayerState(PS);
+	}
 }
 
 void AChrisGameState::SubmitMatchResultsToLeaderboard()
 {
 	if (!HasAuthority()) return;
 
+	// Practice is solo against AI — those results must never reach the leaderboard
+	const AChrisGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<AChrisGameMode>() : nullptr;
+	if (GM && GM->IsPracticeMode())
+	{
+		UE_LOG(LogTemp, Log, TEXT("[Leaderboard] Practice match — results not submitted."));
+		return;
+	}
+
 	for (const FPlayerMatchStats& S : MatchStatsArray)
 	{
 		if (!S.OwningPlayer) continue;
 
 		// The leaderboard needs: a stable player id and result - Wins/losses come from the game mode's round tally, so that gets passed in when this is wired up.
-		UE_LOG(LogTemp, Warning, TEXT("[Leaderboard] %s — K:%d D:%d KD:%.2f"),
-			*S.PlayerName, S.HeroKills, S.Deaths, S.GetKD());
+		UE_LOG(LogTemp, Warning, TEXT("[Leaderboard] %s — Id:%s K:%d D:%d KD:%.2f"),
+			*S.PlayerName, *S.UniquePlayerId, S.HeroKills, S.Deaths, S.GetKD());
 
 		// TODO: POST to the Flask coordinator, or write to EOS stats
 	}
 }
-
 void AChrisGameState::SetArenaAmbienceActive(bool bActive)
 {
 	if (!HasAuthority() || bArenaAmbienceActive == bActive) { return; }
@@ -436,6 +461,8 @@ void AChrisGameState::AddDamageDealt(AActor* Dealer, float Amount)
 void AChrisGameState::FinalizeMatchStats()
 {
 	if (!HasAuthority()) return;
+
+	SeedStatsForAllPlayers();
 
 	// --- Snapshot XP/level from each player's pawn ---
 	for (FPlayerMatchStats& S : MatchStatsArray)

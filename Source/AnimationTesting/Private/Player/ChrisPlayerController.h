@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -70,6 +70,10 @@ public:
     // Called to fade the camera to black over Duration seconds.
     UFUNCTION(Client, Reliable)
     void Client_OnFadeToBlack(float Duration);
+
+    // Sent when the server actually enters the shop phase, not when the UI appears
+    UFUNCTION(Client, Reliable)
+    void Client_OnShopPurchasingOpen();
 
     // Called at transition midpoint (screen is black).
     // Swaps to shop UI, then fades camera back in.
@@ -215,7 +219,7 @@ private:
     // --------- DEATH & BANNER ---------
 
     private:
-    // Delay between dying and the banner appearing � lets the death animation
+    // Delay between dying and the banner appearing — lets the death animation
     // and ragdoll read before the screen gets covered
     UPROPERTY(EditDefaultsOnly, Category = "Banner")
     float DeathBannerDelay = 1.f;

@@ -129,4 +129,37 @@ private:
 	void PreloadHeroAssets(const TArray<UPA_CharacterDefinition*>& Definitions);
 
 	void HeroEntryClicked(const UPA_CharacterDefinition* Definition, bool bPlaySound = true);
+
+	// Lobby Leave Match
+
+	virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
+
+	// Leave confirmation — reuses the same dialog as the in-match pause menu
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<class UGeneralMenuWidget> GeneralMenuClass;
+
+	UPROPERTY()
+	class UGeneralMenuWidget* GeneralMenuWidget;
+
+	// Menu map to return to when leaving the lobby
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSoftObjectPtr<UWorld> MainMenuLevel;
+
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	float LeaveFadeDuration = 1.f;
+
+	// Stops P stacking a second dialog while one is already up
+	bool bIsLeaveMenuOpen = false;
+
+	FTimerHandle LeaveTravelTimerHandle;
+
+	void OpenLeaveConfirmation();
+	void HandleLeaveMenuClosed(bool bConfirmed);
+	void DoLeaveLobbyTravel();
+
+	// Which team slot had focus when the dialog opened, so No can hand it back
+	int32 FocusedSlotIndexBeforeMenu = INDEX_NONE;
+
+	void CaptureFocusedSlot();
+	void RestoreLobbyFocus();
 };

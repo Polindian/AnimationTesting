@@ -16,6 +16,9 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FOnItemStackCountChangeDelegate, const FInv
 DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnItemAbilityCommitted, const FInventoryItemHandle&, float /*CooldownDuration*/, float /*TimeRemaining*/);
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnSkillPurchasedDelegate, const UPA_ShopItem* /*Item*/);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPurchaseFailedDelegate, const UPA_ShopItem* /*Item*/);
+
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnConsumablePurchaseCountChanged, const UPA_ShopItem*, int32 /*NewCount*/);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class UInventoryComponent : public UActorComponent
@@ -31,6 +34,9 @@ public:
 	FOnItemAbilityCommitted OnItemAbilityCommitted;
 
 	FOnSkillPurchasedDelegate OnSkillPurchased;
+	FOnPurchaseFailedDelegate OnPurchaseFailed;
+
+	FOnConsumablePurchaseCountChanged OnConsumablePurchaseCountChanged;
 
 	void TryActivateItem(const FInventoryItemHandle& ItemHandle);
 	bool TryPurchase(const UPA_ShopItem* ItemToPurchase);
@@ -47,6 +53,12 @@ public:
 
 	void TryActivateItemInSlot(int SlotNumber);
 
+	// How many of this consumable the player has bought this match — a cap, not a live count, so drinking one does not free the purchase back up
+	int32 GetConsumablePurchaseCount(const UPA_ShopItem* Item) const;
+
+	UFUNCTION(Client, Reliable)
+	void Client_ConsumablePurchaseCountChanged(const UPA_ShopItem* Item, int32 NewCount);
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -61,22 +73,23 @@ public:
 	// Check if a non-consumable item was already bought
 	bool HasPurchased(const UPA_ShopItem* Item) const { return PurchasedItems.Contains(Item); }
 
-	// Get how many of a consumable the player currently holds
-	int32 GetConsumableCount(const UPA_ShopItem* Item) const;
 
 private:
 	// Tracks purchased skills/ability upgrades (one-time buys)
 	UPROPERTY()
 	TArray<const UPA_ShopItem*> PurchasedItems;
 
-	// Tracks consumables in inventory (key = item, value = count)
+	// Purchases per consumable this match (key = item, value = total bought)
 	UPROPERTY()
-	TMap<const UPA_ShopItem*, int32> ConsumableInventory;
+	TMap<const UPA_ShopItem*, int32> ConsumablesPurchasedThisMatch;
 
+
+	void AddConsumablePurchase(const UPA_ShopItem* Item);
+
+
+	
 	UPROPERTY()
 	TMap<FInventoryItemHandle, UInventoryItem*> InventoryMap;
-
-	void AddConsumableToInventory(const UPA_ShopItem* Item);
 
 	void AbilityCommitted(class UGameplayAbility* CommittedAbility);
 	
@@ -85,7 +98,10 @@ private:
 	void Server_Purchase(const UPA_ShopItem* ItemToPurchase);
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_ActivateItem(FInventoryItemHandle ItemHandle);
-	void GrantItem(const UPA_ShopItem* NewItem);
+
+	// Returns false if the item couldn't actually be placed — caller must not charge
+	bool GrantItem(const UPA_ShopItem* NewItem);
+
 	void ConsumeItem(UInventoryItem* Item);
 	void RemoveItem(UInventoryItem* Item);
 
@@ -102,4 +118,7 @@ private:
 
 	UFUNCTION(Client, Reliable)
 	void Client_SkillPurchased(const UPA_ShopItem* Item);
+
+	UFUNCTION(Client, Reliable)
+	void Client_PurchaseFailed(const UPA_ShopItem* Item);
 };
