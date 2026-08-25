@@ -22,6 +22,7 @@ class UShopWidget : public UUserWidget
 public:
     void StartTimer(float Duration);
     void FocusDefaultItem();
+    void SetPurchasingOpen(bool bOpen) { bPurchasingOpen = bOpen; }
 
 protected:
     virtual void NativeConstruct() override;
@@ -29,13 +30,16 @@ protected:
 
 private:
 
-    bool bShopClosed = false;
+    bool bPurchasingOpen = false;
     bool bSuppressFocusSound = false;
 
     UFUNCTION()
     void OnContinueClicked();
 
     void OnItemPurchaseRequested(const UPA_ShopItem* Item);
+
+    void HandlePurchaseFailed(const UPA_ShopItem* Item);
+    void HandleConsumableCountChanged(const UPA_ShopItem* Item, int32 NewCount);
 
     float EndTime = 0.f;
 
@@ -109,7 +113,6 @@ private:
     void ShopItemLoadFinished();
     void BindWidgetPurchase(UItemWidget* Widget);
 
-    void DecrementStockForItem(const UPA_ShopItem* Item);
     void RestoreShopState();
 
     UPROPERTY()

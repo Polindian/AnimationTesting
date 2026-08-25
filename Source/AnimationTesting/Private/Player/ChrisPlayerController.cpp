@@ -131,8 +131,8 @@ void AChrisPlayerController::ToggleGameplayMenu()
 		bIsGameplayMenuOpen = false;
 
 		// Restore state based on which phase we're in
-		bool bInShop = ShopWidget && ShopWidget->GetVisibility() != ESlateVisibility::Collapsed;
-		
+		const bool bInShop = ShopWidget && ShopWidget->GetVisibility() != ESlateVisibility::Collapsed;
+		const bool bOnMatchStats = MatchStatsWidget && MatchStatsWidget->IsInViewport();
 
 		if (bIsRoundActive)
 		{
@@ -151,6 +151,20 @@ void AChrisPlayerController::ToggleGameplayMenu()
 			FInputModeGameAndUI GameAndUI;
 			GameAndUI.SetHideCursorDuringCapture(false);
 			SetInputMode(GameAndUI);
+
+			// The menu took focus on the way in, so hand it back to the default
+			// item — otherwise a controller player returns to a dead shop
+			ShopWidget->FocusDefaultItem();
+		}
+		else if (bOnMatchStats)
+		{
+			// Same problem on the post-match screen, and it needs UI input too
+			SetShowMouseCursor(true);
+			FInputModeGameAndUI GameAndUI;
+			GameAndUI.SetHideCursorDuringCapture(false);
+			SetInputMode(GameAndUI);
+
+			MatchStatsWidget->FocusLeaveButton();
 		}
 		else
 		{
@@ -489,6 +503,14 @@ void AChrisPlayerController::Client_OnFadeToBlack_Implementation(float Duration)
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("[Client] Fading to black over %.1fs"), Duration);
+}
+
+void AChrisPlayerController::Client_OnShopPurchasingOpen_Implementation()
+{
+	if (ShopWidget)
+	{
+		ShopWidget->SetPurchasingOpen(true);
+	}
 }
 
 // SHOP PHASE START RPC

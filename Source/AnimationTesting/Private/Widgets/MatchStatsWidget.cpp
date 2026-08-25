@@ -30,6 +30,15 @@ void UMatchStatsWidget::PlayLeaveFade(float Duration)
 			}), 0.016f, true);
 }
 
+void UMatchStatsWidget::FocusLeaveButton()
+{
+	if (!LeaveMatchButton || !LeaveMatchButton->GetIsEnabled()) { return; }
+
+	// Deferred: focusing in the same frame as a visibility or enable change gets overridden
+	GetWorld()->GetTimerManager().SetTimerForNextTick(
+		FTimerDelegate::CreateWeakLambda(this, [this]() { LeaveMatchButton->FocusButton(); }));
+}
+
 void UMatchStatsWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
@@ -73,12 +82,9 @@ void UMatchStatsWidget::ShowStats(APlayerState* LocalPlayerState)
 void UMatchStatsWidget::HandleFadeInFinished()
 {
 	LeaveMatchButton->SetIsEnabled(true);
+	FocusLeaveButton();
 
 	UE_LOG(LogTemp, Warning, TEXT("[MatchStats] Fade finished — enabling button"));
-
-	// Deferred: enabling and focusing in the same frame can be overridden
-	GetWorld()->GetTimerManager().SetTimerForNextTick(
-		FTimerDelegate::CreateWeakLambda(this, [this]() { LeaveMatchButton->FocusButton(); }));
 }
 
 void UMatchStatsWidget::HandleLeaveMatchClicked()

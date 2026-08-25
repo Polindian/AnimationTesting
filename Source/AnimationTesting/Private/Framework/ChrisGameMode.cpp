@@ -794,6 +794,13 @@ void AChrisGameMode::StartShopPhase()
 		GS->SetArenaAmbienceActive(true);
 	}
 
+	// The shop UI has been on screen since the transition midpoint, but the server
+	// rejected purchases until this line — tell clients it's genuinely open now
+	ForEachPlayerController([](AChrisPlayerController* PC)
+		{
+			PC->Client_OnShopPurchasingOpen();
+		});
+
 	UE_LOG(LogTemp, Log, TEXT("[MatchFlow] Shop phase started. Duration: %.0fs"), ShopDuration);
 
 	// After ShopDuration, auto-transition even if nobody voted.

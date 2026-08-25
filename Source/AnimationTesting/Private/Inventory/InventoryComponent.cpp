@@ -40,9 +40,10 @@ bool UInventoryComponent::TryPurchase(const UPA_ShopItem* ItemToPurchase)
 		return false;
 	}
 
-	if (ItemToPurchase->GetIsConsumable() && GetConsumableCount(ItemToPurchase) >= ItemToPurchase->GetMaxStackCount())
+	if (ItemToPurchase->GetIsConsumable()
+		&& GetConsumablePurchaseCount(ItemToPurchase) >= ItemToPurchase->GetMaxStackCount())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Max stack reached for: %s"), *ItemToPurchase->GetName());
+		UE_LOG(LogTemp, Warning, TEXT("Match purchase limit reached for: %s"), *ItemToPurchase->GetName());
 		return false;
 	}
 
@@ -141,6 +142,32 @@ void UInventoryComponent::TryActivateItemInSlot(int SlotNumber)
 	}
 }
 
+int32 UInventoryComponent::GetConsumablePurchaseCount(const UPA_ShopItem* Item) const
+{
+	const int32* Count = ConsumablesPurchasedThisMatch.Find(Item);
+	return Count ? *Count : 0;
+}
+
+void UInventoryComponent::AddConsumablePurchase(const UPA_ShopItem* Item)
+{
+	if (!Item) { return; }
+
+	int32& Count = ConsumablesPurchasedThisMatch.FindOrAdd(Item);
+	Count = FMath::Min(Count + 1, Item->GetMaxStackCount());
+
+	OnConsumablePurchaseCountChanged.Broadcast(Item, Count);
+	Client_ConsumablePurchaseCountChanged(Item, Count);
+}
+
+void UInventoryComponent::Client_ConsumablePurchaseCountChanged_Implementation(const UPA_ShopItem* Item, int32 NewCount)
+{
+	// Listen server already broadcast it directly
+	if (GetOwner()->HasAuthority() || !Item) { return; }
+
+	ConsumablesPurchasedThisMatch.Add(Item, NewCount);
+	OnConsumablePurchaseCountChanged.Broadcast(Item, NewCount);
+}
+
 // Called when the game starts
 void UInventoryComponent::BeginPlay()
 {
@@ -165,58 +192,73 @@ void UInventoryComponent::Server_Purchase_Implementation(const UPA_ShopItem* Ite
 	// Server-side: block purchases if shop phase has ended
 	AChrisGameMode* GM = Cast<AChrisGameMode>(GetWorld()->GetAuthGameMode());
 	if (!GM || !GM->IsInShopPhase())
+	{
+		Client_PurchaseFailed(ItemToPurchase);
 		return;
+	}
 
 	if (GetSoul() < ItemToPurchase->GetPrice())
 	{
+		Client_PurchaseFailed(ItemToPurchase);
 		return;
 	}
 
-	if(IsFullFor(ItemToPurchase))
+	if (IsFullFor(ItemToPurchase))
 	{
+		Client_PurchaseFailed(ItemToPurchase);
 		return;
 	}
 
-	OwnerAbilitySystemComponent->ApplyModToAttribute(UCHeroAttributeSet::GetSoulAttribute(), EGameplayModOp::Additive, -ItemToPurchase->GetPrice());
-	UE_LOG(LogTemp, Warning, TEXT("Bought Item: %s"), *(ItemToPurchase->GetName()));
+	// The server had no stack limit at all — only the client did, and its count
+	// was always zero, so the cap was never actually enforced anywhere
+	if (ItemToPurchase->GetIsConsumable()
+		&& GetConsumablePurchaseCount(ItemToPurchase) >= ItemToPurchase->GetMaxStackCount())
+	{
+		Client_PurchaseFailed(ItemToPurchase);
+		return;
+	}
 
 	if (ItemToPurchase->GetIsConsumable())
 	{
-		// Consumable: add to inventory widget and track stack count
-		GrantItem(ItemToPurchase);
-		AddConsumableToInventory(ItemToPurchase);
+		// Grant first, charge second — the old order cost the player their souls
+		// whenever the grant quietly failed
+		if (!GrantItem(ItemToPurchase))
+		{
+			Client_PurchaseFailed(ItemToPurchase);
+			return;
+		}
+
+		OwnerAbilitySystemComponent->ApplyModToAttribute(
+			UCHeroAttributeSet::GetSoulAttribute(), EGameplayModOp::Additive, -ItemToPurchase->GetPrice());
+
+		AddConsumablePurchase(ItemToPurchase);
+		return;
 	}
-	else
+
+	// Skill or Ability Upgrade: applied permanently, never enters the inventory grid
+	OwnerAbilitySystemComponent->ApplyModToAttribute(
+		UCHeroAttributeSet::GetSoulAttribute(), EGameplayModOp::Additive, -ItemToPurchase->GetPrice());
+
+	if (ItemToPurchase->GetEquippedEffect())
 	{
-		// Skill or Ability Upgrade: apply effect permanently, mark as purchased, not added to inventory widget
-		if (ItemToPurchase->GetEquippedEffect())
-		{
-			FGameplayEffectContextHandle Context = OwnerAbilitySystemComponent->MakeEffectContext();
-			FGameplayEffectSpecHandle Spec = OwnerAbilitySystemComponent->MakeOutgoingSpec(ItemToPurchase->GetEquippedEffect(), 1, Context);
-			OwnerAbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
-		}
-		if (ItemToPurchase->GetGrantedAbility())
-		{
-			OwnerAbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(ItemToPurchase->GetGrantedAbility(), 1));
-		}
-		PurchasedItems.Add(ItemToPurchase);
-		Client_SkillPurchased(ItemToPurchase);  
-		OnSkillPurchased.Broadcast(ItemToPurchase);
+		FGameplayEffectContextHandle Context = OwnerAbilitySystemComponent->MakeEffectContext();
+		FGameplayEffectSpecHandle Spec = OwnerAbilitySystemComponent->MakeOutgoingSpec(ItemToPurchase->GetEquippedEffect(), 1, Context);
+		OwnerAbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
 	}
+	if (ItemToPurchase->GetGrantedAbility())
+	{
+		OwnerAbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(ItemToPurchase->GetGrantedAbility(), 1));
+	}
+
+	PurchasedItems.Add(ItemToPurchase);
+	Client_SkillPurchased(ItemToPurchase);
+	OnSkillPurchased.Broadcast(ItemToPurchase);
 }
 
 bool UInventoryComponent::Server_Purchase_Validate(const UPA_ShopItem* ItemToPurchase)
 {
 	return true;
 }
-
-void UInventoryComponent::AddConsumableToInventory(const UPA_ShopItem* Item)
-{
-	int32& Count = ConsumableInventory.FindOrAdd(Item);
-	Count = FMath::Min(Count + 1, Item->GetMaxStackCount());
-	UE_LOG(LogTemp, Warning, TEXT("Added consumable: %s (now %d)"), *Item->GetName(), Count);
-}
-
 
 void UInventoryComponent::AbilityCommitted(class UGameplayAbility* CommittedAbility)
 {
@@ -264,32 +306,41 @@ bool UInventoryComponent::Server_ActivateItem_Validate(FInventoryItemHandle Item
 	return true;
 }
 
-void UInventoryComponent::GrantItem(const UPA_ShopItem* NewItem)
+bool UInventoryComponent::GrantItem(const UPA_ShopItem* NewItem)
 {
-	if(!GetOwner()->HasAuthority())
+	if (!GetOwner()->HasAuthority() || !NewItem)
 	{
-		return;
+		return false;
 	}
 
-	if(UInventoryItem* StackItem = GetAvailableStackForItem(NewItem))
+	if (UInventoryItem* StackItem = GetAvailableStackForItem(NewItem))
 	{
-		StackItem->AddStackCount();
+		// This return value was being ignored: a full stack silently did nothing
+		// while the caller had already deducted the price
+		if (!StackItem->AddStackCount())
+		{
+			return false;
+		}
+
 		OnItemStackCountChanged.Broadcast(StackItem->GetHandle(), StackItem->GetStackCount());
 		Client_ItemStackCountChanged(StackItem->GetHandle(), StackItem->GetStackCount());
+		return true;
 	}
-	else
+
+	// Nothing to stack onto, so it needs a slot of its own
+	if (AreAllSlotsOcuppied())
 	{
-		UInventoryItem* InventoryItem = NewObject <UInventoryItem>();
-		FInventoryItemHandle NewHandle = FInventoryItemHandle::CreateHandle();
-		InventoryItem->InitItem(NewHandle, NewItem, OwnerAbilitySystemComponent);
-		InventoryMap.Add(NewHandle, InventoryItem);
-		OnItemAdded.Broadcast(InventoryItem);
-		UE_LOG(LogTemp, Warning, TEXT("Server Added Item: %s, with Id: %d"), *(InventoryItem->GetShopItem()->GetName()), NewHandle.GetHandleId());
-
-		Client_ItemAdded(NewHandle, NewItem);
+		return false;
 	}
 
-	
+	UInventoryItem* InventoryItem = NewObject<UInventoryItem>();
+	FInventoryItemHandle NewHandle = FInventoryItemHandle::CreateHandle();
+	InventoryItem->InitItem(NewHandle, NewItem, OwnerAbilitySystemComponent);
+	InventoryMap.Add(NewHandle, InventoryItem);
+	OnItemAdded.Broadcast(InventoryItem);
+
+	Client_ItemAdded(NewHandle, NewItem);
+	return true;
 }
 
 void UInventoryComponent::ConsumeItem(UInventoryItem* Item)
@@ -327,6 +378,18 @@ void UInventoryComponent::RemoveItem(UInventoryItem* Item)
 	OnItemRemoved.Broadcast(Item->GetHandle());
 	InventoryMap.Remove(Item->GetHandle());
 	Client_ItemRemoved(Item->GetHandle());
+}
+
+void UInventoryComponent::Client_PurchaseFailed_Implementation(const UPA_ShopItem* Item)
+{
+	if (!Item) { return; }
+
+	if (!Item->GetIsConsumable())
+	{
+		PurchasedItems.Remove(Item);
+	}
+
+	OnPurchaseFailed.Broadcast(Item);
 }
 
 void UInventoryComponent::Client_SkillPurchased_Implementation(const UPA_ShopItem* Item)
@@ -386,11 +449,5 @@ void UInventoryComponent::Client_ItemAdded_Implementation(FInventoryItemHandle A
 	InventoryMap.Add(AssignedHandle, InventoryItem);
 	OnItemAdded.Broadcast(InventoryItem);
 	UE_LOG(LogTemp, Warning, TEXT("Client Added Item: %s, with Id: %d"), *(InventoryItem->GetShopItem()->GetName()), AssignedHandle.GetHandleId());
-}
-
-int32 UInventoryComponent::GetConsumableCount(const UPA_ShopItem* Item) const
-{
-	const int32* Count = ConsumableInventory.Find(Item);
-	return Count ? *Count : 0;
 }
 

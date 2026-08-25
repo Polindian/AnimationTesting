@@ -71,6 +71,10 @@ public:
     UFUNCTION(Client, Reliable)
     void Client_OnFadeToBlack(float Duration);
 
+    // Sent when the server actually enters the shop phase, not when the UI appears
+    UFUNCTION(Client, Reliable)
+    void Client_OnShopPurchasingOpen();
+
     // Called at transition midpoint (screen is black).
     // Swaps to shop UI, then fades camera back in.
     UFUNCTION(Client, Reliable)
