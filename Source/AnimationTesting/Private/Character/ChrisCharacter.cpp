@@ -9,6 +9,7 @@
 #include "GAS/ChrisAbilitySystemComponent.h"
 #include "GAS/ChrisAttributeSet.h"
 #include "GAS/ChrisAbilitySystemStatics.h"
+#include "Player/ChrisPlayerController.h"
 #include "Widgets/OverheadStatsGauge.h"
 #include "GameFramework/CharacterMovementComponent.h" 
 #include "Net/UnrealNetwork.h"
@@ -165,6 +166,13 @@ void AChrisCharacter::DeathTagUpdated(const FGameplayTag Tag, int32 NewCount)
 			{
 				Audio->Play2D(ChrisGameplayTags::Audio_Player_Death);
 			}
+
+			// Inside the local gate on purpose — the banner is yours alone, and
+			// on a dedicated server this whole branch is skipped everywhere else
+			if (AChrisPlayerController* PC = Cast<AChrisPlayerController>(GetController()))
+			{
+				PC->ShowDeathBanner();
+			}
 		}
 
 		StartDeathSequence();
@@ -176,6 +184,16 @@ void AChrisCharacter::DeathTagUpdated(const FGameplayTag Tag, int32 NewCount)
 	}
 	else
 	{
+		// Covers both a normal respawn and ForceResetFromDeath at round end,
+		// since that removes the death tag and comes back through here
+		if (IsLocallyControlledByPlayer())
+		{
+			if (AChrisPlayerController* PC = Cast<AChrisPlayerController>(GetController()))
+			{
+				PC->CancelDeathBanner();
+			}
+		}
+
 		Respawn();
 	}
 }

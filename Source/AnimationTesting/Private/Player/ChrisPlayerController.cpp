@@ -273,6 +273,35 @@ void AChrisPlayerController::ShowLoadingScreen()
 	SetIgnoreLookInput(true);
 }
 
+void AChrisPlayerController::ShowDeathBanner()
+{
+	// Local-only announcement — nobody else needs to know you died on screen
+	if (!IsLocalController() || !BannerWidget)
+	{
+		return;
+	}
+
+	GetWorldTimerManager().SetTimer(DeathBannerTimerHandle,
+		FTimerDelegate::CreateWeakLambda(this, [this]()
+			{
+				if (BannerWidget)
+				{
+					// Round/team args are ignored for PlayerDeath
+					BannerWidget->ShowBanner(EBannerType::PlayerDeath, 0, 255, 255);
+				}
+			}),
+		DeathBannerDelay, false);
+}
+
+void AChrisPlayerController::CancelDeathBanner()
+{
+	GetWorldTimerManager().ClearTimer(DeathBannerTimerHandle);
+
+	if (BannerWidget)
+	{
+		BannerWidget->ClearDeathBanner();
+	}
+}
 
 void AChrisPlayerController::Client_ShowMatchStats_Implementation()
 {

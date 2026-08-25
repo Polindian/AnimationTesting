@@ -1,4 +1,5 @@
 ﻿// Christopher Naglik All Rights Reserved
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -15,7 +16,28 @@ enum class EBannerType : uint8
 	RoundNumber,   // "ROUND 1/2/3" — start of every round
 	RoundResult,   // "ROUND WON" / "ROUND LOST"
 	MatchResult,   // "MATCH WON" / "MATCH LOST"
-	TeamTriumph    // "RED TEAM TRIUMPH" / "BLUE TEAM TRIUMPH"
+	TeamTriumph,   // "RED TEAM TRIUMPH" / "BLUE TEAM TRIUMPH"
+	PlayerDeath    // "YOU DIED" — local only, silent, lowest priority
+};
+
+// A banner waiting its turn. Stores the type as well as the art because the
+// type still decides two things at play time: whether it stings, and whether
+// match flow is allowed to shove it out of the way.
+USTRUCT()
+struct FBannerQueueEntry
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TObjectPtr<UTexture2D> Texture = nullptr;
+
+	UPROPERTY()
+	EBannerType Type = EBannerType::RoundNumber;
+
+	FBannerQueueEntry() {}
+	FBannerQueueEntry(UTexture2D* InTexture, EBannerType InType)
+		: Texture(InTexture), Type(InType) {
+	}
 };
 
 UCLASS()
@@ -27,6 +49,10 @@ public:
 	// Queues a banner. Calling twice back-to-back (match result then triumph)
 	// plays them in order rather than interrupting.
 	void ShowBanner(EBannerType Type, int32 RoundNumber, uint8 WinningTeamId, uint8 LocalTeamId);
+
+	// Drops a death banner whether it's queued or on screen. Call on respawn so
+	// a death banner can't outlive the death it belongs to.
+	void ClearDeathBanner();
 
 protected:
 	virtual void NativeOnInitialized() override;
@@ -71,19 +97,38 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Banner")
 	UTexture2D* BlueTeamTriumphTexture;
 
+	// "YOU DIED" — same scroll frame, no team variants
+	UPROPERTY(EditDefaultsOnly, Category = "Banner")
+	UTexture2D* YouDiedTexture;
+
 	// How long the banner sits fully open before closing
 	UPROPERTY(EditDefaultsOnly, Category = "Banner")
 	float HoldDuration = 3.f;
 
+	// YOU DIED sits longer — there's nothing else on screen worth reading
+	// while you're dead, and it isn't holding match flow up
+	UPROPERTY(EditDefaultsOnly, Category = "Banner")
+	float DeathHoldDuration = 5.f;
+
 private:
-	// Textures waiting to be shown, in order
-	TArray<UTexture2D*> BannerQueue;
+	// Banners waiting to be shown, in order
+	TArray<FBannerQueueEntry> BannerQueue;
 	bool bIsPlaying = false;
+
+	// What's on screen right now — only meaningful while bIsPlaying
+	EBannerType CurrentType = EBannerType::RoundNumber;
+
+	// Set when a banner is being cut short. HandleOpenFinished reads it and
+	// closes straight away instead of starting the hold timer, which covers
+	// the case where we cut it short while Anim_Open is still running.
+	bool bSkipHold = false;
 
 	FTimerHandle HoldTimerHandle;
 
 	UTexture2D* ResolveTexture(EBannerType Type, int32 RoundNumber, uint8 WinningTeamId, uint8 LocalTeamId) const;
 	void PlayNextInQueue();
+	void CutShortCurrentBanner();
+	float GetHoldDurationForCurrentBanner() const;
 
 	UFUNCTION() void HandleOpenFinished();
 	UFUNCTION() void HandleCloseFinished();
