@@ -298,44 +298,42 @@ void UShopWidget::OnSkillPurchasedCallback(const UPA_ShopItem* Item)
     {
         // Not a skill (consumable) — just refresh states normally.
         UpdateSkillLockStates();
-        UpdateAbilityUpgradeStates();
+        UpdateAbilityUpgradeStates(Item);
         return;
     }
 
     StartBranchFillAnim(CatIdx, TierIdx);
-
-    int32 Cat = -1, Tier = -1;
-    if (FindSkillIndices(Item, Cat, Tier))
-    {
-        ApplySkillShimmer(Cat, Tier);
-    }
 }
 
-void UShopWidget::UpdateAbilityUpgradeStates()
+void UShopWidget::UpdateAbilityUpgradeStates(const UPA_ShopItem* JustPurchasedItem)
 {
-    TArray<UItemWidget*> Upgrades = {
-       Bonebreaker, Shockwave, Scorched, Deadeye
-    };
+    if (!OwnerInventoryComponent) return;
+
+    TArray<UItemWidget*> Upgrades = { Bonebreaker, Shockwave, Scorched, Deadeye };
 
     for (UItemWidget* UpgradeWidget : Upgrades)
     {
-        if (!UpgradeWidget || !UpgradeWidget->GetShopItem())
-            continue;
+        if (!UpgradeWidget || !UpgradeWidget->GetShopItem()) continue;
 
         const bool bPurchased = OwnerInventoryComponent->HasPurchased(UpgradeWidget->GetShopItem());
-
-        // No lock system for upgrades — always available, never locked.
         UpgradeWidget->SetSkillState(bPurchased, /*bLocked=*/ false);
-    }
 
-    if (!OwnerInventoryComponent) return;
-
-    for (UItemWidget* Widget : Upgrades)
-    {
-        if (Widget && Widget->GetShopItem())
+        if (!bPurchased)
         {
-            const bool bOwned = OwnerInventoryComponent->HasPurchased(Widget->GetShopItem());
-            Widget->SetShimmerActive(bOwned, FLinearColor::White, true);
+            UpgradeWidget->SetShimmerActive(false);
+            continue;
+        }
+
+        UpgradeWidget->PrepareShimmer(FLinearColor::White, true);
+
+        // Only the item just bought spins; everything else reveals immediately
+        if (JustPurchasedItem && UpgradeWidget->GetShopItem() == JustPurchasedItem)
+        {
+            UpgradeWidget->PlayPurchaseSpin();
+        }
+        else
+        {
+            UpgradeWidget->RevealShimmer();
         }
     }
 }
@@ -444,6 +442,8 @@ void UShopWidget::OnBranchFillComplete(const FBranchFillAnim& Anim)
 {
     // Now update all skill lock states 
     UpdateSkillLockStates();
+
+    ApplySkillShimmer(Anim.CategoryIndex, Anim.TierIndex);
 }
 
 bool UShopWidget::FindSkillIndices(const UPA_ShopItem* Item, int32& OutCategory, int32& OutTier) const

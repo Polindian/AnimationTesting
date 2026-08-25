@@ -234,3 +234,16 @@ void UItemWidget::SetShimmerActive(bool bActive, FLinearColor Colour, bool bDiam
     ShimmerMID->SetVectorParameterValue(FName("GlowColour"), Colour);
     ShimmerImage->SetVisibility(ESlateVisibility::HitTestInvisible);
 }
+
+void UItemWidget::PrepareShimmer(FLinearColor Colour, bool bDiamond)
+{
+    PendingShimmerColour = Colour;
+    bPendingShimmerDiamond = bDiamond;
+    bHasPendingShimmer = true;
+}
+
+void UItemWidget::RevealShimmer()
+{
+    if (!bHasPendingShimmer) return;
+    SetShimmerActive(true, PendingShimmerColour, bPendingShimmerDiamond);
+}

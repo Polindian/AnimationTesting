@@ -118,7 +118,7 @@ private:
     void UpdateSkillLockStates();
     void OnSkillPurchasedCallback(const UPA_ShopItem* Item);
 
-    void UpdateAbilityUpgradeStates();
+    void UpdateAbilityUpgradeStates(const UPA_ShopItem* JustPurchasedItem = nullptr);
 
     // ── Category Tooltips ──────────────────────────────────────────
 
