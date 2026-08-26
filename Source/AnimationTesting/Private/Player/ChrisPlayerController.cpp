@@ -22,6 +22,9 @@
 #include "GameFramework/PlayerState.h"
 #include "Animation/AnimInstance.h"
 #include "Widgets/LoadingScreenWidget.h"
+#include "EngineUtils.h"
+#include "Weapon/SwordEquipComponent.h"
+#include "Character/ChrisCharacter.h"
 
 
 
@@ -472,6 +475,14 @@ void AChrisPlayerController::Client_OnRoundEnd_Implementation()
 	if (ChrisPlayerCharacter)
 	{
 		ChrisPlayerCharacter->DisableInput(this);
+	}
+
+	for (TActorIterator<AChrisCharacter> It(GetWorld()); It; ++It)
+	{
+		if (USwordEquipComponent* SwordComp = It->FindComponentByClass<USwordEquipComponent>())
+		{
+			SwordComp->SetSwordVFXActive(false);
+		}
 	}
 
 	// Remove the round timer

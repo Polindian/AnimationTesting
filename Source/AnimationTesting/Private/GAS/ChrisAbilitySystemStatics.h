@@ -59,6 +59,7 @@ public:
 	static FGameplayTag GetFallBackStatsTag();
 	static FGameplayTag GetAimStatsTag();
 	static FGameplayTag GetCrosshairTag();
+	static FGameplayTag GetRoundOverImmuneTag();
 
 	static FGameplayTag GetHealthFullStatsTag();
 	static FGameplayTag GetHealthEmptyStatsTag();

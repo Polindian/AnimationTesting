@@ -12,6 +12,7 @@
 #include "GameFramework/Controller.h"
 #include "GAS/ChrisAbilitySystemComponent.h"
 #include "GAS/CHeroAttributeSet.h"
+#include "GAS/ChrisAbilitySystemStatics.h"
 #include "Kismet/GameplayStatics.h"
 #include "EngineUtils.h"
 #include "Framework/Flag.h"
@@ -308,6 +309,8 @@ void AChrisGameMode::StartRound()
 						ASC->ResetAllCooldowns();
 						ASC->ApplyHeavyAbilityCooldowns();
 						ASC->ApplyFullStatEffect();
+						ASC->RemoveLooseGameplayTag(UChrisAbilitySystemStatics::GetRoundOverImmuneTag());
+						ASC->Client_SetCooldownAudioSuppressed(false);
 					}
 				}
 			}
@@ -356,23 +359,28 @@ void AChrisGameMode::EndRound()
 					if (UAbilitySystemComponent* ASC = ASI->GetAbilitySystemComponent())
 					{
 						ASC->CancelAllAbilities();
+
+						if (UChrisAbilitySystemComponent* ChrisASC = Cast<UChrisAbilitySystemComponent>(ASC))
+						{
+							ChrisASC->Client_SetCooldownAudioSuppressed(true);
+							
+							// Cooldowns tick on world time and would otherwise expire
+							// mid-shop; StartRound re-applies the heavy ones anyway
+							ChrisASC->ResetAllCooldowns();
+
+							// Post-round hits shouldn't be able to kill anyone and
+							// restart the death/respawn loop we're about to clean up
+							ChrisASC->AddLooseGameplayTag(
+								UChrisAbilitySystemStatics::GetRoundOverImmuneTag());
+						}
 					}
 				}
 			}
 		});
 
-	// Clean up any players who are mid-death
-	ForEachPlayerController([](AChrisPlayerController* PC)
-		{
-			if (AChrisPlayerCharacter* Character = Cast<AChrisPlayerCharacter>(PC->GetPawn()))
-			{
-				Character->CancelDeathTimers();
-				if (Character->IsDead())
-				{
-					Character->ForceResetFromDeath();
-				}
-			}
-		});
+	// Clean up dead players after a short delay to allow death VFX to finish playing
+	GetWorldTimerManager().SetTimer(DeathCleanupTimerHandle, this,
+		&AChrisGameMode::CleanUpDeadPlayers, DeathCleanupDelay, false);
 
 	ForEachPlayerController([](AChrisPlayerController* PC)
 		{
@@ -1056,4 +1064,19 @@ void AChrisGameMode::FinishLoadingHold()
 	// Let the screen finish fading and give the arena a bit of time before the banner
 	GetWorldTimerManager().SetTimer(PhaseTimerHandle, this,
 		&AChrisGameMode::StartRoundIntro, PostLoadingBannerDelay, false);
+}
+
+void AChrisGameMode::CleanUpDeadPlayers()
+{
+	ForEachPlayerController([](AChrisPlayerController* PC)
+		{
+			if (AChrisPlayerCharacter* Character = Cast<AChrisPlayerCharacter>(PC->GetPawn()))
+			{
+				Character->CancelDeathTimers();
+				if (Character->IsDead())
+				{
+					Character->ForceResetFromDeath();
+				}
+			}
+		});
 }

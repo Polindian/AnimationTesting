@@ -47,6 +47,8 @@ public:
     UFUNCTION(Client, Reliable)
     void Client_ShowMatchStats();
 
+    bool IsRoundActive() const { return bIsRoundActive; }
+
 
 	// ---- Client RPCs for match flow ---- 
 

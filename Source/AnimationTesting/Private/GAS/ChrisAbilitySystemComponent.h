@@ -34,6 +34,10 @@ public:
 	UFUNCTION(Client, Reliable)
 	void Client_AbilitySpecLevelUpdated(FGameplayAbilitySpecHandle Handle, int NewLevel);
 
+	/** Silences the skill-ready chime while cooldowns are being wiped between rounds. */
+	UFUNCTION(Client, Reliable)
+	void Client_SetCooldownAudioSuppressed(bool bSuppressed);
+
 
 private:
 	
@@ -54,6 +58,8 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Gameplay Abilities")
 	class UPA_GenericAbilitySystem* AbilitySystemGenerics;
+
+	bool bSuppressCooldownAudio = false;
 
 	/********************************/
 	/*             Audio            */

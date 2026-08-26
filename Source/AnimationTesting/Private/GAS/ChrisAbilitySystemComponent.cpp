@@ -16,6 +16,7 @@
 #include "Components/AudioComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Player/ChrisPlayerController.h"
 
 UChrisAbilitySystemComponent::UChrisAbilitySystemComponent()
 {
@@ -82,6 +83,11 @@ void UChrisAbilitySystemComponent::ServerSideInit()
 	InitializeBaseAttributes();
 	ApplyInitialEffects();
 	GiveInitialAbilities();
+}
+
+void UChrisAbilitySystemComponent::Client_SetCooldownAudioSuppressed_Implementation(bool bSuppressed)
+{
+	bSuppressCooldownAudio = bSuppressed;
 }
 
 void UChrisAbilitySystemComponent::ApplyInitialEffects()
@@ -504,8 +510,15 @@ void UChrisAbilitySystemComponent::SkillCooldownTagUpdated(const FGameplayTag Ta
 	// Count hits zero when the cooldown effect expires
 	if (NewCount != 0) { return; }
 
+	if (bSuppressCooldownAudio) { return; }
+
 	const APawn* OwnerPawn = Cast<APawn>(GetOwner());
 	if (!OwnerPawn || !OwnerPawn->IsLocallyControlled()) { return; }
+
+	// Cooldowns get wiped at round end and re-applied at round start, so without
+	// this the shop phase fills with "skill ready" chimes for skills you can't use
+	const AChrisPlayerController* PC = Cast<AChrisPlayerController>(OwnerPawn->GetController());
+	if (!PC || !PC->IsRoundActive()) { return; }
 
 	if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(GetOwner()))
 	{
