@@ -25,6 +25,14 @@ void UChrisAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallb
 {
     if (Data.EvaluatedData.Attribute == GetHealthAttribute())
     {
+        if (Data.EvaluatedData.Magnitude < 0.f
+            && Data.Target.HasMatchingGameplayTag(UChrisAbilitySystemStatics::GetRoundOverImmuneTag()))
+        {
+            SetHealth(GetHealth() - Data.EvaluatedData.Magnitude);
+            return;
+        }
+
+        
         // GAS has already applied the base magnitude by the time we get here, so back it out to find the health before this effect touched anything
         const float HealthBeforeEffect = GetHealth() - Data.EvaluatedData.Magnitude;
 

@@ -484,6 +484,7 @@ void AChrisCharacter::ForceResetFromDeath()
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
 	GetMesh()->GetAnimInstance()->StopAllMontages(0.f);
 	SetStatusGaugeEnabled(true);
+	RestoreOriginalMaterials();
 
 	if (USwordEquipComponent* SwordComp = FindComponentByClass<USwordEquipComponent>())
 	{

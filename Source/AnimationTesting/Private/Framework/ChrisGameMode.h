@@ -236,4 +236,16 @@ private:
     float PostLoadingBannerDelay = 3.f;
 
     bool bLoadingHoldFinished = false;
+
+
+
+    // --------- DEATH CLEANUP ---------
+    // 
+    // Gives a player who died right on the buzzer time to finish dissolving
+   // before the reintegration runs, otherwise the two overlap
+    UPROPERTY(EditDefaultsOnly, Category = "Match Timing")
+    float DeathCleanupDelay = 2.f;
+
+    void CleanUpDeadPlayers();
+    FTimerHandle DeathCleanupTimerHandle;
 };

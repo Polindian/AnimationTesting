@@ -61,6 +61,25 @@ void UGA_Shoot::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 
 }
 
+void UGA_Shoot::ResetShootState()
+{
+	CurrentShotCount = 0;
+	LastShotTime = 0.0;
+
+	if (GetWorld())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(ShootCooldownTimerHandle);
+	}
+
+	// A volley cut short by the round ending would otherwise proc the triple
+	// damage on the next round's first shot
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	{
+		ASC->SetNumericAttributeBase(UChrisAttributeSet::GetDeadeyeHitCounterAttribute(), 0.f);
+	}
+}
+
+
 void UGA_Shoot::InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
 {
 
@@ -77,13 +96,6 @@ void UGA_Shoot::InputReleased(const FGameplayAbilitySpecHandle Handle, const FGa
 bool UGA_Shoot::CheckCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, FGameplayTagContainer* OptionalRelevantTags) const
 {
 	return true;
-}
-
-void UGA_Shoot::GetCooldownTimeRemainingAndDuration(FGameplayAbilitySpecHandle Handle,
-	const FGameplayAbilityActorInfo* ActorInfo, float& TimeRemaining, float& CooldownDuration) const
-{
-	CooldownDuration = ActiveCooldownDuration > 0.f ? ActiveCooldownDuration : ShootCooldownDuration;
-	TimeRemaining = GetWorld() ? FMath::Max(0.f, (float)(CooldownEndTime - GetWorld()->GetTimeSeconds())) : 0.f;
 }
 
 FGameplayTag UGA_Shoot::GetShootTag()
@@ -108,7 +120,7 @@ void UGA_Shoot::ShootProjectile(FGameplayEventData Payload)
 {
 
 	double CurrentTime = GetWorld()->GetTimeSeconds();
-	if (IsCooldownActive() || !ShootMontage || (CurrentTime - LastShotTime) < 0.15) return;
+	if (IsShootOnCooldown() || !ShootMontage || (CurrentTime - LastShotTime) < 0.15) return;
 	LastShotTime = CurrentTime;
 
 	UAbilityTask_PlayMontageAndWait* PlayShootMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, ShootMontage);
@@ -157,13 +169,16 @@ void UGA_Shoot::ShootProjectile(FGameplayEventData Payload)
 	if (CurrentShotCount >= MaxShots)
 	{
 		CurrentShotCount = 0;
-		ActiveCooldownDuration = GetLeveledCooldownDuration();
-		CooldownEndTime = GetWorld()->GetTimeSeconds() + ActiveCooldownDuration;
 
 		CommitAbilityCost(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo);
 
+		// ForceCooldown because our CheckCooldown always passes — the duration is
+		// snapshotted here, so upgrading mid-cooldown won't shorten this one
+		CommitAbilityCooldown(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
+
+		// Only for the deadeye counter reset; the cooldown itself is the GE now
 		GetWorld()->GetTimerManager().SetTimer(
-			ShootCooldownTimerHandle, this, &UGA_Shoot::OnShootCooldownFinished, ActiveCooldownDuration);
+			ShootCooldownTimerHandle, this, &UGA_Shoot::OnShootCooldownFinished, GetLeveledCooldownDuration());
 
 		UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
 		if (ASC)
@@ -205,9 +220,15 @@ float UGA_Shoot::GetLeveledCooldownDuration() const
 	return ShootCooldownDuration;  // fallback if no GE set
 }
 
-bool UGA_Shoot::IsCooldownActive() const
+
+bool UGA_Shoot::IsShootOnCooldown() const
 {
-	return GetWorld() && GetWorld()->GetTimeSeconds() < CooldownEndTime;
+	const UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	const FGameplayTagContainer* CooldownTags = GetCooldownTags();
+
+	if (!ASC || !CooldownTags || CooldownTags->Num() == 0) { return false; }
+
+	return ASC->HasAnyMatchingGameplayTags(*CooldownTags);
 }
 
 void UGA_Shoot::OnShootCooldownFinished()

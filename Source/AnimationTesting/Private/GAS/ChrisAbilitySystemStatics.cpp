@@ -176,6 +176,11 @@ FGameplayTag UChrisAbilitySystemStatics::GetCrosshairTag()
 	return FGameplayTag::RequestGameplayTag("stats.crosshair");
 }
 
+FGameplayTag UChrisAbilitySystemStatics::GetRoundOverImmuneTag()
+{
+	return FGameplayTag::RequestGameplayTag("stats.roundoverimmune");
+}
+
 FGameplayTag UChrisAbilitySystemStatics::GetHealthFullStatsTag()
 {
 	return FGameplayTag::RequestGameplayTag("stats.health.full");

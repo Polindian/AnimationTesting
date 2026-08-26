@@ -16,6 +16,8 @@
 #include "Components/AudioComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Player/ChrisPlayerController.h"
+#include "GAS/GA_Shoot.h"
 
 UChrisAbilitySystemComponent::UChrisAbilitySystemComponent()
 {
@@ -84,6 +86,11 @@ void UChrisAbilitySystemComponent::ServerSideInit()
 	GiveInitialAbilities();
 }
 
+void UChrisAbilitySystemComponent::Client_SetCooldownAudioSuppressed_Implementation(bool bSuppressed)
+{
+	bSuppressCooldownAudio = bSuppressed;
+}
+
 void UChrisAbilitySystemComponent::ApplyInitialEffects()
 {
 	if (!GetOwner() || !GetOwner()->HasAuthority())
@@ -146,6 +153,14 @@ void UChrisAbilitySystemComponent::ResetAllCooldowns()
 		TotalRemoved += Removed;
 
 		UE_LOG(LogTemp, Warning, TEXT("ResetCooldowns: Removed %d effects for %s"), Removed, *Spec.Ability->GetName());
+
+		for (FGameplayAbilitySpec& ShootSpec : GetActivatableAbilities())
+		{
+			if (UGA_Shoot* ShootAbility = Cast<UGA_Shoot>(ShootSpec.GetPrimaryInstance()))
+			{
+				ShootAbility->ResetShootState();
+			}
+		}
 	}
 	UE_LOG(LogTemp, Warning, TEXT("ResetCooldowns: Total effects removed: %d"), TotalRemoved);
 }
@@ -504,8 +519,15 @@ void UChrisAbilitySystemComponent::SkillCooldownTagUpdated(const FGameplayTag Ta
 	// Count hits zero when the cooldown effect expires
 	if (NewCount != 0) { return; }
 
+	if (bSuppressCooldownAudio) { return; }
+
 	const APawn* OwnerPawn = Cast<APawn>(GetOwner());
 	if (!OwnerPawn || !OwnerPawn->IsLocallyControlled()) { return; }
+
+	// Cooldowns get wiped at round end and re-applied at round start, so without
+	// this the shop phase fills with "skill ready" chimes for skills you can't use
+	const AChrisPlayerController* PC = Cast<AChrisPlayerController>(OwnerPawn->GetController());
+	if (!PC || !PC->IsRoundActive()) { return; }
 
 	if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(GetOwner()))
 	{
