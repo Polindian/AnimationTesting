@@ -17,6 +17,7 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Player/ChrisPlayerController.h"
+#include "GAS/GA_Shoot.h"
 
 UChrisAbilitySystemComponent::UChrisAbilitySystemComponent()
 {
@@ -152,6 +153,14 @@ void UChrisAbilitySystemComponent::ResetAllCooldowns()
 		TotalRemoved += Removed;
 
 		UE_LOG(LogTemp, Warning, TEXT("ResetCooldowns: Removed %d effects for %s"), Removed, *Spec.Ability->GetName());
+
+		for (FGameplayAbilitySpec& ShootSpec : GetActivatableAbilities())
+		{
+			if (UGA_Shoot* ShootAbility = Cast<UGA_Shoot>(ShootSpec.GetPrimaryInstance()))
+			{
+				ShootAbility->ResetShootState();
+			}
+		}
 	}
 	UE_LOG(LogTemp, Warning, TEXT("ResetCooldowns: Total effects removed: %d"), TotalRemoved);
 }
