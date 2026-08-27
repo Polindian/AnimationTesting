@@ -65,6 +65,11 @@ void ASkeletonBarrack::SpawnNewGroup()
 {
 	int i = SkeletonPerGroup;
 
+	// Reactivation isn't instant — the dead tag is removed asynchronously, so
+	// without this the same skeleton is handed out repeatedly in one pass and
+	// only the last teleport survives
+	TSet<ASkeletonAI*> ClaimedThisPass;
+
 	while (i > 0)
 	{
 		FTransform SpawnTransform = GetActorTransform();
@@ -73,9 +78,11 @@ void ASkeletonBarrack::SpawnNewGroup()
 			SpawnTransform = NextSpawnSpot->GetActorTransform();
 		}
 
-		ASkeletonAI* NextAvailableSkeleton = GetNextAvailableSkeleton();
+		ASkeletonAI* NextAvailableSkeleton = GetNextAvailableSkeleton(ClaimedThisPass);
 		if (!NextAvailableSkeleton)
 			break;
+
+		ClaimedThisPass.Add(NextAvailableSkeleton);
 
 		NextAvailableSkeleton->SetActorTransform(SpawnTransform);
 		NextAvailableSkeleton->Activate();
@@ -84,7 +91,6 @@ void ASkeletonBarrack::SpawnNewGroup()
 
 	SpawnNewSkeletons(i);
 }
-
 
 const APlayerStart* ASkeletonBarrack::GetNextSpawnSpot()
 {
@@ -182,11 +188,11 @@ void ASkeletonBarrack::SpawnNewSkeletons(int Amount)
 	}
 }
 
-ASkeletonAI* ASkeletonBarrack::GetNextAvailableSkeleton() const
+ASkeletonAI* ASkeletonBarrack::GetNextAvailableSkeleton(const TSet<ASkeletonAI*>& Excluded) const
 {
 	for (ASkeletonAI* Skeleton : SkeletonPool)
 	{
-		if (!Skeleton->IsActive())
+		if (Skeleton && !Skeleton->IsActive() && !Excluded.Contains(Skeleton))
 		{
 			return Skeleton;
 		}

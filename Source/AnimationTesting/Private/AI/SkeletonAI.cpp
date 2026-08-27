@@ -27,31 +27,46 @@ bool ASkeletonAI::IsActive() const
 
 void ASkeletonAI::Activate()
 {
-	UCharacterMovementComponent* MoveComp = GetCharacterMovement();
 	
+	UE_LOG(LogTemp, Warning, TEXT("[Skeleton] Activate on %s, currently at %s"),
+		*GetName(), *GetActorLocation().ToString());
+	
+	// Where the barrack put us, before Respawn's un-ragdoll can drag the mesh
+	// back to wherever the body came to rest
+	const FTransform SpawnTransform = GetActorTransform();
+	LastSpawnTransform = SpawnTransform;
 
+	UCharacterMovementComponent* MoveComp = GetCharacterMovement();
 	if (MoveComp)
 	{
 		MoveComp->SetMovementMode(MOVE_Walking);
 		MoveComp->StopMovementImmediately();
 		MoveComp->GravityScale = 1.0f;
+		MoveComp->MaxWalkSpeed = FMath::Min(MoveComp->MaxWalkSpeed, 700.f);
+		MoveComp->Velocity = FVector::ZeroVector;
 	}
 
-	// Re-enable collision in case it was disabled during death
 	UCapsuleComponent* Capsule = GetCapsuleComponent();
 	if (Capsule)
 	{
 		Capsule->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	}
 
-	// Re-enable mesh collision if it was changed for ragdoll
 	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	GetMesh()->SetSimulatePhysics(false);
 	GetMesh()->AttachToComponent(Capsule, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 
 	RespawnImmediately();
-}
 
+	// Reapply last — the dead tag removal above runs Respawn synchronously on
+	// the server, and its ragdoll reset moves us
+	SetActorTransform(SpawnTransform);
+
+	if (MoveComp)
+	{
+		MoveComp->StopMovementImmediately();
+	}
+}
 
 
 void ASkeletonAI::BeginPlay()
@@ -99,16 +114,15 @@ void ASkeletonAI::OnRep_TeamID()
 	PickSkinBasedOnTeamID();
 }
 
-void ASkeletonAI::MoveSpeedUpdated(const FOnAttributeChangeData& Data)
-{
-	float ClampedSpeed = FMath::Clamp(Data.NewValue, 0.f, 700.f);
-	GetCharacterMovement()->MaxWalkSpeed = ClampedSpeed;
 
-	if (Data.NewValue > 700.f)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[AI MoveSpeed] %s — clamped from %.0f to %.0f"),
-			*GetName(), Data.NewValue, ClampedSpeed);
-	}
+float ASkeletonAI::ClampMoveSpeed(float InSpeed) const
+{
+	if (InSpeed > MaxAIWalkSpeed)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[AI MoveSpeed] %s — clamped from %.0f to %.0f"),*GetName(), InSpeed, MaxAIWalkSpeed);
+		}
+
+	return FMath::Clamp(InSpeed, 0.f, MaxAIWalkSpeed);
 }
 
 
@@ -133,6 +147,18 @@ void ASkeletonAI::OnRespawn()
 {
 	Super::OnRespawn();
 
+	// Any respawn that didn't come through the barrack — round-end cleanup, for
+	// one — would otherwise leave us standing where the body fell
+	if (HasAuthority() && !LastSpawnTransform.Equals(FTransform::Identity))
+	{
+		SetActorTransform(LastSpawnTransform);
+
+		if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+		{
+			MoveComp->StopMovementImmediately();
+		}
+	}
+
 	if (GetNetMode() != NM_DedicatedServer)
 	{
 		ScheduleNextScream();
@@ -155,6 +181,9 @@ void ASkeletonAI::TryScream()
 			Audio->PlayAtLocation(ChrisGameplayTags::Audio_World_Skeleton_Scream, GetActorLocation());
 		}
 	}
+
+	UE_LOG(LogTemp, Warning, TEXT("[AI Speed] %s — Vel=%.0f MaxWalk=%.0f"),
+		*GetName(), GetVelocity().Size(), GetCharacterMovement()->MaxWalkSpeed);
 
 	// Reschedule either way, so a skeleton that wanders back into range resumes
 	ScheduleNextScream();

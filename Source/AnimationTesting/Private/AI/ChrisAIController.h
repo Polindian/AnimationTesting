@@ -73,4 +73,8 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "AI Targeting")
 	float LowHealthThreshold = 0.25f;
+
+	// Round-end stop is authoritative: the tag handlers below must not undo it
+	// when a stun, knockback or death tag happens to clear afterwards
+	bool bBehaviorStoppedForRound = false;
 };

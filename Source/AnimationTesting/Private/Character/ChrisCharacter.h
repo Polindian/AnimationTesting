@@ -76,6 +76,9 @@ private:
 	class UChrisAttributeSet* ChrisAttributeSet;
 
 	virtual void MoveSpeedUpdated(const FOnAttributeChangeData& Data);
+
+	// AI overrides this. The write itself stays in one place so a base-class dispatch can never bypass the cap
+	virtual float ClampMoveSpeed(float InSpeed) const { return InSpeed; }
 	void MoveAccelerationUpdated(const FOnAttributeChangeData& Data);
 
 	void MaxHealthUpdated(const FOnAttributeChangeData& Data);
