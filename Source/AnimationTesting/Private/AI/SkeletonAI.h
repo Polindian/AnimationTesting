@@ -28,7 +28,7 @@ private:
 
 	virtual void OnRep_TeamID() override;
 
-	virtual void MoveSpeedUpdated(const FOnAttributeChangeData& Data) override;
+	virtual float ClampMoveSpeed(float InSpeed) const override;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Visual")
 	TMap<FGenericTeamId, USkeletalMesh*> SkinMap;
@@ -47,6 +47,11 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Gameplay Abilities")
 	class UPA_GenericAbilitySystem* AbilitySystemGenerics;
+
+	FTransform LastSpawnTransform;
+
+	UPROPERTY(EditDefaultsOnly, Category = "AI")
+	float MaxAIWalkSpeed = 700.f;
 
 
 /*********************************/
@@ -74,5 +79,7 @@ private:
 	float ScreamMaxDistance = 4000.f;
 
 	bool IsNearLocalPlayer(float MaxDistance) const;
+
+
 
 };

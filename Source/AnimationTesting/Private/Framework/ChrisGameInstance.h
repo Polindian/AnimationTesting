@@ -107,6 +107,10 @@ public:
 
 	bool bReturnToMultiplayerPage = false;
 
+	// Called when the lobby leaves team selection — pulls the session out of
+	// search results so nobody can join a match that's past team picking
+	void SetSessionJoinable(bool bJoinable);
+
 
 private:
 	void CreateSession();

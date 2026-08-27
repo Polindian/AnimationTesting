@@ -514,6 +514,27 @@ void UChrisGameInstance::PlayerLeft(const FUniqueNetIdRepl& UniqueId)
 	}
 }
 
+void UChrisGameInstance::SetSessionJoinable(bool bJoinable)
+{
+	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
+	if (!SessionPtr || ServerSessionName.IsEmpty()) { return; }
+
+	const FName SessionFName(ServerSessionName);
+
+	FOnlineSessionSettings* CurrentSettings = SessionPtr->GetSessionSettings(SessionFName);
+	if (!CurrentSettings) { return; }
+
+	// bShouldAdvertise false removes it from EOS search results, so it drops off
+	// the multiplayer page on the clients' next refresh
+	FOnlineSessionSettings NewSettings = *CurrentSettings;
+	NewSettings.bShouldAdvertise = bJoinable;
+	NewSettings.bAllowJoinInProgress = bJoinable;
+
+	SessionPtr->UpdateSession(SessionFName, NewSettings, true);
+
+	UE_LOG(LogTemp, Warning, TEXT("[Session] Joinable set to %d"), bJoinable ? 1 : 0);
+}
+
 void UChrisGameInstance::CreateSession()
 {
 	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();

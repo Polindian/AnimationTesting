@@ -58,8 +58,9 @@ private:
 
 	bool IsSpawnSpotOccupied(const APlayerStart* SpawnSpot) const;
 
+	// Must exceed twice the capsule radius, or spots read as free while a skeleton is still standing in them and the new one spawns interpenetrating
 	UPROPERTY(EditAnywhere, Category = "Spawn")
-	float OccupiedRadius = 10.f;
+	float OccupiedRadius = 120.f;
 
 	int NextSpawnSpotIndex = -1;
 
@@ -68,7 +69,7 @@ private:
 	void SpawnNewGroup();
 	void SpawnNewSkeletons(int Amount);
 
-	ASkeletonAI* GetNextAvailableSkeleton() const;
+	ASkeletonAI* GetNextAvailableSkeleton(const TSet<class ASkeletonAI*>& Excluded) const;
 
 	FTimerHandle SpawnIntervalTimerHnadle;
 

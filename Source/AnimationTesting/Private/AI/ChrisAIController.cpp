@@ -98,6 +98,8 @@ void AChrisAIController::BeginPlay()
 
 void AChrisAIController::StartAIBehavior()
 {
+	bBehaviorStoppedForRound = false;
+
 	if (GetBrainComponent())
 	{
 		GetBrainComponent()->StartLogic();
@@ -106,11 +108,25 @@ void AChrisAIController::StartAIBehavior()
 
 void AChrisAIController::StopAIBehavior()
 {
+	bBehaviorStoppedForRound = true;
+
 	if (GetBrainComponent())
 	{
 		GetBrainComponent()->StopLogic("RoundEnded");
 		GetWorld()->GetTimerManager().ClearTimer(LowHealthCheckTimerHandle);
 	}
+
+	// Otherwise they keep swinging at whatever they were already targeting
+	if (APawn* MyPawn = GetPawn())
+	{
+		if (UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(MyPawn))
+		{
+			ASC->CancelAllAbilities();
+		}
+	}
+
+	StopMovement();
+	ClearAndDisableAllSenses();
 }
 
 void AChrisAIController::TargetPerceptionUpdated(AActor* TargetActor, FAIStimulus Stimulus)
@@ -229,25 +245,29 @@ void AChrisAIController::EnableAllSenses()
 
 void AChrisAIController::PawnDeadTagUpdated(const FGameplayTag Tag, int32 Count)
 {
-	if (Count == 0)
-	{
-		if (GetBlackboardComponent())
-		{
-			GetBlackboardComponent()->SetValueAsBool("bLockedToMidZone", false);
-		}
-	}
 	if (Count != 0)
 	{
 		GetBrainComponent()->StopLogic("Pawn is dead");
 		ClearAndDisableAllSenses();
 		bIsPawnDead = true;
+		return;
 	}
-	else
+
+	if (GetBlackboardComponent())
 	{
-		GetBrainComponent()->StartLogic();
-		EnableAllSenses();
-		bIsPawnDead = false;
+		GetBlackboardComponent()->SetValueAsBool("bLockedToMidZone", false);
 	}
+
+	// Tracked even while the brain stays stopped, or the next round starts
+	// with this AI still believed to be dead
+	bIsPawnDead = false;
+
+	// Pooled respawns clear the dead tag, so without this every skeleton the
+	// barrack recycles would restart its brain mid round-end
+	if (bBehaviorStoppedForRound) { return; }
+
+	GetBrainComponent()->StartLogic();
+	EnableAllSenses();
 }
 
 void AChrisAIController::PawnStunTagUpdated(const FGameplayTag Tag, int32 Count)
@@ -256,14 +276,17 @@ void AChrisAIController::PawnStunTagUpdated(const FGameplayTag Tag, int32 Count)
 	{
 		return;
 	}
+
 	if (Count != 0)
 	{
 		GetBrainComponent()->StopLogic("Stun");
+		return;
 	}
-	else
-	{
-		GetBrainComponent()->StartLogic();
-	}
+
+	// A stun that expires after the round ended must not wake the brain back up
+	if (bBehaviorStoppedForRound) { return; }
+
+	GetBrainComponent()->StartLogic();
 }
 
 void AChrisAIController::PawnFallBackTagUpdated(const FGameplayTag Tag, int32 Count)
@@ -272,14 +295,16 @@ void AChrisAIController::PawnFallBackTagUpdated(const FGameplayTag Tag, int32 Co
 	{
 		return;
 	}
+
 	if (Count != 0)
 	{
 		GetBrainComponent()->StopLogic("FallBack");
+		return;
 	}
-	else
-	{
-		GetBrainComponent()->StartLogic();
-	}
+
+	if (bBehaviorStoppedForRound) { return; }
+
+	GetBrainComponent()->StartLogic();
 }
 
 void AChrisAIController::CheckForLowHealthHeroes()

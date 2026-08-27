@@ -16,4 +16,13 @@ class ALobbyGameMode : public AGameModeBase
 	GENERATED_BODY()
 public:
 	ALobbyGameMode();
+
+	virtual void PreLogin(const FString& Options, const FString& Address,
+		const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage) override;
+
+	// Flipped once the lobby leaves team selection
+	void SetAcceptingPlayers(bool bAccepting) { bAcceptingPlayers = bAccepting; }
+
+private:
+	bool bAcceptingPlayers = true;
 };
