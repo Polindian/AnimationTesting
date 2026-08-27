@@ -7,6 +7,7 @@
 #include "Framework/ChrisGameInstance.h"
 #include "Framework/CAssetManager.h"
 #include "Framework/ChrisGameMode.h"
+#include "Framework/LobbyGameMode.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/PlayerState.h"
 #include "GameFramework/Pawn.h"
@@ -155,6 +156,17 @@ void AChrisGameState::RequestPlayerReadyChange(const APlayerState* RequestingPla
 		// Auto-transition: if all players readied and teams balanced, switch everyone
 		if (CanStartHeroSelection())	
 		{
+			// Team selection is over — stop advertising so late joiners can't land in a lobby that's already picking heroes
+			if (UChrisGameInstance* GI = GetGameInstance<UChrisGameInstance>())
+			{
+				GI->SetSessionJoinable(false);
+			}
+
+			if (ALobbyGameMode* LobbyGM = GetWorld()->GetAuthGameMode<ALobbyGameMode>())
+			{
+				LobbyGM->SetAcceptingPlayers(false);
+			}
+			
 			StartHeroSelectionTimer();
 
 			for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
