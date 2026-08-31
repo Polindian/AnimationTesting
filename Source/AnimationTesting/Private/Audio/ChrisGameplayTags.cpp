@@ -74,6 +74,10 @@ namespace ChrisGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Audio_Player_Stun_Loop, "audio.player.stun.loop");
 	UE_DEFINE_GAMEPLAY_TAG(Audio_Player_Stun_Close, "audio.player.stun.close");
 
+	UE_DEFINE_GAMEPLAY_TAG(Audio_Player_Footstep, "audio.player.footstep");
+	UE_DEFINE_GAMEPLAY_TAG(Audio_Player_Jump, "audio.player.jump");
+	UE_DEFINE_GAMEPLAY_TAG(Audio_Player_Land, "audio.player.land");
+
 
 
 	// ── General ─────────────────────────────────────────

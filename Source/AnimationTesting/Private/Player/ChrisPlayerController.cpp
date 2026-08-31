@@ -23,8 +23,8 @@
 #include "Animation/AnimInstance.h"
 #include "Widgets/LoadingScreenWidget.h"
 #include "EngineUtils.h"
-#include "Weapon/SwordEquipComponent.h"
 #include "Character/ChrisCharacter.h"
+#include "Framework/CAssetManager.h"
 
 
 
@@ -109,6 +109,11 @@ void AChrisPlayerController::SpawnGameplayWidget()
 		GameplayWidget->AddToViewport();
 		GameplayWidget->ConfigureAbilities(ChrisPlayerCharacter->GetAbilities());
 	}
+}
+
+void AChrisPlayerController::PreloadShopItems()
+{
+	UCAssetManager::Get().LoadShopItems(FStreamableDelegate());
 }
 
 void AChrisPlayerController::SetupInputComponent()
@@ -272,6 +277,11 @@ void AChrisPlayerController::BeginPlay()
 		{
 			Server_ReportLoaded();
 		}));
+
+	if (IsLocalController())
+	{
+		PreloadShopItems();
+	}
 }
 
 void AChrisPlayerController::ShowLoadingScreen()
