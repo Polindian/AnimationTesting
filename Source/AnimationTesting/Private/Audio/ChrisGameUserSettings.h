@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -25,7 +25,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Chris|Audio")
 	float GetSFXVolume() const { return SFXVolume; }
 
-	// Setters only store the value � applying it is the audio subsystem's job
+	// Setters only store the value — applying it is the audio subsystem's job
 	UFUNCTION(BlueprintCallable, Category = "Chris|Audio")
 	void SetMasterVolume(float InVolume) { MasterVolume = FMath::Clamp(InVolume, 0.f, 1.f); }
 
@@ -34,6 +34,14 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Chris|Audio")
 	void SetSFXVolume(float InVolume) { SFXVolume = FMath::Clamp(InVolume, 0.f, 1.f); }
+
+	UFUNCTION(BlueprintPure, Category = "Chris|Graphics")
+	int32 GetGraphicsQuality() const { return GetOverallScalabilityLevel(); }
+
+	// Applies immediately — moves view distance, shadows, textures, effects and AA together, and persists to GameUserSettings.ini
+	UFUNCTION(BlueprintCallable, Category = "Chris|Graphics")
+	void SetGraphicsQuality(int32 Level);
+
 
 private:
 	// Config: saved to and loaded from GameUserSettings.ini automatically
@@ -45,4 +53,9 @@ private:
 
 	UPROPERTY(Config)
 	float SFXVolume = 1.f;
+
+	UPROPERTY(Config)
+	int32 GraphicsQuality = 2;
+
+
 };
