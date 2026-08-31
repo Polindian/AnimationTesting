@@ -82,8 +82,17 @@ FReply UVolumeSliderWidget::NativeOnKeyDown(const FGeometry& InGeometry, const F
 		NudgeVolume(-KeyStep);
 		return FReply::Handled();
 	}
+
 	if (Key == EKeys::Right || Key == EKeys::Gamepad_DPad_Right || Key == EKeys::Gamepad_LeftStick_Right)
 	{
+		// Already at max — let the key through so navigation can move focus off
+		// the slider, otherwise Right is swallowed forever and the quality
+		// options are unreachable
+		if (GetVolume() >= 1.f)
+		{
+			return FReply::Unhandled();
+		}
+
 		NudgeVolume(KeyStep);
 		return FReply::Handled();
 	}

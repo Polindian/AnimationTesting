@@ -101,6 +101,9 @@ public:
 private:
 
 	void SpawnGameplayWidget();
+
+    void PreloadShopItems();
+
 	UPROPERTY()
 	class AChrisPlayerCharacter* ChrisPlayerCharacter;
 

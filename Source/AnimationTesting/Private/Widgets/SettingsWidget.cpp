@@ -12,6 +12,7 @@
 #include "Components/TextBlock.h"
 #include "Audio/ChrisAudioSubsystem.h"
 #include "Audio/ChrisGameUserSettings.h"
+#include "Widgets/QualityOptionWidget.h"
 
 
 void USettingsWidget::NativeOnInitialized()
@@ -49,6 +50,10 @@ void USettingsWidget::NativeOnInitialized()
     Row_Music->OnVolumeChanged.AddUObject(this, &USettingsWidget::HandleMusicVolumeChanged);
     Row_SFX->OnVolumeChanged.AddUObject(this, &USettingsWidget::HandleSFXVolumeChanged);
 
+    Option_Low->OnQualityOptionChosen.AddUObject(this, &USettingsWidget::HandleQualityChosen);
+    Option_Medium->OnQualityOptionChosen.AddUObject(this, &USettingsWidget::HandleQualityChosen);
+    Option_High->OnQualityOptionChosen.AddUObject(this, &USettingsWidget::HandleQualityChosen);
+
     WireVolumeSliderNavigation();
 }
 
@@ -57,6 +62,7 @@ void USettingsWidget::OpenSettings()
     bClosing = false;
     SwitchToTab(0, false);
     RefreshVolumeSliders();
+    RefreshQualityOptions();
 
     PlayAnimation(Anim_SlideIn);
 
@@ -109,7 +115,13 @@ void USettingsWidget::SwitchToTab(int32 NewIndex, bool bPlaySound)
     if (CurrentTabIndex == 2 && Row_Master)
     {
         GetWorld()->GetTimerManager().SetTimerForNextTick(
-            FTimerDelegate::CreateWeakLambda(this, [this]() { Row_Master->FocusSlider(); }));
+            FTimerDelegate::CreateWeakLambda(this, [this]()
+                {
+                    // Re-wired here, not in OnInitialized: the switcher hadn't built
+                    // this page's Slate widgets yet, so the rules had nothing to bind to
+                    WireVolumeSliderNavigation();
+                    Row_Master->FocusSlider();
+                }));
     }
 }
 
@@ -124,6 +136,8 @@ void USettingsWidget::HandleMasterVolumeChanged(float NewValue)
     {
         Audio->ApplyVolumeSettings();
     }
+
+    PlayVolumeTick();
 }
 
 void USettingsWidget::HandleMusicVolumeChanged(float NewValue)
@@ -137,6 +151,8 @@ void USettingsWidget::HandleMusicVolumeChanged(float NewValue)
     {
         Audio->ApplyVolumeSettings();
     }
+
+    PlayVolumeTick();
 }
 
 void USettingsWidget::HandleSFXVolumeChanged(float NewValue)
@@ -150,6 +166,8 @@ void USettingsWidget::HandleSFXVolumeChanged(float NewValue)
     {
         Audio->ApplyVolumeSettings();
     }
+
+    PlayVolumeTick();
 }
 
 void USettingsWidget::RefreshVolumeSliders()
@@ -165,6 +183,7 @@ void USettingsWidget::RefreshVolumeSliders()
 void USettingsWidget::WireVolumeSliderNavigation()
 {
     if (!Row_Master || !Row_Music || !Row_SFX) { return; }
+    if (!Option_Low || !Option_Medium || !Option_High) { return; }
 
     Row_Master->SetNavigationRuleExplicit(EUINavigation::Down, Row_Music);
     Row_Master->SetNavigationRuleBase(EUINavigation::Up, EUINavigationRule::Stop);
@@ -173,11 +192,86 @@ void USettingsWidget::WireVolumeSliderNavigation()
     Row_Music->SetNavigationRuleExplicit(EUINavigation::Down, Row_SFX);
 
     Row_SFX->SetNavigationRuleExplicit(EUINavigation::Up, Row_Music);
-    Row_SFX->SetNavigationRuleBase(EUINavigation::Down, EUINavigationRule::Stop);
+
+    // Sliders eat Left and Right for nudging, so Down is the only way out —
+    // without this the quality options are unreachable on a controller
+    Row_SFX->SetNavigationRuleExplicit(EUINavigation::Down, Option_Low);
+
+    Option_Low->SetNavigationRuleExplicit(EUINavigation::Up, Row_SFX);
+    Option_Low->SetNavigationRuleExplicit(EUINavigation::Right, Option_Medium);
+
+    // Left goes back to the sliders — Stop here would strand controller usersin the quality row with no way out
+    Option_Low->SetNavigationRuleExplicit(EUINavigation::Left, Row_Master);
+
+    Option_Medium->SetNavigationRuleExplicit(EUINavigation::Left, Option_Low);
+    Option_Medium->SetNavigationRuleExplicit(EUINavigation::Right, Option_High);
+    Option_Medium->SetNavigationRuleExplicit(EUINavigation::Up, Row_SFX);
+
+    Option_High->SetNavigationRuleExplicit(EUINavigation::Left, Option_Medium);
+    Option_High->SetNavigationRuleBase(EUINavigation::Right, EUINavigationRule::Stop);
+    Option_High->SetNavigationRuleExplicit(EUINavigation::Up, Row_SFX);
+
+    Row_Master->SetNavigationRuleExplicit(EUINavigation::Right, Option_Low);
+    Row_Music->SetNavigationRuleExplicit(EUINavigation::Right, Option_Low);
+    Row_SFX->SetNavigationRuleExplicit(EUINavigation::Right, Option_Low);
 
     Row_Master->BuildNavigation();
     Row_Music->BuildNavigation();
     Row_SFX->BuildNavigation();
+    Option_Low->BuildNavigation();
+    Option_Medium->BuildNavigation();
+    Option_High->BuildNavigation();
+}
+
+void USettingsWidget::PlayVolumeTick()
+{
+    UWorld* World = GetWorld();
+    if (!World) { return; }
+
+    const double Now = World->GetTimeSeconds();
+    if (Now - LastVolumeTickTime < VolumeTickInterval) { return; }
+
+    LastVolumeTickTime = Now;
+
+    if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+    {
+        Audio->Play2D(ChrisGameplayTags::Audio_UI_Navigate_Soft);
+    }
+}
+
+// Radio behaviour lives here, same as the tab borders — the rows only report
+// being chosen, they never decide who's ticked
+void USettingsWidget::RefreshQualityOptions()
+{
+    const UChrisGameUserSettings* Settings = UChrisGameUserSettings::GetChrisSettings();
+    if (!Settings) { return; }
+
+    const int32 Current = Settings->GetGraphicsQuality();
+
+    Option_Low->SetChosen(Current == Option_Low->GetQualityLevel());
+    Option_Medium->SetChosen(Current == Option_Medium->GetQualityLevel());
+    Option_High->SetChosen(Current == Option_High->GetQualityLevel());
+}
+
+void USettingsWidget::HandleQualityChosen(int32 Level)
+{
+    if (UChrisGameUserSettings* Settings = UChrisGameUserSettings::GetChrisSettings())
+    {
+        Settings->SetGraphicsQuality(Level);
+    }
+
+    RefreshQualityOptions();
+
+    if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+    {
+        Audio->Play2D(ChrisGameplayTags::Audio_UI_Confirm);
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("[Graphics] Chose %d — engine reports %d, effects %d, shadows %d"),
+        Level,
+        UChrisGameUserSettings::GetChrisSettings()->GetOverallScalabilityLevel(),
+        UChrisGameUserSettings::GetChrisSettings()->GetVisualEffectQuality(),
+        UChrisGameUserSettings::GetChrisSettings()->GetShadowQuality());
 }
 
 void USettingsWidget::ChangeTab(int32 Delta)

@@ -95,6 +95,15 @@ protected:
     UPROPERTY(meta = (BindWidget))
     TObjectPtr<class UVolumeSliderWidget> Row_SFX;
 
+    UPROPERTY(meta = (BindWidget))
+    TObjectPtr<class UQualityOptionWidget> Option_Low;
+
+    UPROPERTY(meta = (BindWidget))
+    TObjectPtr<class UQualityOptionWidget> Option_Medium;
+
+    UPROPERTY(meta = (BindWidget))
+    TObjectPtr<class UQualityOptionWidget> Option_High;
+
 
 /*****************************/
 /*            Tabs           */
@@ -149,4 +158,20 @@ private:
     void RefreshVolumeSliders();
 
     void WireVolumeSliderNavigation();
+
+    // Drags fire OnVolumeChanged every frame, so the tick is rate-limited rather than played once per event
+    UPROPERTY(EditDefaultsOnly, Category = "Settings|Audio")
+    float VolumeTickInterval = 0.06f;
+
+    double LastVolumeTickTime = 0.0;
+
+    void PlayVolumeTick();
+
+/*****************************/
+/*          Graphics         */
+/*****************************/
+
+
+    void HandleQualityChosen(int32 Level);
+    void RefreshQualityOptions();
 };

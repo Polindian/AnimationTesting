@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -16,7 +16,7 @@ class ANIMATIONTESTING_API UVolumeSliderWidget : public UUserWidget
 public:
 	FOnVolumeChanged OnVolumeChanged;
 
-	// Sets the slider and both visuals without broadcasting � for initial population
+	// Sets the slider and both visuals without broadcasting — for initial population
 	void SetVolume(float NewVolume);
 
 	float GetVolume() const;
