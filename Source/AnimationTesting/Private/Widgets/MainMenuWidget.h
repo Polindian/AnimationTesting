@@ -315,4 +315,40 @@ private:
 	UPROPERTY(meta = (BindWidget))
 	class UMenuButtonWidget* MultiplayerLeaderboardsButton;
 
+
+/*****************************/
+/*        Game Title         */
+/*****************************/
+
+
+	UPROPERTY(meta = (BindWidget))
+	class UWidget* IntroRoot;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Intro")
+	TObjectPtr<class UMediaPlayer> IntroMediaPlayer;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Intro")
+	TObjectPtr<class UMediaSource> IntroMediaSource;
+
+	UFUNCTION()
+	void HandleIntroFinished();
+
+	void PlayIntro();
+
+	// OnEndReached never fires if the video fails to open — a missing file in a
+	// packaged build, say. Without this the intro would lock on a black screen
+	UPROPERTY(EditDefaultsOnly, Category = "Intro")
+	float IntroMaxDuration = 25.f;
+
+	FTimerHandle IntroSafetyTimerHandle;
+
+	// How far into the intro the menu music starts, so it's already up when the
+	// video ends rather than starting from silence
+	UPROPERTY(EditDefaultsOnly, Category = "Intro")
+	float MenuMusicStartDelay = 12.f;
+
+	FTimerHandle MenuMusicStartTimerHandle;
+
+	void StartMenuMusicNow();
+
 };

@@ -25,6 +25,9 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "MediaPlayer.h"
 #include "MediaSource.h"
+#include "Player/MainMenuPlayerController.h"
+
+
 
 void UMainMenuWidget::NativeConstruct()
 {
@@ -157,7 +160,6 @@ void UMainMenuWidget::NativeConstruct()
 
 				SettingsButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::SettingsClicked);
 
-				if (!bDebugFillSessionList) return;
 
 				if (bDebugFillSessionList)
 				{
@@ -170,6 +172,19 @@ void UMainMenuWidget::NativeConstruct()
 				}
 
 				UpdateMultiplayerWind();
+
+				AMainMenuPlayerController* MenuPC = Cast<AMainMenuPlayerController>(GetOwningPlayer());
+
+				// Not logged in means a cold launch — returning from a match keeps the login, so the intro doesn't replay
+				if (ChrisGameInstance && !ChrisGameInstance->IsLoggedIn())
+				{
+					PlayIntro();
+				}
+				else if (MenuPC)
+				{
+					// No intro on this path, so nothing else will start the music
+					StartMenuMusicNow();
+				}
 }
 
 FReply UMainMenuWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
@@ -715,6 +730,60 @@ void UMainMenuWidget::LeaderboardsClosed()
 	if (LeaderboardOpener) { LeaderboardOpener->FocusButton(); }
 }
 
+void UMainMenuWidget::PlayIntro()
+{
+	if (!IntroMediaPlayer || !IntroMediaSource)
+	{
+		// No video set — don't strand the player on a black screen
+		GoToPage(LoginWidgetRoot);
+		return;
+	}
+
+	MainSwitcher->SetActiveWidget(IntroRoot);
+
+	IntroMediaPlayer->OnEndReached.AddDynamic(this, &UMainMenuWidget::HandleIntroFinished);
+	IntroMediaPlayer->OpenSource(IntroMediaSource);
+
+	// Set slightly longer than the video, so it only fires if playback failed
+	GetWorld()->GetTimerManager().SetTimer(IntroSafetyTimerHandle, this,
+		&UMainMenuWidget::HandleIntroFinished, IntroMaxDuration, false);
+
+	// Comes up under the back half of the video, so the transition to the login
+	// page isn't a jump from video audio straight into silence
+	GetWorld()->GetTimerManager().SetTimer(MenuMusicStartTimerHandle, this,
+		&UMainMenuWidget::StartMenuMusicNow, MenuMusicStartDelay, false);
+}
+
+void UMainMenuWidget::StartMenuMusicNow()
+{
+	if (AMainMenuPlayerController* MenuPC = Cast<AMainMenuPlayerController>(GetOwningPlayer()))
+	{
+		MenuPC->StartMenuMusic();
+	}
+}
+void UMainMenuWidget::HandleIntroFinished()
+{
+	// Called from either the media callback or the safety timer, so it has to be safe to reach twice — clear both, then move on
+	GetWorld()->GetTimerManager().ClearTimer(IntroSafetyTimerHandle);
+	GetWorld()->GetTimerManager().ClearTimer(MenuMusicStartTimerHandle);
+
+	// Covers a video that ended early — the delay timer wouldn't have fired yet
+	StartMenuMusicNow();
+
+	if (IntroMediaPlayer)
+	{
+		IntroMediaPlayer->OnEndReached.RemoveDynamic(this, &UMainMenuWidget::HandleIntroFinished);
+		IntroMediaPlayer->Close();
+	}
+
+	if (AMainMenuPlayerController* PC = Cast<AMainMenuPlayerController>(GetOwningPlayer()))
+	{
+		PC->StartMenuMusic();
+	}
+
+	// Reuses the existing fade-to-black-and-swap path
+	GoToPage(LoginWidgetRoot);
+}
 
 void UMainMenuWidget::SwitchToMainWidget()
 {
@@ -808,6 +877,11 @@ void UMainMenuWidget::OnFadeOutFinished()
 	if (!PendingPage) return;
 
 	MainSwitcher->SetActiveWidget(PendingPage);
+
+	if (MainSwitcher && MainSwitcher->GetActiveWidget() == LoginWidgetRoot && LoginButton)
+	{
+		LoginButton->FocusButton();
+	}
 
 	// Console-style default: top button of the new page starts focused/highlighted
 	if (PendingPage == MainWidgetRoot) { StoryModeButton->FocusButton(); }

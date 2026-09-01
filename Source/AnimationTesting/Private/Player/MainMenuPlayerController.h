@@ -16,6 +16,8 @@ class AMainMenuPlayerController : public AMenuPlayerController
 	
 public:
 	AMainMenuPlayerController();
+
+	void StartMenuMusic();
 	
 protected:
 	virtual void BeginPlay() override;

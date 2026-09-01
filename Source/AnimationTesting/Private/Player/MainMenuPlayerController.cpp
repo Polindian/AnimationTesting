@@ -10,15 +10,22 @@ AMainMenuPlayerController::AMainMenuPlayerController()
 	bAutoManageActiveCameraTarget = false;
 }
 
-
-void AMainMenuPlayerController::BeginPlay()
+void AMainMenuPlayerController::StartMenuMusic()
 {
-	Super::BeginPlay();
+	// Called by the widget once the intro video is done, so the two don't overlap
+	if (MenuMusic) { return; }
 
 	if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
 	{
 		MenuMusic = Audio->PlayLooping2DFadeIn(ChrisGameplayTags::Audio_Music_MainMenu, MusicFadeInTime);
 	}
+}
+
+
+void AMainMenuPlayerController::BeginPlay()
+{
+	Super::BeginPlay();
+
 }
 
 // Travelling to the lobby tears this controller down, so the track stops with it
