@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 
 #include "ChrisAudioSubsystem.h"
@@ -123,7 +123,7 @@ UAudioComponent* UChrisAudioSubsystem::PlayLooping2DFadeIn(FGameplayTag Tag, flo
 	const FChrisSoundDef* Def = Library ? Library->FindSound(Tag) : nullptr;
 	if (!Def) { return nullptr; }
 
-	// bAutoDestroy false � we hold this and fade it out ourselves later
+	// bAutoDestroy false — we hold this and fade it out ourselves later
 	UAudioComponent* Component = UGameplayStatics::SpawnSound2D(this, Def->Sound, Def->VolumeMultiplier,
 		Def->PitchMultiplier, 0.f, Def->Concurrency, false, false);
 

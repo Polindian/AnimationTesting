@@ -610,6 +610,13 @@ void AChrisCharacter::ApplyDissolveMaterial(UMaterialInterface* DissolveMaterial
 {
 	if (!DissolveMaterial) return;
 
+	// Already dissolved and not yet restored — capturing now would record the
+	// dissolve MIDs as the originals, and the mesh could never come back
+	if (DissolveMeshes.Num() > 0)
+	{
+		RestoreOriginalMaterials();
+	}
+
 	DissolveMeshes.Reset();
 	OriginalMaterials.Reset();
 	OriginalMaterialCounts.Reset();

@@ -16,6 +16,20 @@ class AMainMenuPlayerController : public AMenuPlayerController
 	
 public:
 	AMainMenuPlayerController();
+
+	void StartMenuMusic();
 	
-	
+protected:
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+private:
+	UPROPERTY(Transient)
+	class UAudioComponent* MenuMusic = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Audio")
+	float MusicFadeInTime = 2.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Audio")
+	float MusicFadeOutTime = 1.5f;
 };

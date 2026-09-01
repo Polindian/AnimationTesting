@@ -234,4 +234,22 @@ private:
 public:
     void ShowDeathBanner();
     void CancelDeathBanner();
+
+    // --------- MUSIC ---------
+
+private:
+    UPROPERTY(Transient)
+    class UAudioComponent* ArenaMusic = nullptr;
+
+    // Long enough to land under the round-end banner without cutting abruptly
+    UPROPERTY(EditDefaultsOnly, Category = "Audio")
+    float ArenaMusicFadeOutTime = 2.f;
+
+    void StopArenaMusic();
+
+    // Delay for music so drop hits on FIGHT text
+    UPROPERTY(EditDefaultsOnly, Category = "Audio")
+    float ArenaMusicStartDelay = 2.f;
+
+    FTimerHandle ArenaMusicStartTimerHandle;
 };
