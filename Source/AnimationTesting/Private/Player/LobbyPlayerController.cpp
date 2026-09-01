@@ -4,6 +4,8 @@
 #include "Player/LobbyPlayerController.h"
 #include "GameFramework/PlayerState.h"
 #include "Framework/ChrisGameState.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
 
 
 // Executes on server: forwards the slot change request to the GameState for authoritative validation
@@ -77,4 +79,21 @@ bool ALobbyPlayerController::Server_RequestLockIn_Validate(bool bLockIn)
 ALobbyPlayerController::ALobbyPlayerController()
 {
 	bAutoManageActiveCameraTarget = false;
+}
+
+void ALobbyPlayerController::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+	{
+		PreMatchMusic = Audio->PlayLooping2DFadeIn(ChrisGameplayTags::Audio_Music_PreMatch, MusicFadeInTime);
+	}
+}
+
+void ALobbyPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	UChrisAudioSubsystem::StopLoopingSound(PreMatchMusic, MusicFadeOutTime);
+
+	Super::EndPlay(EndPlayReason);
 }

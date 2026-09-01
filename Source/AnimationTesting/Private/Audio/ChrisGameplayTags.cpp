@@ -87,4 +87,7 @@ namespace ChrisGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_UI_MatchStats, "audio.ui.matchstats", "");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_World_FlagSmash, "audio.world.flagsmash", "Flags slamming at round start and on capture");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Ambience_LoadingScreen, "audio.ambience.loadingscreen", "Loops while the loading screen is up");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Music_MainMenu, "audio.music.mainmenu", "Looping menu track, main menu level only");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Music_PreMatch, "audio.music.prematch", "Looping lobby track, team and hero selection");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Audio_Music_Arena, "audio.music.arena", "Round track, starts on countdown so the drop lands on FIGHT");
 }

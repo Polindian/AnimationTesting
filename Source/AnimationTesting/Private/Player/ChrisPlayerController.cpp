@@ -25,6 +25,9 @@
 #include "EngineUtils.h"
 #include "Character/ChrisCharacter.h"
 #include "Framework/CAssetManager.h"
+#include "Audio/ChrisAudioSubsystem.h"
+#include "Audio/ChrisGameplayTags.h"
+
 
 
 
@@ -216,6 +219,8 @@ void AChrisPlayerController::ToggleGameplayMenu()
 
 void AChrisPlayerController::HandleLeaveMatch()
 {
+	StopArenaMusic();
+	
 	if (UChrisGameInstance* GI = GetGameInstance<UChrisGameInstance>())
 	{
 		GI->bReturnToMultiplayerPage = true;
@@ -330,6 +335,13 @@ void AChrisPlayerController::CancelDeathBanner()
 	}
 }
 
+void AChrisPlayerController::StopArenaMusic()
+{
+	GetWorldTimerManager().ClearTimer(ArenaMusicStartTimerHandle);
+
+	UChrisAudioSubsystem::StopLoopingSound(ArenaMusic, ArenaMusicFadeOutTime);
+}
+
 void AChrisPlayerController::Client_ShowMatchStats_Implementation()
 {
 	if (!MatchStatsWidgetClass) return;
@@ -419,6 +431,18 @@ void AChrisPlayerController::Client_OnCountdownStart_Implementation(int32 Second
 		}
 	}
 
+	StopArenaMusic();
+
+	GetWorldTimerManager().SetTimer(ArenaMusicStartTimerHandle,
+		FTimerDelegate::CreateWeakLambda(this, [this]()
+			{
+				if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+				{
+					ArenaMusic = Audio->PlayLooping2DFadeIn(ChrisGameplayTags::Audio_Music_Arena, 0.f);
+				}
+			}),
+		ArenaMusicStartDelay, false);
+
 	UE_LOG(LogTemp, Log, TEXT("[Client] Countdown started: %d"), Seconds);
 }
 
@@ -486,6 +510,8 @@ void AChrisPlayerController::Client_OnRoundEnd_Implementation()
 	{
 		ChrisPlayerCharacter->DisableInput(this);
 	}
+
+	StopArenaMusic();
 
 	for (TActorIterator<AChrisCharacter> It(GetWorld()); It; ++It)
 	{
