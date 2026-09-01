@@ -56,6 +56,9 @@ void ASkeletonAI::Activate()
 	GetMesh()->SetSimulatePhysics(false);
 	GetMesh()->AttachToComponent(Capsule, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 
+	// A skeleton recycled mid-dissolve would otherwise come back invisible
+	RestoreOriginalMaterials();
+
 	RespawnImmediately();
 
 	// Reapply last — the dead tag removal above runs Respawn synchronously on

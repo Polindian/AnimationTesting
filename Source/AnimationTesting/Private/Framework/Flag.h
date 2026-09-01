@@ -132,6 +132,14 @@ private:
     UPROPERTY()
     TSet<class AChrisPlayerCharacter*> OverlappingHeroes;
 
+    // Everything in the zone that has a team, heroes and minions alike. Rates are
+    // recomputed from this each tick rather than accumulated on enter and exit,
+    // so a death inside the zone stops counting immediately
+    UPROPERTY()
+    TSet<AActor*> OverlappingInfluencers;
+
+    void RecalculateCaptureRates();
+
     // How much XP to grant per threshold
     UPROPERTY(EditDefaultsOnly, Category = "Capture|Reward")
     float ZoneXPReward = 50.f;

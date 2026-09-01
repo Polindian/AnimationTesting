@@ -11,6 +11,7 @@
 #include "Player/ChrisPlayerCharacter.h"
 #include "Audio/ChrisAudioSubsystem.h"
 #include "Audio/ChrisGameplayTags.h"
+#include "Character/ChrisCharacter.h"
 
 
 AFlag::AFlag()
@@ -147,6 +148,7 @@ void AFlag::ResetCapture()
     TeamOneCaptureRate = 0.f;
     TeamTwoCaptureRate = 0.f;
     OverlappingHeroes.Empty();
+    OverlappingInfluencers.Empty();
     DismissBanner();
 }
 
@@ -162,6 +164,8 @@ void AFlag::Tick(float DeltaTime)
 
     if (!HasAuthority() || bIsCaptured || !bCaptureEnabled)
         return;
+
+    RecalculateCaptureRates();
 
     // Zone time and XP accrue for anyone standing here while the flag is uncaptured — including a contested zone where influence cancels out.
     AChrisGameState* GS = GetWorld()->GetGameState<AChrisGameState>();
@@ -261,36 +265,69 @@ float AFlag::GetActorCaptureWeight(AActor* Actor) const
     return 0.f;
 }
 
+void AFlag::RecalculateCaptureRates()
+{
+    const float PreviousTeamOne = TeamOneCaptureRate;
+    const float PreviousTeamTwo = TeamTwoCaptureRate;
+
+    TeamOneCaptureRate = 0.f;
+    TeamTwoCaptureRate = 0.f;
+
+    for (auto It = OverlappingInfluencers.CreateIterator(); It; ++It)
+    {
+        AActor* Influencer = *It;
+
+        // Destroyed without an exit event — drop it from the set
+        if (!IsValid(Influencer))
+        {
+            It.RemoveCurrent();
+            continue;
+        }
+
+        // Dead bodies stay overlapping, but they shouldn't hold the zone
+        if (const AChrisCharacter* Character = Cast<AChrisCharacter>(Influencer))
+        {
+            if (Character->IsDead()) { continue; }
+        }
+
+        const IGenericTeamAgentInterface* TeamAgent = Cast<IGenericTeamAgentInterface>(Influencer);
+        if (!TeamAgent) { continue; }
+
+        const float Weight = GetActorCaptureWeight(Influencer);
+
+        if (TeamAgent->GetGenericTeamId().GetId() == 0)
+        {
+            TeamOneCaptureRate += Weight;
+        }
+        else if (TeamAgent->GetGenericTeamId().GetId() == 1)
+        {
+            TeamTwoCaptureRate += Weight;
+        }
+    }
+
+    // Only tell the UI when something actually moved
+    if (!FMath::IsNearlyEqual(PreviousTeamOne, TeamOneCaptureRate)
+        || !FMath::IsNearlyEqual(PreviousTeamTwo, TeamTwoCaptureRate))
+    {
+        OnTeamInfluenceUpdated.Broadcast(TeamOneCaptureRate, TeamTwoCaptureRate);
+    }
+}
+
 void AFlag::OnInfluencerEnter(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
     if (bIsCaptured)
         return;
 
-    IGenericTeamAgentInterface* TeamAgent = Cast<IGenericTeamAgentInterface>(OtherActor);
-    if (!TeamAgent)
+    if (!Cast<IGenericTeamAgentInterface>(OtherActor))
         return;
 
-    float Weight = GetActorCaptureWeight(OtherActor);
+    // Only track membership
+    OverlappingInfluencers.Add(OtherActor);
 
-    if (TeamAgent->GetGenericTeamId().GetId() == 0)
-    {
-        TeamOneCaptureRate += Weight;
-    }
-    else if (TeamAgent->GetGenericTeamId().GetId() == 1)
-    {
-        TeamTwoCaptureRate += Weight;
-    }
-
-    // Track hero for XP accumulation
     if (AChrisPlayerCharacter* Hero = Cast<AChrisPlayerCharacter>(OtherActor))
     {
         OverlappingHeroes.Add(Hero);
     }
-
-    UE_LOG(LogTemp, Warning, TEXT("Entered flag zone: %s | Weight: %.1f | T1Rate: %.1f | T2Rate: %.1f"),
-        *OtherActor->GetName(), Weight, TeamOneCaptureRate, TeamTwoCaptureRate);
-
-    OnTeamInfluenceUpdated.Broadcast(TeamOneCaptureRate, TeamTwoCaptureRate);
 }
 
 void AFlag::OnInfluencerExit(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
@@ -298,28 +335,10 @@ void AFlag::OnInfluencerExit(UPrimitiveComponent* OverlappedComponent, AActor* O
     if (bIsCaptured)
         return;
 
-    IGenericTeamAgentInterface* TeamAgent = Cast<IGenericTeamAgentInterface>(OtherActor);
-    if (!TeamAgent)
-        return;
-
-    float Weight = GetActorCaptureWeight(OtherActor);
-
-    if (TeamAgent->GetGenericTeamId().GetId() == 0)
-    {
-        TeamOneCaptureRate = FMath::Max(0.f, TeamOneCaptureRate - Weight);
-    }
-    else if (TeamAgent->GetGenericTeamId().GetId() == 1)
-    {
-        TeamTwoCaptureRate = FMath::Max(0.f, TeamTwoCaptureRate - Weight);
-    }
+    OverlappingInfluencers.Remove(OtherActor);
 
     if (AChrisPlayerCharacter* Hero = Cast<AChrisPlayerCharacter>(OtherActor))
     {
         OverlappingHeroes.Remove(Hero);
     }
-
-    UE_LOG(LogTemp, Warning, TEXT("Left flag zone: %s | Weight: %.1f | T1Rate: %.1f | T2Rate: %.1f"),
-        *OtherActor->GetName(), Weight, TeamOneCaptureRate, TeamTwoCaptureRate);
-
-    OnTeamInfluenceUpdated.Broadcast(TeamOneCaptureRate, TeamTwoCaptureRate);
 }

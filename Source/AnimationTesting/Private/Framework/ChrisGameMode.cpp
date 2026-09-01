@@ -387,6 +387,13 @@ void AChrisGameMode::EndRound()
 			PC->Client_OnRoundEnd();
 		});
 
+
+	if (AChrisGameState* GS = GetGameState<AChrisGameState>())
+	{
+		GS->SetArenaAmbienceActive(true);
+	}
+
+
 	// === NEW === Unbind flag captured delegates (prevent stale bindings next round)
 	for (TActorIterator<AFlag> It(GetWorld()); It; ++It)
 	{
@@ -796,11 +803,6 @@ void AChrisGameMode::StartShopPhase()
 {
 	CurrentPhase = EMatchPhase::ShopPhase;
 	ContinueVoters.Empty(); // Reset votes from previous round
-
-	if (AChrisGameState* GS = GetGameState<AChrisGameState>())
-	{
-		GS->SetArenaAmbienceActive(true);
-	}
 
 	// The shop UI has been on screen since the transition midpoint, but the server
 	// rejected purchases until this line — tell clients it's genuinely open now
