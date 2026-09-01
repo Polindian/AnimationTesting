@@ -1061,6 +1061,18 @@ void AChrisGameMode::FinishLoadingHold()
 	ForEachPlayerController([](AChrisPlayerController* PC)
 		{
 			PC->Client_DismissLoadingScreen();
+			PC->Client_OnSetArenaCamera();
+
+			// The rotation half of TeleportPlayersToStart, without the teleport.
+			// Rounds 2 and 3 get this at the arena transition; round 1 was left
+			// with whatever the lobby set, which faced the wrong way
+			TWeakObjectPtr<AActor> StartSpot = PC->StartSpot;
+			if (StartSpot.IsValid())
+			{
+				const FRotator SpawnRotation = StartSpot->GetActorRotation();
+				PC->SetControlRotation(SpawnRotation);          // server side
+				PC->Client_OnResetRotation(SpawnRotation);      // client side
+			}
 		});
 
 	// Let the screen finish fading and give the arena a bit of time before the banner

@@ -27,6 +27,7 @@
 #include "Framework/CAssetManager.h"
 #include "Audio/ChrisAudioSubsystem.h"
 #include "Audio/ChrisGameplayTags.h"
+#include "GameFramework/SpringArmComponent.h"
 
 
 
@@ -70,6 +71,14 @@ void AChrisPlayerController::AcknowledgePossession(APawn* NewPawn)
 		if (GameplayWidget)
 		{
 			GameplayWidget->SetVisibility(ESlateVisibility::Collapsed);
+		}
+
+		if (USpringArmComponent* Boom = ChrisPlayerCharacter->FindComponentByClass<USpringArmComponent>())
+		{
+			OriginalBoomRotation = Boom->GetRelativeRotation();
+			OriginalBoomSocketOffset = Boom->SocketOffset;
+			OriginalArmLength = Boom->TargetArmLength;
+			bOriginalUsePawnControlRotation = Boom->bUsePawnControlRotation;
 		}
 	}
 }
@@ -695,10 +704,8 @@ void AChrisPlayerController::Client_OnSetShopCamera_Implementation()
 	USpringArmComponent* Boom = ChrisPlayerCharacter->FindComponentByClass<USpringArmComponent>();
 	if (!Boom) return;
 
-	// Save current camera settings
-	OriginalBoomRotation = Boom->GetRelativeRotation();
-	OriginalBoomSocketOffset = Boom->SocketOffset;
-	bOriginalUsePawnControlRotation = Boom->bUsePawnControlRotation;
+	// The Original* values are captured once in AcknowledgePossession. Re-saving
+	// here risked storing the shop angle as the arena default on a second visit
 
 	// Decouple CAMERA from controller (for shop preview angle)
 	Boom->bUsePawnControlRotation = false;
@@ -714,9 +721,7 @@ void AChrisPlayerController::Client_OnSetShopCamera_Implementation()
 
 	// Position camera independently at the shop preview angle
 	Boom->SetWorldRotation(FRotator(0.f, InitialSpawnRotation.Yaw + 170.f, 0.f));
-
 	Boom->SocketOffset = FVector(0.f, -180.f, -10.f);
-	OriginalArmLength = Boom->TargetArmLength;
 	Boom->TargetArmLength = 240.f;
 }
 
