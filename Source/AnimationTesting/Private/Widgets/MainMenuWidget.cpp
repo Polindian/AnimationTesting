@@ -171,7 +171,12 @@ void UMainMenuWidget::NativeConstruct()
 					BackgroundMediaPlayer->OnMediaOpened.AddDynamic(this, &UMainMenuWidget::HandleBackgroundMediaOpened);
 				}
 
-				UpdateMultiplayerWind();
+				if (MainMenuMediaPlayer)
+				{
+					MainMenuMediaPlayer->OnMediaOpened.AddDynamic(this, &UMainMenuWidget::HandleMainMenuMediaOpened);
+				}
+
+				UpdatePageAmbience();
 
 				AMainMenuPlayerController* MenuPC = Cast<AMainMenuPlayerController>(GetOwningPlayer());
 
@@ -219,6 +224,12 @@ void UMainMenuWidget::NativeDestruct()
 	{
 		BackgroundMediaPlayer->OnMediaOpened.RemoveAll(this);
 		BackgroundMediaPlayer->Close();
+	}
+
+	if (MainMenuMediaPlayer)
+	{
+		MainMenuMediaPlayer->OnMediaOpened.RemoveAll(this);
+		MainMenuMediaPlayer->Close();
 	}
 
 	Super::NativeDestruct();
@@ -313,7 +324,7 @@ void UMainMenuWidget::SwitchToMultiplayerPage()
 		MainSwitcher->SetActiveWidget(MultiplayerPageRoot);
 	}
 
-	UpdateMultiplayerWind();
+	UpdatePageAmbience();
 }
 
 void UMainMenuWidget::JoinSessionFailed()
@@ -479,7 +490,7 @@ void UMainMenuWidget::PracticeArenaClicked()
 			});
 }
 
-void UMainMenuWidget::UpdateMultiplayerWind()
+void UMainMenuWidget::UpdatePageAmbience()
 {
 	const bool bOnMultiplayerPage = (MainSwitcher && MainSwitcher->GetActiveWidget() == MultiplayerPageRoot);
 
@@ -508,6 +519,24 @@ void UMainMenuWidget::UpdateMultiplayerWind()
 		{
 			BackgroundMediaPlayer->Close();
 			bBackgroundVideoPlaying = false;
+		}
+	}
+
+	const bool bOnMainPage = MainSwitcher && MainSwitcher->GetActiveWidget() == MainWidgetRoot;
+
+	// Same as the multiplayer video: only decode while its page is up
+	if (MainMenuMediaPlayer && MainMenuMediaSource)
+	{
+		if (bOnMainPage && !bMainMenuVideoPlaying)
+		{
+			MainMenuMediaPlayer->SetNativeVolume(0.f);
+			MainMenuMediaPlayer->OpenSource(MainMenuMediaSource);
+			bMainMenuVideoPlaying = true;
+		}
+		else if (!bOnMainPage && bMainMenuVideoPlaying)
+		{
+			MainMenuMediaPlayer->Close();
+			bMainMenuVideoPlaying = false;
 		}
 	}
 }
@@ -752,6 +781,15 @@ void UMainMenuWidget::PlayIntro()
 	// page isn't a jump from video audio straight into silence
 	GetWorld()->GetTimerManager().SetTimer(MenuMusicStartTimerHandle, this,
 		&UMainMenuWidget::StartMenuMusicNow, MenuMusicStartDelay, false);
+
+	// Opened during the intro so the first frame is decoded before the main page
+	// is ever shown — otherwise there's a visible black gap on arrival
+	if (MainMenuMediaPlayer && MainMenuMediaSource && !bMainMenuVideoPlaying)
+	{
+		MainMenuMediaPlayer->SetNativeVolume(0.f);
+		MainMenuMediaPlayer->OpenSource(MainMenuMediaSource);
+		bMainMenuVideoPlaying = true;
+	}
 }
 
 void UMainMenuWidget::StartMenuMusicNow()
@@ -761,6 +799,16 @@ void UMainMenuWidget::StartMenuMusicNow()
 		MenuPC->StartMenuMusic();
 	}
 }
+void UMainMenuWidget::HandleMainMenuMediaOpened(FString OpenedUrl)
+{
+	UE_LOG(LogTemp, Warning, TEXT("[MainMenuBG] Media opened: %s"), *OpenedUrl);
+	
+	if (!MainMenuMediaPlayer) { return; }
+
+	MainMenuMediaPlayer->SetLooping(true);
+	MainMenuMediaPlayer->Play();
+}
+
 void UMainMenuWidget::HandleIntroFinished()
 {
 	// Called from either the media callback or the safety timer, so it has to be safe to reach twice — clear both, then move on
@@ -791,6 +839,8 @@ void UMainMenuWidget::SwitchToMainWidget()
 	{
 		MainSwitcher->SetActiveWidget(MainWidgetRoot);
 		StoryModeButton->FocusButton();
+
+		UpdatePageAmbience();
 	}
 }
 
@@ -878,27 +928,33 @@ void UMainMenuWidget::OnFadeOutFinished()
 
 	MainSwitcher->SetActiveWidget(PendingPage);
 
-	if (MainSwitcher && MainSwitcher->GetActiveWidget() == LoginWidgetRoot && LoginButton)
-	{
-		LoginButton->FocusButton();
-	}
-
 	// Console-style default: top button of the new page starts focused/highlighted
-	if (PendingPage == MainWidgetRoot) { StoryModeButton->FocusButton(); }
-	else if (PendingPage == MultiplayerPageRoot) { CreateSessionButton->FocusButton(); }
-	else if (PendingPage == StoryModeRoot) { StoryBackButton->FocusButton(); }
+	if (PendingPage == MainWidgetRoot)
+	{
+		StoryModeButton->FocusButton();
+	}
+	else if (PendingPage == MultiplayerPageRoot)
 	{
 		ResetCreateSessionFlow();
 		CreateSessionButton->FocusButton();
 	}
+	else if (PendingPage == StoryModeRoot)
+	{
+		StoryBackButton->FocusButton();
+	}
+	else if (PendingPage == LoginWidgetRoot)
+	{
+		LoginButton->FocusButton();
+	}
 
 	PendingPage = nullptr;
 
-	UpdateMultiplayerWind();
+	UpdatePageAmbience();
 
 	GetWorld()->GetTimerManager().SetTimer(
 		FadeHoldTimerHandle, this, &UMainMenuWidget::OnFadeHoldFinished, FadeHoldDuration);
 }
+
 
 void UMainMenuWidget::OnFadeHoldFinished()
 {

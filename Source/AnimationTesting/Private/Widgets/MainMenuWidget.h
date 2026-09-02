@@ -226,7 +226,7 @@ private:
 	UAudioComponent* WindAudio = nullptr;
 
 	// Called whenever the active page changes, from any path
-	void UpdateMultiplayerWind();
+	void UpdatePageAmbience();
 
 	UPROPERTY(EditDefaultsOnly, Category = "Multiplayer Page")
 	TObjectPtr<class UMediaPlayer> BackgroundMediaPlayer;
@@ -351,4 +351,19 @@ private:
 
 	void StartMenuMusicNow();
 
+
+/*****************************/
+/*       Main Menu Video     */
+/*****************************/
+
+	UPROPERTY(EditDefaultsOnly, Category = "Main Page")
+	TObjectPtr<class UMediaPlayer> MainMenuMediaPlayer;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Main Page")
+	TObjectPtr<class UMediaSource> MainMenuMediaSource;
+
+	bool bMainMenuVideoPlaying = false;
+
+	UFUNCTION()
+	void HandleMainMenuMediaOpened(FString OpenedUrl);
 };
