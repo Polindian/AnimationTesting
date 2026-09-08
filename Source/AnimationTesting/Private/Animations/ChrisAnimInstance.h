@@ -66,6 +66,10 @@ public:
 	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
 	FORCEINLINE float GetLookPitchOffset() const { return LookRotationOffset.Pitch; }
 
+	// Aim delta driving the aim offset; exposed so it shows in the Anim BP debugger
+	UPROPERTY(BlueprintReadOnly, Category = "Aim")
+	FRotator LookRotationOffset;
+
 
 	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
 	bool ShouldDoFullBody() const;
@@ -123,5 +127,4 @@ private:
 	FRotator PlayerRotationLastFrame;
 	FRotator PlayerRotation;
 	FRotator DeltaRotation;
-	FRotator LookRotationOffset;
 };
