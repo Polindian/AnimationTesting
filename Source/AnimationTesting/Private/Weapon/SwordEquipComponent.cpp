@@ -215,6 +215,9 @@ void USwordEquipComponent::ResetToUnequipped()
     PhaseAlpha = 0.f;
     SetComponentTickEnabled(false);
 
+    // Death bypasses FinalizeUnequip, so the glow has to be killed here too
+    SetSwordVFXActive(false);
+
     // Snap swords to sheath sockets
     if (LeftSword && RightSword && OwnerMesh)
     {

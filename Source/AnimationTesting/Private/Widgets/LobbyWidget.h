@@ -162,4 +162,11 @@ private:
 
 	void CaptureFocusedSlot();
 	void RestoreLobbyFocus();
+
+	// Team selection is pre-commitment, so leaving there costs nothing
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	FText LeaveTeamSelectionText = FText::FromString(TEXT("Are you sure you want to leave this match?"));
+
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	FText LeaveHeroSelectionText = FText::FromString(TEXT("Are you sure you want to leave the match?\nIt will count as a loss on your record."));
 };
