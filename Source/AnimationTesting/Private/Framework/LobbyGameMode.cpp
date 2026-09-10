@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 
 #include "Framework/LobbyGameMode.h"
@@ -20,6 +20,6 @@ void ALobbyGameMode::PreLogin(const FString& Options, const FString& Address, co
 	if (!bAcceptingPlayers)
 	{
 		ErrorMessage = TEXT("This match has already started.");
-		UE_LOG(LogTemp, Warning, TEXT("[Lobby] Rejected a join � team selection is over"));
+		UE_LOG(LogTemp, Warning, TEXT("[Lobby] Rejected a join — team selection is over"));
 	}
 }

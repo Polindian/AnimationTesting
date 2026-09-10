@@ -14,9 +14,10 @@
 DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnLoginCompleted, bool /*bWasSuccessful*/, const FString& /*PlayerNickname*/, const FString& /*ErrorMessage*/);
 DECLARE_MULTICAST_DELEGATE(FOnJoinSessionFailed);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnGlobalSessionSearchCompleted, const TArray<FOnlineSessionSearchResult>& /*SearchResults*/)
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnTravelFailedWithReason, const FString& /*Reason*/);
 
 /**
- * 
+ *
  */
 UCLASS()
 class UChrisGameInstance : public UGameInstance
@@ -31,9 +32,9 @@ public:
 	int32 LastHintIndex = -1;
 
 
-/*********************************/
-/*             Login             */
-/*********************************/
+	/*********************************/
+	/*             Login             */
+	/*********************************/
 public:
 	bool IsLoggedIn() const;
 	bool IsLoggingIn() const;
@@ -48,9 +49,9 @@ private:
 
 	FDelegateHandle LoggingInDelegateHandle;
 
-/*********************************/
-/*         Client Session        */
-/*********************************/
+	/*********************************/
+	/*         Client Session        */
+	/*********************************/
 
 public:
 	void RequestCreateAndJoinSession(const FName& NewSessionName);
@@ -62,6 +63,10 @@ public:
 	FOnJoinSessionFailed OnJoinSessionFailed;
 	FOnGlobalSessionSearchCompleted OnGlobalSessionSearchCompleted;
 
+	// A PreLogin rejection or a dead server surfaces here, not in OnJoinSessionFailed —
+	// the EOS join has already succeeded by the time the connection is refused
+	FOnTravelFailedWithReason OnTravelFailedWithReason;
+
 private:
 	void SessionCreationRequestCompleted(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bConnectedSuccessfully, FGuid SessionSearchId);
 	void StartFindingCreatedSession(const FGuid& SessionSearchId);
@@ -70,6 +75,9 @@ private:
 	void StopGlobalSessionSearch();
 	void FindGlobalSessions();
 	void GlobalSessionSearchCompleted(bool bWasSuccessful);
+
+	void HandleNetworkFailure(UWorld* World, UNetDriver* NetDriver,
+		ENetworkFailure::Type FailureType, const FString& ErrorString);
 
 	FTimerHandle FindCreatedSessionTimerHandle;
 	FTimerHandle FindCreatedSessionTimeoutTimerHandle;
@@ -83,9 +91,16 @@ private:
 	FTimerHandle GlobalSessionSearchTimerHandle;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Session Search")
-	float GlobalSessionSearchInterval = 3.f;
+	float GlobalSessionSearchInterval = 8.f;
 
-	
+	// A server that stops responding mid-join produces no callback at all,
+	// so the waiting widget needs its own way out
+	FTimerHandle JoinSessionTimeoutHandle;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Session Search")
+	float JoinSessionTimeoutDuration = 30.f;
+
+	void JoinSessionTimeout();
 
 	void FindCreatedSession(FGuid SessionSearchId);
 	void FindCreatedSessionTimeout();
@@ -98,9 +113,9 @@ private:
 
 
 
-/*********************************/
-/*          Session Server       */
-/*********************************/
+	/*********************************/
+	/*          Session Server       */
+	/*********************************/
 public:
 	void PlayerJoined(const FUniqueNetIdRepl& UniqueId);
 	void PlayerLeft(const FUniqueNetIdRepl& UniqueId);
@@ -110,6 +125,12 @@ public:
 	// Called when the lobby leaves team selection — pulls the session out of
 	// search results so nobody can join a match that's past team picking
 	void SetSessionJoinable(bool bJoinable);
+
+	// Flask decides what's joinable; EOS keeps advertising sessions it shouldn't
+	bool IsSessionJoinable(const FString& SessionSearchId) const
+	{
+		return JoinableSessionIds.Contains(SessionSearchId);
+	}
 
 
 private:
@@ -125,7 +146,7 @@ private:
 	FTimerHandle WaitPlayerJoinTimeoutHandle;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Session")
-	float WaitPlayerJoinTimeoutDuration = 300.f;
+	float WaitPlayerJoinTimeoutDuration = 100.f;
 
 	void WaitPlayerJoinTimeoutReached();
 
@@ -143,10 +164,29 @@ private:
 
 	void LoadLevelAndListen(TSoftObjectPtr<UWorld>Level);
 
+	// EOS keeps advertising despite bShouldAdvertise, so the coordinator is what
+	// actually controls whether this session appears in the browser.
+	// Status is "open", "started" or "ended".
+	void ReportSessionStatusToCoordinator(const FString& Status);
 
-/*********************************/
-/*         Practice Arena        */
-/*********************************/
+	// Silence means dead, whatever the cause — this survives crashes and hard
+	// kills, which a shutdown-time report cannot
+	FTimerHandle HeartbeatTimerHandle;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Session")
+	float HeartbeatInterval = 30.f;
+
+	void SendHeartbeat();
+
+	TSet<FString> JoinableSessionIds;
+
+	void FetchJoinableSessions();
+	void JoinableSessionsFetched(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess);
+
+
+	/*********************************/
+	/*         Practice Arena        */
+	/*********************************/
 
 public:
 	// Practice arena: solo play against AI, no session or coordinator involved
