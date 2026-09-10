@@ -33,6 +33,10 @@ public:
 
     void SetButtonSize(float InWidth, float InHeight);
 
+    // Persistent "you've committed" tint. Survives hover and focus, unlike the retainer glow
+    UFUNCTION(BlueprintCallable, Category = "Menu Button")
+    void SetCommittedVisual(bool bCommitted);
+
 private:
     UPROPERTY(meta = (BindWidget))
     class UButton* MainButton;
@@ -69,6 +73,14 @@ private:
     // Full font control per instance: family, typeface, size, outline, spacing
     UPROPERTY(EditAnywhere, Category = "Menu Button")
     FSlateFontInfo ButtonFont;
+
+    UPROPERTY(EditAnywhere, Category = "Menu Button")
+    FLinearColor CommittedTextColor = FLinearColor(0.25f, 0.85f, 0.35f);
+
+    UPROPERTY(EditAnywhere, Category = "Menu Button")
+    FLinearColor NormalTextColor = FLinearColor::White;
+
+    bool bIsCommitted = false;
 
 
     /*********************************/

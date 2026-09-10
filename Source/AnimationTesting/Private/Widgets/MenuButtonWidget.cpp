@@ -66,6 +66,16 @@ void UMenuButtonWidget::SetButtonSize(float InWidth, float InHeight)
     }
 }
 
+void UMenuButtonWidget::SetCommittedVisual(bool bCommitted)
+{
+    bIsCommitted = bCommitted;
+
+    if (ButtonText)
+    {
+        ButtonText->SetColorAndOpacity(FSlateColor(bCommitted ? CommittedTextColor : NormalTextColor));
+    }
+}
+
 void UMenuButtonWidget::HandleClicked()
 {
     // Play before broadcasting — a listener may switch pages and destroy this widget

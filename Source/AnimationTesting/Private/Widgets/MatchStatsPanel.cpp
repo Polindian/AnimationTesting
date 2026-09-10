@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+﻿// Christopher Naglik All Rights Reserved
 
 #include "Widgets/MatchStatsPanel.h"
 #include "Components/TextBlock.h"
@@ -20,7 +20,7 @@ void UMatchStatsPanel::SetStats(const FPlayerMatchStats& Stats, int32 PlayerCoun
     // Damage to the nearest whole point
     DamageValueText->SetText(FText::AsNumber(FMath::RoundToInt(Stats.DamageInflicted)));
 
-    // "(2/6)" � this player's position for that stat out of everyone in the match
+    // "(2/6)" — this player's position for that stat out of everyone in the match
     auto RankText = [PlayerCount](int32 Rank)
         {
             return FText::FromString(FString::Printf(TEXT("(%d/%d)"), Rank, PlayerCount));

@@ -28,6 +28,7 @@ public:
 
 protected:
     virtual void NativeOnInitialized() override;
+    virtual void NativeDestruct() override;
 
 private:
     // Gold panel = MVP (everyone sees the same), silver = this client
@@ -54,4 +55,16 @@ private:
     class UWidget* ContentRoot;
 
     FTimerHandle LeaveFadeTimerHandle;
+
+    // Fills both panels from the current GameState array
+    void RefreshPanels();
+
+    // Stats arrive on the GameState's channel while the show RPC comes down the
+    // PlayerController's, so the first read can predate the ranking pass
+    void HandleMatchStatsUpdated(const TArray<FPlayerMatchStats>& Stats);
+
+    FDelegateHandle StatsUpdatedHandle;
+
+    UPROPERTY()
+    TObjectPtr<APlayerState> CachedLocalPlayerState;
 };
