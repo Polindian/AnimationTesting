@@ -67,6 +67,7 @@ void UMainMenuWidget::NativeConstruct()
 			SwitchToMainWidget();
 		}
 		ChrisGameInstance->OnJoinSessionFailed.AddUObject(this, &UMainMenuWidget::JoinSessionFailed);
+		ChrisGameInstance->OnTravelFailedWithReason.AddUObject(this, &UMainMenuWidget::TravelFailed);
 		ChrisGameInstance->OnGlobalSessionSearchCompleted.AddUObject(this, &UMainMenuWidget::UpdateLobbyList);
 		ChrisGameInstance->StartGlobalSessionSearch();
 	}
@@ -317,6 +318,12 @@ void UMainMenuWidget::CancelSessionCreation()
 		FTimerDelegate::CreateWeakLambda(this, [this]() { CreateSessionButton->FocusButton(); }));
 }
 
+void UMainMenuWidget::CancelSessionJoin()
+{
+	HideWaitingWidget();
+	SwitchToMultiplayerPage();
+}
+
 void UMainMenuWidget::SwitchToMultiplayerPage()
 {
 	if (MainSwitcher)
@@ -329,7 +336,15 @@ void UMainMenuWidget::SwitchToMultiplayerPage()
 
 void UMainMenuWidget::JoinSessionFailed()
 {
-	SwitchToMultiplayerPage();
+	HideWaitingWidget();
+
+	OpenGeneralMenu(EGeneralMenuType::Continue,
+		NSLOCTEXT("MainMenu", "JoinRejected", "THIS MATCH HAS ALREADY STARTED"))
+		.AddLambda([this](bool)
+			{
+				SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+				SwitchToMultiplayerPage();
+			});
 }
 
 void UMainMenuWidget::UpdateLobbyList(const TArray<FOnlineSessionSearchResult>& SearchResults)
@@ -339,11 +354,44 @@ void UMainMenuWidget::UpdateLobbyList(const TArray<FOnlineSessionSearchResult>& 
 	// Debug mode: the global search still fires and would ClearChildren the fake list
 	if (bDebugFillSessionList) { return; }
 
+	// Rebuilding destroys the focused row, so remember which one it was
+	FString FocusedId;
+	for (UWidget* Child : SessionScrollBox->GetAllChildren())
+	{
+		if (USessionEntryWidget* Entry = Cast<USessionEntryWidget>(Child))
+		{
+			if (Entry->GetSessionButton() && Entry->GetSessionButton()->HasUserFocus(GetOwningPlayer()))
+			{
+				FocusedId = Entry->GetCachedSessionIdString();
+				break;
+			}
+		}
+	}
+
 	SessionScrollBox->ClearChildren();
 
+	// EOS gives no ordering guarantee, so sort or the list reshuffles every poll
+	TArray<FOnlineSessionSearchResult> Sorted = SearchResults;
+	Sorted.Sort([](const FOnlineSessionSearchResult& A, const FOnlineSessionSearchResult& B)
+		{
+			return A.GetSessionIdStr() < B.GetSessionIdStr();
+		});
+
 	bool bCurrentSelectedSessionValid = false;
-	for (const FOnlineSessionSearchResult& SearchResult : SearchResults)
+	USessionEntryWidget* EntryToRefocus = nullptr;
+
+	for (const FOnlineSessionSearchResult& SearchResult : Sorted)
 	{
+		FString SearchId;
+		SearchResult.Session.SessionSettings.Get<FString>(UChrisNetStatics::GetSessionSearchIdKey(), SearchId);
+
+		// Flask, not EOS, decides what's still joinable — EOS keeps advertising
+		// sessions that have moved past team selection
+		if (ChrisGameInstance && !ChrisGameInstance->IsSessionJoinable(SearchId))
+		{
+			continue;
+		}
+
 		USessionEntryWidget* NewSessionWidget = CreateWidget<USessionEntryWidget>(GetOwningPlayer(), SessionEntryWidgetClass);
 		if (NewSessionWidget)
 		{
@@ -364,6 +412,14 @@ void UMainMenuWidget::UpdateLobbyList(const TArray<FOnlineSessionSearchResult>& 
 			if (CurrentSelectedSessionId == SessionIdString)
 			{
 				bCurrentSelectedSessionValid = true;
+
+				// The row is a new object each refresh, so the tint has to be reapplied
+				NewSessionWidget->SetSelectedVisual(true);
+			}
+
+			if (!FocusedId.IsEmpty() && FocusedId == SessionIdString)
+			{
+				EntryToRefocus = NewSessionWidget;
 			}
 		}
 	}
@@ -372,6 +428,12 @@ void UMainMenuWidget::UpdateLobbyList(const TArray<FOnlineSessionSearchResult>& 
 	JoinSessionButton->SetIsEnabled(bCurrentSelectedSessionValid);
 
 	WireMultiplayerPageNavigation();
+
+	if (EntryToRefocus)
+	{
+		// false: no navigate sound, or it would chirp on every poll
+		EntryToRefocus->FocusEntry(false);
+	}
 }
 
 void UMainMenuWidget::JoinSessionButtonClicked()
@@ -381,9 +443,8 @@ void UMainMenuWidget::JoinSessionButtonClicked()
 		UE_LOG(LogTemp, Warning, TEXT("Trying to join session with ID: %s"), *CurrentSelectedSessionId);
 		if (ChrisGameInstance->JoinSessionWithId(CurrentSelectedSessionId))
 		{
-			SwitchToWaitingWidget(FText::FromString("JOINING SESSION"), false);
+			SwitchToWaitingWidget(FText::FromString("JOINING SESSION"), true).AddDynamic(this, &UMainMenuWidget::CancelSessionJoin);
 		}
-
 	}
 	else
 	{
@@ -550,6 +611,21 @@ void UMainMenuWidget::HandleBackgroundMediaOpened(FString OpenedUrl)
 	BackgroundMediaPlayer->SetLooping(true);
 	BackgroundMediaPlayer->Play();
 }
+
+void UMainMenuWidget::TravelFailed(const FString& Reason)
+{
+	HideWaitingWidget();
+
+	OpenGeneralMenu(EGeneralMenuType::Continue,
+		NSLOCTEXT("MainMenu", "JoinRejected", "THIS MATCH HAS ALREADY STARTED"))
+		.AddLambda([this](bool)
+			{
+				SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+				SwitchToMultiplayerPage();
+			});
+}
+
+
 
 void UMainMenuWidget::OpenVirtualKeyboard()
 {
@@ -799,6 +875,7 @@ void UMainMenuWidget::StartMenuMusicNow()
 		MenuPC->StartMenuMusic();
 	}
 }
+
 void UMainMenuWidget::HandleMainMenuMediaOpened(FString OpenedUrl)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[MainMenuBG] Media opened: %s"), *OpenedUrl);

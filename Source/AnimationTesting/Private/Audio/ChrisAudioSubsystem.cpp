@@ -11,6 +11,9 @@
 #include "ChrisGameUserSettings.h"
 #include "AudioModulationStatics.h"
 #include "SoundControlBus.h"
+#include "Sound/SoundSubmix.h"
+#include "AudioMixerBlueprintLibrary.h"
+#include "Sound/SoundEffectSubmix.h"
 
 void UChrisAudioSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -23,6 +26,25 @@ void UChrisAudioSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		MasterBus = Settings->MasterBus.LoadSynchronous();
 		MusicBus = Settings->MusicBus.LoadSynchronous();
 		SFXBus = Settings->SFXBus.LoadSynchronous();
+
+		MusicSubmix = Settings->MusicSubmix.LoadSynchronous();
+		DeathEffectFadeTime = Settings->DeathEffectFadeTime;
+
+		for (const TSoftObjectPtr<USoundEffectSubmixPreset>& Preset : Settings->DeathEffectChain)
+		{
+			if (USoundEffectSubmixPreset* Loaded = Preset.LoadSynchronous())
+			{
+				DeathEffectChain.Add(Loaded);
+			}
+		}
+
+		for (const TSoftObjectPtr<USoundEffectSubmixPreset>& Preset : Settings->OpenEffectChain)
+		{
+			if (USoundEffectSubmixPreset* Loaded = Preset.LoadSynchronous())
+			{
+				OpenEffectChain.Add(Loaded);
+			}
+		}
 	}
 
 	if (!Library)
@@ -142,4 +164,14 @@ void UChrisAudioSubsystem::StopLoopingSound(UAudioComponent*& Component, float F
 	// FadeOut destroys it when it reaches silence, so we just drop our reference
 	Component->FadeOut(FadeOutTime, 0.f);
 	Component = nullptr;
+}
+
+void UChrisAudioSubsystem::SetMusicDeathEffect(bool bEnabled)
+{
+	if (!MusicSubmix) { return; }
+
+	// Swapping to a neutral chain rather than clearing — Clear fades the chain
+	// down to silence before removing it, which is audible as a dropout
+	UAudioMixerBlueprintLibrary::SetSubmixEffectChainOverride(
+		this, MusicSubmix, bEnabled ? DeathEffectChain : OpenEffectChain, DeathEffectFadeTime);
 }

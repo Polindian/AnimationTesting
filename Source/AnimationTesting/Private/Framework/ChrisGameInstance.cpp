@@ -8,6 +8,8 @@
 #include "Interfaces/OnlineIdentityInterface.h"
 #include "Kismet/GameplayStatics.h"
 #include "HttpModule.h"
+#include "Interfaces/IHttpRequest.h"
+#include "Interfaces/IHttpResponse.h"
 
 // Only the server (dedicated or listen) should initiate a map travel
 void UChrisGameInstance::StartMatch()
@@ -40,6 +42,7 @@ void UChrisGameInstance::StartMatch()
 void UChrisGameInstance::Init()
 {
 	Super::Init();
+
 	if (GetWorld()->IsEditorWorld())
 		return;
 
@@ -47,6 +50,10 @@ void UChrisGameInstance::Init()
 	{
 		CreateSession();
 	}
+
+	// PreLogin rejections land here, not in OnJoinSessionFailed — the EOS join
+	// already succeeded by the time the server refuses the connection
+	GEngine->OnNetworkFailure().AddUObject(this, &UChrisGameInstance::HandleNetworkFailure);
 }
 
 bool UChrisGameInstance::IsLoggedIn() const
@@ -323,6 +330,8 @@ void UChrisGameInstance::FindGlobalSessions()
 {
 	UE_LOG(LogTemp, Warning, TEXT("---- Retrying Global Session Search -----"));
 
+	FetchJoinableSessions();
+
 	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
 	if (!SessionPtr)
 	{
@@ -368,6 +377,11 @@ void UChrisGameInstance::GlobalSessionSearchCompleted(bool bWasSuccessful)
 	}
 }
 
+
+void UChrisGameInstance::JoinSessionTimeout()
+{
+	OnTravelFailedWithReason.Broadcast(TEXT("Timed out"));
+}
 
 // One poll: build a targeted query and fire an async EOS search
 void UChrisGameInstance::FindCreatedSession(FGuid SessionSearchId)
@@ -433,6 +447,9 @@ void UChrisGameInstance::JoinSessionWithSearchResult(const FOnlineSessionSearchR
 		return;
 	}
 
+	GetWorld()->GetTimerManager().SetTimer(JoinSessionTimeoutHandle, this,
+		&UChrisGameInstance::JoinSessionTimeout, JoinSessionTimeoutDuration, false);
+
 	FString SessionName = "";
 	SearchResult.Session.SessionSettings.Get<FString>(UChrisNetStatics::GetSessionNameKey(), SessionName);
 
@@ -458,6 +475,9 @@ void UChrisGameInstance::JoinSessionWithSearchResult(const FOnlineSessionSearchR
 void UChrisGameInstance::JoinSessionCompleted(FName SessionName, EOnJoinSessionCompleteResult::Type JoinResult, int Port)
 {
 	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
+
+	GetWorld()->GetTimerManager().ClearTimer(JoinSessionTimeoutHandle);
+
 	if (!SessionPtr)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Joining session completed, but cannot find session pointer!"));
@@ -533,6 +553,8 @@ void UChrisGameInstance::SetSessionJoinable(bool bJoinable)
 	SessionPtr->UpdateSession(SessionFName, NewSettings, true);
 
 	UE_LOG(LogTemp, Warning, TEXT("[Session] Joinable set to %d"), bJoinable ? 1 : 0);
+
+	ReportSessionStatusToCoordinator(bJoinable ? TEXT("open") : TEXT("started"));
 }
 
 void UChrisGameInstance::CreateSession()
@@ -571,6 +593,7 @@ void UChrisGameInstance::OnSessionCreated(FName SessionName, bool bWasSuccessful
 		UE_LOG(LogTemp, Warning, TEXT("Session Creation SUCCESSFUL!"));
 		GetWorld()->GetTimerManager().SetTimer(WaitPlayerJoinTimeoutHandle, this, &UChrisGameInstance::WaitPlayerJoinTimeoutReached, WaitPlayerJoinTimeoutDuration);
 		LoadLevelAndListen(LobbyLevel);
+		GetWorld()->GetTimerManager().SetTimer(HeartbeatTimerHandle, this, &UChrisGameInstance::SendHeartbeat, HeartbeatInterval, true);
 	}
 	else
 	{
@@ -586,6 +609,9 @@ void UChrisGameInstance::OnSessionCreated(FName SessionName, bool bWasSuccessful
 
 void UChrisGameInstance::TerminateSessionServer()
 {
+	// Sent first: every path below can reach RequestExit, and a queued HTTP request won't survive that
+	ReportSessionStatusToCoordinator(TEXT("ended"));
+
 	if (IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr())
 	{
 		SessionPtr->OnEndSessionCompleteDelegates.RemoveAll(this);
@@ -625,6 +651,76 @@ void UChrisGameInstance::LoadLevelAndListen(TSoftObjectPtr<UWorld> Level)
 		UE_LOG(LogTemp, Warning, TEXT("Server travelling to: %s"), *(TravelString));
 		GetWorld()->ServerTravel(TravelString);
 	}
+}
+
+void UChrisGameInstance::ReportSessionStatusToCoordinator(const FString& Status)
+{
+	const FString SearchId = UChrisNetStatics::GetSessionSearchIdString();
+	if (SearchId.IsEmpty()) { return; }
+
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
+	Request->SetURL(UChrisNetStatics::GetCoordinatorURLString() + TEXT("/SessionStatus"));
+	Request->SetVerb(TEXT("POST"));
+	Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+
+	const FString Body = FString::Printf(
+		TEXT("{\"%s\":\"%s\",\"STATUS\":\"%s\"}"),
+		*UChrisNetStatics::GetSessionSearchIdKey().ToString(),
+		*SearchId,
+		*Status);
+
+	Request->SetContentAsString(Body);
+	Request->ProcessRequest();
+}
+
+void UChrisGameInstance::SendHeartbeat()
+{
+	ReportSessionStatusToCoordinator(TEXT("alive"));
+}
+
+void UChrisGameInstance::FetchJoinableSessions()
+{
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
+	Request->SetURL(UChrisNetStatics::GetCoordinatorURLString() + TEXT("/Sessions"));
+	Request->SetVerb(TEXT("GET"));
+	Request->OnProcessRequestComplete().BindUObject(this, &UChrisGameInstance::JoinableSessionsFetched);
+	Request->ProcessRequest();
+}
+
+void UChrisGameInstance::JoinableSessionsFetched(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess)
+{
+	if (!bSuccess || !Response.IsValid()) { return; }
+
+	TSharedPtr<FJsonObject> Json;
+	TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Response->GetContentAsString());
+	if (!FJsonSerializer::Deserialize(Reader, Json) || !Json.IsValid()) { return; }
+
+	const TArray<TSharedPtr<FJsonValue>>* Ids = nullptr;
+	if (!Json->TryGetArrayField(TEXT("SESSIONS"), Ids)) { return; }
+
+	JoinableSessionIds.Empty();
+	for (const TSharedPtr<FJsonValue>& Value : *Ids)
+	{
+		JoinableSessionIds.Add(Value->AsString());
+	}
+}
+void UChrisGameInstance::HandleNetworkFailure(UWorld* World, UNetDriver* NetDriver,
+	ENetworkFailure::Type FailureType, const FString& ErrorString)
+{
+	UE_LOG(LogTemp, Warning, TEXT("[Session] Network failure: %s"), *ErrorString);
+
+	GetWorld()->GetTimerManager().ClearTimer(JoinSessionTimeoutHandle);
+	StopAllSessionFindings();
+
+	// Without this the client stays registered in a session it isn't connected
+	// to, and the next join attempt fails for no obvious reason
+	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
+	if (SessionPtr)
+	{
+		SessionPtr->DestroySession(NAME_GameSession);
+	}
+
+	OnTravelFailedWithReason.Broadcast(ErrorString);
 }
 
 void UChrisGameInstance::StartPracticeArena()

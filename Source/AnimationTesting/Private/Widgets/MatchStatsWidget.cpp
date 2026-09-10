@@ -53,22 +53,34 @@ void UMatchStatsWidget::NativeOnInitialized()
 	LeaveMatchButton->OnMenuButtonClicked.AddDynamic(this, &UMatchStatsWidget::HandleLeaveMatchClicked);
 }
 
+void UMatchStatsWidget::NativeDestruct()
+{
+	if (StatsUpdatedHandle.IsValid())
+	{
+		if (AChrisGameState* GS = GetWorld() ? GetWorld()->GetGameState<AChrisGameState>() : nullptr)
+		{
+			GS->OnMatchStatsUpdated.Remove(StatsUpdatedHandle);
+		}
+		StatsUpdatedHandle.Reset();
+	}
+
+	Super::NativeDestruct();
+}
+
 void UMatchStatsWidget::ShowStats(APlayerState* LocalPlayerState)
 {
+	CachedLocalPlayerState = LocalPlayerState;
+
 	AChrisGameState* GS = GetWorld() ? GetWorld()->GetGameState<AChrisGameState>() : nullptr;
 	if (!GS) return;
 
-	const TArray<FPlayerMatchStats>& AllStats = GS->GetMatchStats();
-	const int32 PlayerCount = AllStats.Num();
+	if (!StatsUpdatedHandle.IsValid())
+	{
+		StatsUpdatedHandle = GS->OnMatchStatsUpdated.AddUObject(
+			this, &UMatchStatsWidget::HandleMatchStatsUpdated);
+	}
 
-	const FPlayerMatchStats* MVP = AllStats.FindByPredicate(
-		[](const FPlayerMatchStats& S) { return S.RankOverall == 1; });
-
-	const FPlayerMatchStats* Mine = AllStats.FindByPredicate(
-		[LocalPlayerState](const FPlayerMatchStats& S) { return S.OwningPlayer == LocalPlayerState; });
-
-	if (MVP && MVPPanel) { MVPPanel->SetStats(*MVP, PlayerCount); }
-	if (Mine && PlayerPanel) { PlayerPanel->SetStats(*Mine, PlayerCount); }
+	RefreshPanels();
 
 	PlayAnimation(Anim_FadeIn);
 
@@ -91,4 +103,27 @@ void UMatchStatsWidget::HandleLeaveMatchClicked()
 {
 	UE_LOG(LogTemp, Warning, TEXT("[MatchStats] Leave clicked"));
 	OnLeaveMatchRequested.Broadcast();
+}
+
+void UMatchStatsWidget::RefreshPanels()
+{
+	AChrisGameState* GS = GetWorld() ? GetWorld()->GetGameState<AChrisGameState>() : nullptr;
+	if (!GS) return;
+
+	const TArray<FPlayerMatchStats>& AllStats = GS->GetMatchStats();
+	const int32 PlayerCount = AllStats.Num();
+
+	const FPlayerMatchStats* MVP = AllStats.FindByPredicate(
+		[](const FPlayerMatchStats& S) { return S.RankOverall == 1; });
+
+	const FPlayerMatchStats* Mine = AllStats.FindByPredicate(
+		[this](const FPlayerMatchStats& S) { return S.OwningPlayer == CachedLocalPlayerState; });
+
+	if (MVP && MVPPanel) { MVPPanel->SetStats(*MVP, PlayerCount); }
+	if (Mine && PlayerPanel) { PlayerPanel->SetStats(*Mine, PlayerCount); }
+}
+
+void UMatchStatsWidget::HandleMatchStatsUpdated(const TArray<FPlayerMatchStats>& Stats)
+{
+	RefreshPanels();
 }

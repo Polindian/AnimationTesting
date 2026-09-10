@@ -160,13 +160,15 @@ private:
 	UFUNCTION()
 	void CancelSessionCreation();
 
+	UFUNCTION()
+	void CancelSessionJoin();
+
 	void SwitchToMultiplayerPage();
 
 	UPROPERTY(meta = (BindWidget))
 	class USizeBox* SessionNameContainer;
 
-	void JoinSessionFailed();
-	void UpdateLobbyList(const TArray<FOnlineSessionSearchResult>& SearchResults);
+	
 
 	UPROPERTY(meta=(BindWidget))
 	class UScrollBox* SessionScrollBox;
@@ -238,6 +240,10 @@ private:
 
 	UFUNCTION()
 	void HandleBackgroundMediaOpened(FString OpenedUrl);
+
+	void TravelFailed(const FString& Reason);
+	void JoinSessionFailed();
+	void UpdateLobbyList(const TArray<FOnlineSessionSearchResult>& SearchResults);
 
 
 	/***********   Keyboard   *************/

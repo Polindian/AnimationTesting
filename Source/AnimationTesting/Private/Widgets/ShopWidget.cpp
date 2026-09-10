@@ -176,6 +176,12 @@ void UShopWidget::LoadShopItems()
 void UShopWidget::StartTimer(float Duration)
 {
     EndTime = GetWorld()->GetTimeSeconds() + Duration;
+
+    // Runs once per shop phase, so this is where last round's vote gets cleared
+    if (ContinueButton)
+    {
+        ContinueButton->SetCommittedVisual(false);
+    }
 }
 
 
@@ -660,10 +666,20 @@ void UShopWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 void UShopWidget::OnContinueClicked()
 {
     bPurchasingOpen = false;
-    
+
+    if (ContinueButton)
+    {
+        ContinueButton->SetCommittedVisual(true);
+    }
+
+
     AChrisPlayerController* PC = Cast<AChrisPlayerController>(GetOwningPlayer());
     if (PC)
     {
+        // Hand focus back to the game so the arena isn't left with a focused widget
+        FSlateApplication::Get().ClearKeyboardFocus(EFocusCause::SetDirectly);
+        PC->SetInputMode(FInputModeGameOnly());
+
         PC->Server_VoteContinue();
     }
 }

@@ -36,12 +36,14 @@ public:
 	void SetSFXVolume(float InVolume) { SFXVolume = FMath::Clamp(InVolume, 0.f, 1.f); }
 
 	UFUNCTION(BlueprintPure, Category = "Chris|Graphics")
-	int32 GetGraphicsQuality() const { return GetOverallScalabilityLevel(); }
+	int32 GetGraphicsQuality() const { return GraphicsQuality; }
 
 	// Applies immediately — moves view distance, shadows, textures, effects and AA together, and persists to GameUserSettings.ini
 	UFUNCTION(BlueprintCallable, Category = "Chris|Graphics")
 	void SetGraphicsQuality(int32 Level);
 
+protected:
+	virtual void SetToDefaults() override;
 
 private:
 	// Config: saved to and loaded from GameUserSettings.ini automatically

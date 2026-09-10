@@ -18,3 +18,12 @@ void UChrisGameUserSettings::SetGraphicsQuality(int32 Level)
 	// Applied here rather than on panel close, so the player sees the change while choosing
 	ApplySettings(false);
 }
+
+void UChrisGameUserSettings::SetToDefaults()
+{
+	Super::SetToDefaults();
+
+	// Super resets scalability to hardware auto-detect, so force medium back on
+	GraphicsQuality = 2;
+	SetOverallScalabilityLevel(GraphicsQuality);
+}

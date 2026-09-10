@@ -505,9 +505,10 @@ void ULobbyWidget::OpenLeaveConfirmation()
     bIsLeaveMenuOpen = true;
     GeneralMenuWidget->AddToViewport(200);
 
-    // OpenMenu clears the delegate and hands it back, so the bind comes after
+    const bool bOnHeroSelection = (MainSwitcher->GetActiveWidget() == HeroSelectionRoot);
+
     GeneralMenuWidget->OpenMenu(EGeneralMenuType::YesNo,
-        FText::FromString(TEXT("Are you sure you want to leave the match?\nIt will count as a loss on your record.")))
+        bOnHeroSelection ? LeaveHeroSelectionText : LeaveTeamSelectionText)
         .AddUObject(this, &ULobbyWidget::HandleLeaveMenuClosed);
 }
 

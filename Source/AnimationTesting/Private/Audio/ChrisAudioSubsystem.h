@@ -52,6 +52,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Chris|Audio")
 	static void StopLoopingSound(class UAudioComponent*& Component, float FadeOutTime);
 
+	UFUNCTION(BlueprintCallable, Category = "Chris|Audio")
+	void SetMusicDeathEffect(bool bEnabled);
+	
+
 private:
 	UPROPERTY(Transient)
 	TObjectPtr<UChrisSoundLibrary> Library = nullptr;
@@ -64,4 +68,15 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<class USoundControlBus> SFXBus = nullptr;
+
+	UPROPERTY(Transient)
+	TObjectPtr<class USoundSubmix> MusicSubmix = nullptr;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<class USoundEffectSubmixPreset>> DeathEffectChain;
+
+	float DeathEffectFadeTime = 0.f;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<class USoundEffectSubmixPreset>> OpenEffectChain;
 };

@@ -1,4 +1,3 @@
-// Christopher Naglik All Rights Reserved
 
 #pragma once
 

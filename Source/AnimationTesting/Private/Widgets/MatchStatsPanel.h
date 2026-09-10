@@ -1,4 +1,4 @@
-// Christopher Naglik All Rights Reserved
+ï»¿// Christopher Naglik All Rights Reserved
 
 #pragma once
 
@@ -8,7 +8,7 @@
 #include "MatchStatsPanel.generated.h"
 
 /**
- * One stats panel — used twice on the match stats screen: the gold instance
+ * One stats panel â€” used twice on the match stats screen: the gold instance
  * shows the match MVP (the same for every client) and the silver instance
  * shows the local player. Purely a display; it never reads state itself,
  * the owning widget hands it a finished stats entry.
@@ -19,7 +19,7 @@ class UMatchStatsPanel : public UUserWidget
     GENERATED_BODY()
 
 public:
-    // PlayerCount is the denominator in every "(2/6)" — the number of players in the match, so it's passed in rather than stored per stat
+    // PlayerCount is the denominator in every "(2/6)" â€” the number of players in the match, so it's passed in rather than stored per stat
     void SetStats(const FPlayerMatchStats& Stats, int32 PlayerCount);
 
 private:
@@ -51,11 +51,11 @@ private:
     UPROPERTY(meta = (BindWidget))
     class UTextBlock* DamageRankText;
 
-    // "POSITION - 1/6" — the overall standing, ranked on experience
+    // "POSITION - 1/6" â€” the overall standing, ranked on experience
     UPROPERTY(meta = (BindWidget))
     class UTextBlock* OverallRankText;
 
-    // XP box: a plain progress bar fed by snapshotted values, NOT an attribute-bound gauge — a client can't read another player's attributes,
+    // XP box: a plain progress bar fed by snapshotted values, NOT an attribute-bound gauge â€” a client can't read another player's attributes,
     // so the MVP's level could never be drawn from live data
     UPROPERTY(meta = (BindWidget))
     class UTextBlock* LevelText;
