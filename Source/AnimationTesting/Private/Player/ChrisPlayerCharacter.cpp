@@ -15,6 +15,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "Weapon/SwordEquipComponent.h"
+#include "Audio/ChrisAudioSubsystem.h"
 
 AChrisPlayerCharacter::AChrisPlayerCharacter()
 {
@@ -319,11 +320,29 @@ void AChrisPlayerCharacter::SetInputEnabledFromPlayerController(bool bEnabled)
 void AChrisPlayerCharacter::OnDead()
 {
 	SetInputEnabledFromPlayerController(false);
+
+	// Local only — the death effect is for the player who died, not everyone
+	if (IsLocallyControlledByPlayer())
+	{
+		if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+		{
+			Audio->SetMusicDeathEffect(true);
+		}
+	}
 }
 
 void AChrisPlayerCharacter::OnRespawn()
 {
 	SetInputEnabledFromPlayerController(true);
+
+	// Local only — the death effect is for the player who died, not everyone
+	if (IsLocallyControlledByPlayer())
+	{
+		if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+		{
+			Audio->SetMusicDeathEffect(false);
+		}
+	}
 }
 
 void AChrisPlayerCharacter::OnStun()

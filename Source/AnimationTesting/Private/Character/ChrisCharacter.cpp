@@ -165,6 +165,7 @@ void AChrisCharacter::DeathTagUpdated(const FGameplayTag Tag, int32 NewCount)
 			if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
 			{
 				Audio->Play2D(ChrisGameplayTags::Audio_Player_Death);
+				Audio->SetMusicDeathEffect(true);
 			}
 
 			// Inside the local gate on purpose — the banner is yours alone, and
@@ -195,6 +196,11 @@ void AChrisCharacter::DeathTagUpdated(const FGameplayTag Tag, int32 NewCount)
 		}
 
 		Respawn();
+
+		if (UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this))
+		{
+			Audio->SetMusicDeathEffect(false);
+		}
 	}
 }
 

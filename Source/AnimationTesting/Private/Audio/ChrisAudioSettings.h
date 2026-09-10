@@ -27,4 +27,17 @@ public:
 
 	UPROPERTY(Config, EditAnywhere, Category = "Audio")
 	TSoftObjectPtr<class USoundControlBus> SFXBus;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Audio")
+	TSoftObjectPtr<class USoundSubmix> MusicSubmix;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Audio")
+	TArray<TSoftObjectPtr<class USoundEffectSubmixPreset>> DeathEffectChain;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Audio")
+	float DeathEffectFadeTime = 0.f;
+
+	// Neutral chain swapped in on respawn; avoids the fade-to-silence of clearing
+	UPROPERTY(Config, EditAnywhere, Category = "Audio")
+	TArray<TSoftObjectPtr<class USoundEffectSubmixPreset>> OpenEffectChain;
 };
