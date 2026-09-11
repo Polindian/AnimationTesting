@@ -46,6 +46,9 @@ public:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_RequestLockIn(bool bLockIn);
 
+	UFUNCTION(Client, Reliable)
+	void Client_MatchAborted(const FText& Reason);
+
 
 protected:
 	virtual void BeginPlay() override;
@@ -60,5 +63,9 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Audio")
 	float MusicFadeOutTime = 1.5f;
+
+	// Menu map to return to when the match aborts
+	UPROPERTY(EditDefaultsOnly, Category = "Travel")
+	TSoftObjectPtr<UWorld> MainMenuLevel;
 
 };

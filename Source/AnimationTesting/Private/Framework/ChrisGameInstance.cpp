@@ -212,6 +212,25 @@ void UChrisGameInstance::StartGlobalSessionSearch()
 
 bool UChrisGameInstance::JoinSessionWithId(const FString& SessionIdString)
 {
+	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
+
+	// A stale local session from a previous lobby makes JoinSession fail with
+	// AlreadyInSession. DestroySession is async, so join from its callback
+	// rather than immediately after firing it.
+	if (SessionPtr && !JoinedSessionName.IsNone() && SessionPtr->GetNamedSession(JoinedSessionName))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Session] Destroying stale session '%s' before joining"), *JoinedSessionName.ToString());
+
+		PendingJoinSessionId = SessionIdString;
+
+		SessionPtr->OnDestroySessionCompleteDelegates.RemoveAll(this);
+		SessionPtr->OnDestroySessionCompleteDelegates.AddUObject(
+			this, &UChrisGameInstance::DestroyBeforeJoinCompleted);
+		SessionPtr->DestroySession(JoinedSessionName);
+
+		return true;
+	}
+
 	if (SessionSearch.IsValid())
 	{
 		const FOnlineSessionSearchResult* SessionSearchResult = SessionSearch->SearchResults.FindByPredicate(
@@ -462,6 +481,8 @@ void UChrisGameInstance::JoinSessionWithSearchResult(const FOnlineSessionSearchR
 
 	UE_LOG(LogTemp, Warning, TEXT("Trying to join session: %s, at port: %lld"), *(SessionName), Port);
 
+	JoinedSessionName = FName(SessionName);
+
 	SessionPtr->OnJoinSessionCompleteDelegates.RemoveAll(this);
 	SessionPtr->OnJoinSessionCompleteDelegates.AddUObject(this, &UChrisGameInstance::JoinSessionCompleted, (int) Port);
 	if (!SessionPtr->JoinSession(0, FName(SessionName), SearchResult))
@@ -507,6 +528,7 @@ void UChrisGameInstance::JoinSessionCompleted(FName SessionName, EOnJoinSessionC
 	}
 	else
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[Session] Join failed, result: %d"), (int32)JoinResult);
 		OnJoinSessionFailed.Broadcast();
 	}
 
@@ -555,6 +577,18 @@ void UChrisGameInstance::SetSessionJoinable(bool bJoinable)
 	UE_LOG(LogTemp, Warning, TEXT("[Session] Joinable set to %d"), bJoinable ? 1 : 0);
 
 	ReportSessionStatusToCoordinator(bJoinable ? TEXT("open") : TEXT("started"));
+}
+
+void UChrisGameInstance::LeaveCurrentSession()
+{
+	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
+	if (!SessionPtr || JoinedSessionName.IsNone()) { return; }
+
+	SessionPtr->DestroySession(JoinedSessionName);
+
+	UE_LOG(LogTemp, Warning, TEXT("[Session] Destroyed local session '%s'"), *JoinedSessionName.ToString());
+
+	JoinedSessionName = NAME_None;
 }
 
 void UChrisGameInstance::CreateSession()
@@ -638,6 +672,27 @@ void UChrisGameInstance::WaitPlayerJoinTimeoutReached()
 	TerminateSessionServer();
 }
 
+void UChrisGameInstance::DestroyBeforeJoinCompleted(FName SessionName, bool bWasSuccessful)
+{
+	if (IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr())
+	{
+		SessionPtr->OnDestroySessionCompleteDelegates.RemoveAll(this);
+	}
+
+	JoinedSessionName = NAME_None;
+
+	UE_LOG(LogTemp, Warning, TEXT("[Session] Destroy before join completed: %d"), bWasSuccessful ? 1 : 0);
+
+	const FString Id = PendingJoinSessionId;
+	PendingJoinSessionId.Empty();
+
+	// GetNamedSession is null now, so this takes the normal path
+	if (!Id.IsEmpty())
+	{
+		JoinSessionWithId(Id);
+	}
+}
+
 
 void UChrisGameInstance::LoadLevelAndListen(TSoftObjectPtr<UWorld> Level)
 {
@@ -717,9 +772,11 @@ void UChrisGameInstance::HandleNetworkFailure(UWorld* World, UNetDriver* NetDriv
 	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
 	if (SessionPtr)
 	{
-		SessionPtr->DestroySession(NAME_GameSession);
+		SessionPtr->DestroySession(JoinedSessionName);
 	}
 
+	bReturnToMultiplayerPage = true;
+	PendingMenuMessage = NSLOCTEXT("MainMenu", "JoinFailed", "COULD NOT JOIN THIS SESSION");
 	OnTravelFailedWithReason.Broadcast(ErrorString);
 }
 

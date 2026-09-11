@@ -6,6 +6,8 @@
 #include "Framework/ChrisGameState.h"
 #include "Audio/ChrisAudioSubsystem.h"
 #include "Audio/ChrisGameplayTags.h"
+#include "Framework/ChrisGameInstance.h"
+#include "Misc/PackageName.h"
 
 
 // Executes on server: forwards the slot change request to the GameState for authoritative validation
@@ -79,6 +81,21 @@ bool ALobbyPlayerController::Server_RequestLockIn_Validate(bool bLockIn)
 ALobbyPlayerController::ALobbyPlayerController()
 {
 	bAutoManageActiveCameraTarget = false;
+}
+
+void ALobbyPlayerController::Client_MatchAborted_Implementation(const FText& Reason)
+{
+	if (UChrisGameInstance* GI = GetGameInstance<UChrisGameInstance>())
+	{
+		GI->bReturnToMultiplayerPage = true;
+		GI->PendingMenuMessage = Reason;
+		GI->LeaveCurrentSession();
+	}
+
+	if (MainMenuLevel.IsNull()) { return; }
+
+	const FString LevelName = FPackageName::ObjectPathToPackageName(MainMenuLevel.ToString());
+	ClientTravel(LevelName, ETravelType::TRAVEL_Absolute);
 }
 
 void ALobbyPlayerController::BeginPlay()

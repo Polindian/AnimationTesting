@@ -22,6 +22,8 @@ public:
 	// Flipped once the lobby leaves team selection
 	void SetAcceptingPlayers(bool bAccepting) { bAcceptingPlayers = bAccepting; }
 
+	virtual void Logout(AController* Exiting) override;
+
 private:
 	bool bAcceptingPlayers = true;
 };

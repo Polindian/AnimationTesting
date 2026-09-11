@@ -49,6 +49,16 @@ public:
 	// Returns the remaining hero selection time (replicated so clients can display it)
 	FORCEINLINE float GetHeroSelectionTimeRemaining() const { return HeroSelectionTimeRemaining; }
 
+	// Nothing pruned the array before, so a leaver stayed in it and the match
+	// travelled with a phantom player the arena then waited for
+	void RemovePlayerFromSelection(class APlayerState* LeavingPlayer);
+
+	// Both teams must be non-empty and within one player of each other
+	// Teams must be exactly even for the match to start
+	bool HasValidTeamsForMatch() const;
+
+	void AbortMatch(const FText& Reason);
+
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_PlayerSelectionArray)
 	TArray<FPlayerSelection> PlayerSelectionArray;
