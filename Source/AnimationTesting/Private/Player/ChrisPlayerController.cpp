@@ -253,6 +253,13 @@ void AChrisPlayerController::DoLeaveMatchTravel()
 {
 	if (MainMenuLevel.IsNull()) { return; }
 
+	// EOS keeps us registered after travelling away, and the next JoinSession
+	// fails until the local session is destroyed
+	if (UChrisGameInstance* GI = GetGameInstance<UChrisGameInstance>())
+	{
+		GI->LeaveCurrentSession();
+	}
+
 	const FString LevelName = FPackageName::ObjectPathToPackageName(MainMenuLevel.ToString());
 	ClientTravel(LevelName, ETravelType::TRAVEL_Absolute);
 }

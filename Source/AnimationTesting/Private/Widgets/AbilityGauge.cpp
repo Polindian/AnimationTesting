@@ -109,12 +109,32 @@ void UAbilityGauge::AbilityCommitted(UGameplayAbility* Ability)
 
 		Ability->GetCooldownTimeRemainingAndDuration(Ability->GetCurrentAbilitySpecHandle(), Ability->GetCurrentActorInfo(), CooldownTimeRemaining, CooldownDuration);
 
+		// On a client the cooldown GE hasn't replicated yet at commit time, so
+		// both come back 0 — fall back to the ability's configured duration
+		if (CooldownDuration <= 0.f)
+		{
+			const FGameplayAbilitySpec* Spec = GetAbilitySpec();
+			const int32 Level = Spec ? Spec->Level : 1;
+
+			CooldownDuration = UChrisAbilitySystemStatics::GetCooldownDurationFor(
+				AbilityCDO, OwnerAbilitySystemComponent, Level);
+			CooldownTimeRemaining = CooldownDuration;
+		}
+
 		StartCooldown(CooldownTimeRemaining, CooldownDuration);
 	}
 }
 
 void UAbilityGauge::StartCooldown(float CooldownTimeRemaining, float CooldownDuration)
 {
+	// A zero-rate timer never fires, so CooldownFinished would never run and
+	// UpdateCooldown would count into negatives
+	if (CooldownTimeRemaining <= 0.f || CooldownDuration <= 0.f)
+	{
+		ResetCooldownVisual();
+		return;
+	}
+	
 	CooldownDurationText->SetText(FText::AsNumber(CooldownDuration));
 	CachedCooldownDuration = CooldownDuration;
 	CachedCooldownTimeRemaining = CooldownTimeRemaining;

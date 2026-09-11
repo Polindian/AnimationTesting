@@ -3,6 +3,7 @@
 
 #include "Framework/LobbyGameMode.h"
 #include "Network/ChrisGameSession.h"
+#include "Framework/ChrisGameState.h"
 
 ALobbyGameMode::ALobbyGameMode()
 {
@@ -22,4 +23,14 @@ void ALobbyGameMode::PreLogin(const FString& Options, const FString& Address, co
 		ErrorMessage = TEXT("This match has already started.");
 		UE_LOG(LogTemp, Warning, TEXT("[Lobby] Rejected a join — team selection is over"));
 	}
+}
+
+void ALobbyGameMode::Logout(AController* Exiting)
+{
+	if (AChrisGameState* GS = GetGameState<AChrisGameState>())
+	{
+		GS->RemovePlayerFromSelection(Exiting->PlayerState);
+	}
+
+	Super::Logout(Exiting);
 }

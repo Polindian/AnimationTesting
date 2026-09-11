@@ -245,17 +245,89 @@ void AChrisGameState::StartMatch()
 {
 	if (!HasAuthority()) return;
 
-	GetWorld()->GetTimerManager().ClearTimer(HeroSelectionTimerHandle);
+	if (!HasValidTeamsForMatch())
+	{
+		AbortMatch(NSLOCTEXT("Lobby", "PlayerLeft",
+			"A PLAYER LEFT THE LOBBY — THE MATCH CANNOT START WITH UNEVEN TEAMS"));
+		return;
+	}
 
-	// Ensure every player has a character assigned
+	GetWorld()->GetTimerManager().ClearTimer(HeroSelectionTimerHandle);
 	AssignRandomCharactersToEmptySlots();
 
-	// Travel to the game level via GameInstance
 	UChrisGameInstance* GameInstance = GetGameInstance<UChrisGameInstance>();
 	if (GameInstance)
 	{
 		GameInstance->StartMatch();
 	}
+}
+
+void AChrisGameState::RemovePlayerFromSelection(APlayerState* LeavingPlayer)
+{
+	if (!HasAuthority() || !LeavingPlayer) { return; }
+
+	const int32 Removed = PlayerSelectionArray.RemoveAll(
+		[&](const FPlayerSelection& PS) { return PS.IsForPlayer(LeavingPlayer); });
+
+	if (Removed == 0) { return; }
+
+	OnPlayerSelectionUpdated.Broadcast(PlayerSelectionArray);
+
+	// Mid-hero-selection departure: abort now rather than letting the timer
+	// run down and travel into a match that can't start
+	if (HeroSelectionTimerHandle.IsValid() && !HasValidTeamsForMatch())
+	{
+		AbortMatch(NSLOCTEXT("Lobby", "PlayerLeft",
+			"A PLAYER LEFT THE LOBBY — THE MATCH CANNOT START WITH UNEVEN TEAMS"));
+	}
+}
+
+bool AChrisGameState::HasValidTeamsForMatch() const
+{
+	if (PlayerSelectionArray.Num() < 2) { return false; }
+
+#if WITH_EDITOR
+	if (GIsEditor) { return true; }
+#endif
+
+	const int32 PlayersPerTeam = UChrisNetStatics::GetPlayerCountPerTeam();
+	int32 RedCount = 0;
+	int32 BlueCount = 0;
+
+	for (const FPlayerSelection& PS : PlayerSelectionArray)
+	{
+		PS.GetPlayerSlot() < PlayersPerTeam ? RedCount++ : BlueCount++;
+	}
+
+	if (RedCount == 0 || BlueCount == 0) { return false; }
+
+	return RedCount == BlueCount;
+}
+
+void AChrisGameState::AbortMatch(const FText& Reason)
+{
+	if (!HasAuthority()) { return; }
+
+	GetWorld()->GetTimerManager().ClearTimer(HeroSelectionTimerHandle);
+
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		if (ALobbyPlayerController* LobbyPC = Cast<ALobbyPlayerController>(It->Get()))
+		{
+			LobbyPC->Client_MatchAborted(Reason);
+		}
+	}
+
+	// Delayed so the RPCs get out before the process exits
+	FTimerHandle AbortHandle;
+	GetWorld()->GetTimerManager().SetTimer(AbortHandle,
+		FTimerDelegate::CreateWeakLambda(this, [this]()
+			{
+				if (UChrisGameInstance* GI = GetGameInstance<UChrisGameInstance>())
+				{
+					GI->TerminateSessionServer();
+				}
+			}), 2.f, false);
 }
 
 void AChrisGameState::StartHeroSelectionTimer()

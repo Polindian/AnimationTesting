@@ -121,6 +121,9 @@ public:
 	void PlayerLeft(const FUniqueNetIdRepl& UniqueId);
 
 	bool bReturnToMultiplayerPage = false;
+	// Set by whoever sent the player back; the rebuilt menu widget shows it.
+	// Empty means no dialog.
+	FText PendingMenuMessage;
 
 	// Called when the lobby leaves team selection — pulls the session out of
 	// search results so nobody can join a match that's past team picking
@@ -132,6 +135,12 @@ public:
 		return JoinableSessionIds.Contains(SessionSearchId);
 	}
 
+	// EOS keeps the client registered in the session after travelling away, and
+	// the next JoinSession fails until it's destroyed
+	void LeaveCurrentSession();
+
+	void TerminateSessionServer();
+
 
 private:
 	void CreateSession();
@@ -140,7 +149,7 @@ private:
 	FString ServerSessionName;
 	int SessionServerPort;
 
-	void TerminateSessionServer();
+	
 	void EndSessionCompleted(FName SessionName, bool bWasSuccessful);
 
 	FTimerHandle WaitPlayerJoinTimeoutHandle;
@@ -151,6 +160,11 @@ private:
 	void WaitPlayerJoinTimeoutReached();
 
 	TSet<FUniqueNetIdRepl> PlayerRecord;
+
+	FString PendingJoinSessionId;
+	void DestroyBeforeJoinCompleted(FName SessionName, bool bWasSuccessful);
+
+	FName JoinedSessionName;
 
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "Map")

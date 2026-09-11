@@ -58,6 +58,24 @@ void UMainMenuWidget::NativeConstruct()
 			MainSwitcher->SetActiveWidget(MultiplayerPageRoot);
 			ResetCreateSessionFlow();
 
+			if (!ChrisGameInstance->PendingMenuMessage.IsEmpty())
+			{
+				const FText Message = ChrisGameInstance->PendingMenuMessage;
+				ChrisGameInstance->PendingMenuMessage = FText::GetEmpty();
+
+				GetWorld()->GetTimerManager().SetTimerForNextTick(
+					FTimerDelegate::CreateWeakLambda(this, [this, Message]()
+						{
+							OpenGeneralMenu(EGeneralMenuType::Continue, Message)
+								.AddLambda([this](bool) { SetVisibility(ESlateVisibility::SelfHitTestInvisible); });
+						}));
+			}
+
+			// Catches any leave path that didn't clean up on its way out
+			ChrisGameInstance->LeaveCurrentSession();
+
+			ChrisGameInstance->StartGlobalSessionSearch();
+
 			// Arrived from a match on a black screen — fade up into the page, matching how GoToPage transitions look
 			FadeImage->SetVisibility(ESlateVisibility::Visible);
 			PlayAnimation(FadeIn);
@@ -339,11 +357,13 @@ void UMainMenuWidget::JoinSessionFailed()
 	HideWaitingWidget();
 
 	OpenGeneralMenu(EGeneralMenuType::Continue,
-		NSLOCTEXT("MainMenu", "JoinRejected", "THIS MATCH HAS ALREADY STARTED"))
+		NSLOCTEXT("MainMenu", "JoinFailed", "COULD NOT JOIN THIS SESSION"))
 		.AddLambda([this](bool)
 			{
 				SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-				SwitchToMultiplayerPage();
+				MainSwitcher->SetActiveWidget(MultiplayerPageRoot);
+				UpdatePageAmbience();
+				ChrisGameInstance->StartGlobalSessionSearch();
 			});
 }
 
@@ -387,10 +407,10 @@ void UMainMenuWidget::UpdateLobbyList(const TArray<FOnlineSessionSearchResult>& 
 
 		// Flask, not EOS, decides what's still joinable — EOS keeps advertising
 		// sessions that have moved past team selection
-		if (ChrisGameInstance && !ChrisGameInstance->IsSessionJoinable(SearchId))
-		{
-			continue;
-		}
+		//if (ChrisGameInstance && !ChrisGameInstance->IsSessionJoinable(SearchId))
+		//{
+		//	continue;
+		//}
 
 		USessionEntryWidget* NewSessionWidget = CreateWidget<USessionEntryWidget>(GetOwningPlayer(), SessionEntryWidgetClass);
 		if (NewSessionWidget)
@@ -615,17 +635,7 @@ void UMainMenuWidget::HandleBackgroundMediaOpened(FString OpenedUrl)
 void UMainMenuWidget::TravelFailed(const FString& Reason)
 {
 	HideWaitingWidget();
-
-	OpenGeneralMenu(EGeneralMenuType::Continue,
-		NSLOCTEXT("MainMenu", "JoinRejected", "THIS MATCH HAS ALREADY STARTED"))
-		.AddLambda([this](bool)
-			{
-				SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-				SwitchToMultiplayerPage();
-			});
 }
-
-
 
 void UMainMenuWidget::OpenVirtualKeyboard()
 {
