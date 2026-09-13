@@ -10,6 +10,10 @@
 #include "HttpModule.h"
 #include "Interfaces/IHttpRequest.h"
 #include "Interfaces/IHttpResponse.h"
+#include "Blueprint/UserWidget.h"
+#include "UObject/UObjectGlobals.h"
+#include "TimerManager.h"
+#include "Engine/World.h"
 
 // Only the server (dedicated or listen) should initiate a map travel
 void UChrisGameInstance::StartMatch()
@@ -54,6 +58,8 @@ void UChrisGameInstance::Init()
 	// PreLogin rejections land here, not in OnJoinSessionFailed — the EOS join
 	// already succeeded by the time the server refuses the connection
 	GEngine->OnNetworkFailure().AddUObject(this, &UChrisGameInstance::HandleNetworkFailure);
+
+	FCoreUObjectDelegates::PostLoadMapWithWorld.AddUObject(this, &UChrisGameInstance::HandlePostLoadMap);
 }
 
 bool UChrisGameInstance::IsLoggedIn() const
@@ -394,6 +400,29 @@ void UChrisGameInstance::GlobalSessionSearchCompleted(bool bWasSuccessful)
 	{
 		SessionPtr->OnFindSessionsCompleteDelegates.RemoveAll(this);
 	}
+}
+
+void UChrisGameInstance::HandlePostLoadMap(UWorld* LoadedWorld)
+{
+	if (!TravelCoverWidgetClass || !LoadedWorld) { return; }
+
+	APlayerController* PC = LoadedWorld->GetFirstPlayerController();
+	if (!PC) { return; }
+
+	TravelCoverWidget = CreateWidget<UUserWidget>(PC, TravelCoverWidgetClass);
+	if (!TravelCoverWidget) { return; }
+
+	TravelCoverWidget->AddToViewport(2000);   // above the loading screen's 1000
+
+	LoadedWorld->GetTimerManager().SetTimer(TravelCoverTimerHandle,
+		FTimerDelegate::CreateWeakLambda(this, [this]()
+			{
+				if (TravelCoverWidget)
+				{
+					TravelCoverWidget->RemoveFromParent();
+					TravelCoverWidget = nullptr;
+				}
+			}), TravelCoverDuration, false);
 }
 
 
