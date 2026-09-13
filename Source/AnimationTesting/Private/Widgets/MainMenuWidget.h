@@ -15,7 +15,7 @@ class UAudioComponent;
 /**
  * 
  */
-UCLASS()
+UCLASS(Config = Game)
 class UMainMenuWidget : public UUserWidget
 {
 	GENERATED_BODY()
@@ -217,6 +217,14 @@ private:
 
 	FOnGeneralMenuClosed& OpenGeneralMenu(EGeneralMenuType Type, const FText& Message);
 	void SessionNameTooLong();
+
+	// Substring match, so it catches padding and separators but also flags
+	// innocent words that happen to contain a listed term
+	bool ContainsProfanity(const FString& Name) const;
+	void SessionNameProfane();
+
+	UPROPERTY(EditDefaultsOnly, Category = "Session")
+	TArray<FString> BlockedWords;
 
 	UPROPERTY(meta = (BindWidget))
 	class UMenuButtonWidget* PracticeArenaButton;

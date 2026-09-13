@@ -26,12 +26,20 @@
 #include "MediaPlayer.h"
 #include "MediaSource.h"
 #include "Player/MainMenuPlayerController.h"
-
+#include "Misc/ConfigCacheIni.h"
 
 
 void UMainMenuWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+
+	// Blueprint subclasses don't pick up config-loaded arrays from the C++ CDO,
+	// so read the section directly
+	if (BlockedWords.Num() == 0)
+	{
+		GConfig->GetArray(TEXT("/Script/AnimationTesting.MainMenuWidget"),
+			TEXT("BlockedWords"), BlockedWords, GGameIni);
+	}
 
 	HideWaitingWidget();
 
@@ -306,6 +314,12 @@ void UMainMenuWidget::CreateSessionButtonClicked()
 				return;   // dialog instead of creating
 			}
 
+			if (ContainsProfanity(SessionSearchBar->GetText().ToString()))
+			{
+				SessionNameProfane();
+				return;
+			}
+
 			if (Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Lobby_Continue); }
 
 			ChrisGameInstance->RequestCreateAndJoinSession(FName(SessionSearchBar->GetText().ToString()));
@@ -553,6 +567,36 @@ void UMainMenuWidget::SessionNameTooLong()
 			});
 }
 
+bool UMainMenuWidget::ContainsProfanity(const FString& Name) const
+{
+	UE_LOG(LogTemp, Warning, TEXT("[Profanity] %d words loaded"), BlockedWords.Num());
+	
+	// Strip anything that isn't a letter, so "f-u-c-k" and "f u c k" don't slip past
+	FString Stripped;
+	for (const TCHAR Char : Name)
+	{
+		if (FChar::IsAlpha(Char)) { Stripped.AppendChar(FChar::ToLower(Char)); }
+	}
+
+	for (const FString& Word : BlockedWords)
+	{
+		if (Stripped.Contains(Word.ToLower())) { return true; }
+	}
+
+	return false;
+}
+
+void UMainMenuWidget::SessionNameProfane()
+{
+	OpenGeneralMenu(EGeneralMenuType::Continue,
+		NSLOCTEXT("MainMenu", "NameProfane", "PROFANITY IS NOT PERMITTED IN SESSION NAMES"))
+		.AddLambda([this](bool)
+			{
+				SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+				SessionSearchBar->FocusBar();
+			});
+}
+
 void UMainMenuWidget::PracticeArenaClicked()
 {
 	OpenGeneralMenu(EGeneralMenuType::YesNo,
@@ -658,10 +702,19 @@ void UMainMenuWidget::VirtualKeyboardCommitted(const FText& FinalText)
 	SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 	SessionSearchBar->SetTextFromKeyboard(FinalText);
 
-	if (FinalText.ToString().Len() > SessionSearchBar->GetMaxLength())
+	const FString CommittedName = FinalText.ToString();
+
+	if (CommittedName.Len() > SessionSearchBar->GetMaxLength())
 	{
 		SessionNameTooLong();
-	} 
+		return;
+	}
+
+	if (ContainsProfanity(CommittedName))
+	{
+		SessionNameProfane();
+		return;
+	}
 }
 
 void UMainMenuWidget::VirtualKeyboardCancelled()
