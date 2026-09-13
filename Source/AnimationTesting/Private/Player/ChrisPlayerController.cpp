@@ -80,7 +80,10 @@ void AChrisPlayerController::AcknowledgePossession(APawn* NewPawn)
 			OriginalArmLength = Boom->TargetArmLength;
 			bOriginalUsePawnControlRotation = Boom->bUsePawnControlRotation;
 		}
+
+		UE_LOG(LogTemp, Warning, TEXT("[Arrival] BeginPlay, local=%d"), IsLocalController() ? 1 : 0);
 	}
+
 }
 
 void AChrisPlayerController::SetGenericTeamId(const FGenericTeamId& NewTeamID)
@@ -303,6 +306,8 @@ void AChrisPlayerController::BeginPlay()
 	{
 		PreloadShopItems();
 	}
+	UE_LOG(LogTemp, Warning, TEXT("[Arrival] BeginPlay, local=%d"), IsLocalController() ? 1 : 0);
+	
 }
 
 void AChrisPlayerController::ShowLoadingScreen()
@@ -675,6 +680,9 @@ void AChrisPlayerController::Client_OnReturnToArena_Implementation(float FadeInD
 
 	// Explicitly grab focus for the game viewport
 	FSlateApplication::Get().SetAllUserFocusToGameViewport();
+
+	UE_LOG(LogTemp, Warning, TEXT("[Fade] <name> at %.2f"), GetWorld()->GetTimeSeconds());
+	
 }
 
 // CONTINUE VOTE (Server RPC)
@@ -701,6 +709,7 @@ void AChrisPlayerController::Client_OnFadeFromBlack_Implementation(float Duratio
 	{
 		PlayerCameraManager->StartCameraFade(1.f, 0.f, Duration, FLinearColor::Black, false, false);
 	}
+	UE_LOG(LogTemp, Warning, TEXT("[Fade] <name> at %.2f"), GetWorld()->GetTimeSeconds());
 }
 
 void AChrisPlayerController::Client_OnSetShopCamera_Implementation()

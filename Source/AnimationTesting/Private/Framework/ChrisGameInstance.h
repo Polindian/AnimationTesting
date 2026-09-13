@@ -111,7 +111,20 @@ private:
 
 	TSharedPtr<class FOnlineSessionSearch> SessionSearch;
 
+	// The player controller's BeginPlay runs ~2s after seamless travel finishes,
+	// so the arena renders before any controller-side cover can exist
+	void HandlePostLoadMap(UWorld* LoadedWorld);
 
+	UPROPERTY(EditDefaultsOnly, Category = "Travel")
+	TSubclassOf<class UUserWidget> TravelCoverWidgetClass;
+
+	UPROPERTY(Transient)
+	class UUserWidget* TravelCoverWidget = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Travel")
+	float TravelCoverDuration = 5.f;
+
+	FTimerHandle TravelCoverTimerHandle;
 
 	/*********************************/
 	/*          Session Server       */
