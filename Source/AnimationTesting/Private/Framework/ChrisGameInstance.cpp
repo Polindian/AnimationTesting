@@ -421,6 +421,11 @@ void UChrisGameInstance::HandlePostLoadMap(UWorld* LoadedWorld)
 {
 	if (!TravelCoverWidgetClass || !LoadedWorld) { return; }
 
+	// Only the hero selection to arena travel has the gap worth covering —
+	// every other map load is fast enough not to need it
+	const FString ArenaName = FPackageName::ObjectPathToPackageName(Lvl_ThirdPerson.ToString());
+	if (!ArenaName.EndsWith(LoadedWorld->GetName())) { return; }
+
 	APlayerController* PC = LoadedWorld->GetFirstPlayerController();
 	if (!PC) { return; }
 
