@@ -154,6 +154,11 @@ public:
 
 	void TerminateSessionServer();
 
+	void CancelSessionJoin();
+
+	bool bJoinCancelled = false;
+
+	FString PendingCreateSearchId;
 
 private:
 	void CreateSession();

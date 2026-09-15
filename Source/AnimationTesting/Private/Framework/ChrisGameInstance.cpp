@@ -189,6 +189,8 @@ void UChrisGameInstance::RequestCreateAndJoinSession(const FName& NewSessionName
 	Request->SetContentAsString(RequestBody);
 	Request->OnProcessRequestComplete().BindUObject(this, &UChrisGameInstance::SessionCreationRequestCompleted, SessionSearchId);
 
+	PendingCreateSearchId = SessionSearchId.ToString(EGuidFormats::Digits);
+
 	if(!Request->ProcessRequest())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Session Creation Request failed right away!"));
@@ -205,6 +207,19 @@ void UChrisGameInstance::CancelSessionCreation()
 	{
 		SessionPtr->OnFindSessionsCompleteDelegates.RemoveAll(this);
 		SessionPtr->OnJoinSessionCompleteDelegates.RemoveAll(this);
+	}
+
+	if (!PendingCreateSearchId.IsEmpty())
+	{
+		TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
+		Request->SetURL(UChrisNetStatics::GetCoordinatorURLString() + TEXT("/SessionCancel"));
+		Request->SetVerb(TEXT("POST"));
+		Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+		Request->SetContentAsString(FString::Printf(TEXT("{\"%s\":\"%s\"}"),
+			*UChrisNetStatics::GetSessionSearchIdKey().ToString(), *PendingCreateSearchId));
+		Request->ProcessRequest();
+
+		PendingCreateSearchId.Empty();
 	}
 
 	StartGlobalSessionSearch();
@@ -406,6 +421,11 @@ void UChrisGameInstance::HandlePostLoadMap(UWorld* LoadedWorld)
 {
 	if (!TravelCoverWidgetClass || !LoadedWorld) { return; }
 
+	// Only the hero selection to arena travel has the gap worth covering —
+	// every other map load is fast enough not to need it
+	const FString ArenaName = FPackageName::ObjectPathToPackageName(Lvl_ThirdPerson.ToString());
+	if (!ArenaName.EndsWith(LoadedWorld->GetName())) { return; }
+
 	APlayerController* PC = LoadedWorld->GetFirstPlayerController();
 	if (!PC) { return; }
 
@@ -487,6 +507,8 @@ void UChrisGameInstance::FindCreateSessionCompleted(bool bWasSuccessful)
 // Read side of GenerateOnlineSessionSettings: pull the advertised name and port back out of the found session's metadata
 void UChrisGameInstance::JoinSessionWithSearchResult(const FOnlineSessionSearchResult& SearchResult)
 {
+	bJoinCancelled = false;
+	
 	UE_LOG(LogTemp, Warning, TEXT("Joining session with search result!"));
 	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
 	if (!SessionPtr)
@@ -524,6 +546,14 @@ void UChrisGameInstance::JoinSessionWithSearchResult(const FOnlineSessionSearchR
 
 void UChrisGameInstance::JoinSessionCompleted(FName SessionName, EOnJoinSessionCompleteResult::Type JoinResult, int Port)
 {
+	if (bJoinCancelled)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Session] Join completed but was cancelled — not travelling"));
+		bJoinCancelled = false;
+		LeaveCurrentSession();
+		return;
+	}
+
 	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
 
 	GetWorld()->GetTimerManager().ClearTimer(JoinSessionTimeoutHandle);
@@ -688,6 +718,16 @@ void UChrisGameInstance::TerminateSessionServer()
 	{
 		FGenericPlatformMisc::RequestExit(false);
 	}
+}
+
+void UChrisGameInstance::CancelSessionJoin()
+{
+	UE_LOG(LogTemp, Warning, TEXT("[Session] Join cancelled by user"));
+
+	bJoinCancelled = true;
+
+	GetWorld()->GetTimerManager().ClearTimer(JoinSessionTimeoutHandle);
+	StartGlobalSessionSearch();
 }
 
 void UChrisGameInstance::EndSessionCompleted(FName SessionName, bool bWasSuccessful)
