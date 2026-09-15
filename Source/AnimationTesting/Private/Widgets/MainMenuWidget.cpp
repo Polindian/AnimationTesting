@@ -352,6 +352,11 @@ void UMainMenuWidget::CancelSessionCreation()
 
 void UMainMenuWidget::CancelSessionJoin()
 {
+	if (ChrisGameInstance)
+	{
+		ChrisGameInstance->CancelSessionJoin();
+	}
+
 	HideWaitingWidget();
 	SwitchToMultiplayerPage();
 }
