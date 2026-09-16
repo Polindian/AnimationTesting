@@ -203,25 +203,22 @@ void UInventoryComponent::Server_Purchase_Implementation(const UPA_ShopItem* Ite
 		return;
 	}
 
-	if (IsFullFor(ItemToPurchase))
-	{
-		Client_PurchaseFailed(ItemToPurchase);
-		return;
-	}
-
-	// The server had no stack limit at all — only the client did, and its count
-	// was always zero, so the cap was never actually enforced anywhere
-	if (ItemToPurchase->GetIsConsumable()
-		&& GetConsumablePurchaseCount(ItemToPurchase) >= ItemToPurchase->GetMaxStackCount())
-	{
-		Client_PurchaseFailed(ItemToPurchase);
-		return;
-	}
-
 	if (ItemToPurchase->GetIsConsumable())
 	{
-		// Grant first, charge second — the old order cost the player their souls
-		// whenever the grant quietly failed
+		// Only consumables occupy grid slots — skills and upgrades are applied
+		// permanently and never enter the inventory
+		if (IsFullFor(ItemToPurchase))
+		{
+			Client_PurchaseFailed(ItemToPurchase);
+			return;
+		}
+
+		if (GetConsumablePurchaseCount(ItemToPurchase) >= ItemToPurchase->GetMaxStackCount())
+		{
+			Client_PurchaseFailed(ItemToPurchase);
+			return;
+		}
+
 		if (!GrantItem(ItemToPurchase))
 		{
 			Client_PurchaseFailed(ItemToPurchase);
