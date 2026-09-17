@@ -24,12 +24,20 @@ def PruneStaleSessions():
         print(f"[Coordinator] Pruning stale session {sid}")
         del activeSessions[sid]
 
+def GetUsedPorts():
+    result = subprocess.run(['docker', 'ps', '--format', '{{.Ports}}'], capture_output=True, text=True)
+    output = result.stdout
+    print(output)
+    
+
+def CreateServerImplementation(sessionName, sessionSearchId):
+    port = GetUsedPorts()
 
 def CreateServerLocalTest(sessionName, sessionSearchId):
     global nextAvailablePort
     proc = subprocess.Popen([
         "C:/Kingdom of Monsters/UnrealSrce/UnrealEngine/Engine/Binaries/Win64/UnrealEditor.exe",
-        "C:\Kingdom of Monsters\AnimationTesting\AnimationTesting.uproject",
+        r"C:\Kingdom of Monsters\AnimationTesting\AnimationTesting.uproject",
         "-server",
         "-log",
         '-epicapp="ServerClient"',
@@ -116,6 +124,6 @@ def CancelServer():
     return jsonify({"status": "success"}), 200
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=80)
-
+    #app.run(host="0.0.0.0", port=5000)
+    CreateServerImplementation("", "")
 
