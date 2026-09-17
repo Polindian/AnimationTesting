@@ -58,7 +58,7 @@ def CreateServerImplementation(sessionName, sessionSearchId):
         "--rm",
         "-p", f"{port}:{port}/tcp",
         "-p", f"{port}:{port}/udp",
-        "animationtestingserver",
+        "server",
         "-server",
         "-log",
         "-epicapp=ServerClient",
