@@ -8,7 +8,6 @@ from consts import SESSION_NAME_KEY, SESSION_SEARCH_ID_KEY, PORT_KEY, STATUS_KEY
 
 app = Flask(__name__)
 
-nextAvailablePort = 7777
 
 # search_id -> {name, port, status, last_seen}
 # status: "open" (joinable) or "started" (past team selection)
@@ -40,28 +39,35 @@ def GetUsedPorts():
     return usedPorts
     
 
-def CreateServerImplementation(sessionName, sessionSearchId):
-    ports = GetUsedPorts()
-    print (ports)
 
-def CreateServerLocalTest(sessionName, sessionSearchId):
-    global nextAvailablePort
+def FindNextAvailablePort(start=7777, end=8000):
+    usedPorts = GetUsedPorts()
+    for port in range(start, end+1):
+        if port not in usedPorts:
+            return port
+        
+    return 0
+
+def CreateServerImplementation(sessionName, sessionSearchId):
+    port = FindNextAvailablePort()
+    print(f"Launching server: {sessionName}, with id: ({sessionSearchId}), on port: {port}")
+
     proc = subprocess.Popen([
-        "C:/Kingdom of Monsters/UnrealSrce/UnrealEngine/Engine/Binaries/Win64/UnrealEditor.exe",
-        r"C:\Kingdom of Monsters\AnimationTesting\AnimationTesting.uproject",
+        "docker",
+        "run",
+        "--rm",
+        "-p", f"{port}:{port}/tcp",
+        "-p", f"{port}:{port}/udp",
+        "animationtestingserver",
         "-server",
         "-log",
-        '-epicapp="ServerClient"',
-        f'-SESSION_NAME="{sessionName}"',
-        f'-SESSION_SEARCH_ID="{sessionSearchId}"',
-        f'-PORT={nextAvailablePort}'
+        "-epicapp=ServerClient",
+        f"-SESSION_NAME={sessionName}",
+        f"-SESSION_SEARCH_ID={sessionSearchId}",
+        f"-PORT={port}"
     ])
 
-    usedPort = nextAvailablePort
-    nextAvailablePort += 1
-    return usedPort, proc
-
-
+    return port, proc
 
 
 # The UE server calls this on its heartbeat timer and when its status changes.
@@ -104,7 +110,7 @@ def CreateServer():
     sessionName = body.get(SESSION_NAME_KEY)
     sessionSearchId = body.get(SESSION_SEARCH_ID_KEY)
 
-    port, proc = CreateServerLocalTest(sessionName, sessionSearchId)
+    port, proc = CreateServerImplementation(sessionName, sessionSearchId)
 
     activeSessions[sessionSearchId] = {
         "name": sessionName,
@@ -135,6 +141,4 @@ def CancelServer():
     return jsonify({"status": "success"}), 200
 
 if __name__ == '__main__':
-    #app.run(host="0.0.0.0", port=5000)
-    CreateServerImplementation("", "")
-
+    app.run(host="0.0.0.0", port=80)
