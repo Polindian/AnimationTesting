@@ -1,3 +1,5 @@
+import re
+
 from flask import Flask, request, jsonify
 import subprocess
 import time
@@ -27,11 +29,20 @@ def PruneStaleSessions():
 def GetUsedPorts():
     result = subprocess.run(['docker', 'ps', '--format', '{{.Ports}}'], capture_output=True, text=True)
     output = result.stdout
-    print(output)
+
+    usedPorts = set()
+
+    for line in output.strip().split("\n"):
+        matches = re.findall(r'0\.0\.0\.0:(\d+)->', line)
+       
+        usedPorts.update(map(int, matches))
+
+    return usedPorts
     
 
 def CreateServerImplementation(sessionName, sessionSearchId):
-    port = GetUsedPorts()
+    ports = GetUsedPorts()
+    print (ports)
 
 def CreateServerLocalTest(sessionName, sessionSearchId):
     global nextAvailablePort
