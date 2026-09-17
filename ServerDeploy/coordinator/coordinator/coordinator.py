@@ -29,7 +29,7 @@ def CreateServerLocalTest(sessionName, sessionSearchId):
     global nextAvailablePort
     proc = subprocess.Popen([
         "C:/Kingdom of Monsters/UnrealSrce/UnrealEngine/Engine/Binaries/Win64/UnrealEditor.exe",
-        r"C:\Kingdom of Monsters\AnimationTesting\AnimationTesting.uproject",
+        "C:\Kingdom of Monsters\AnimationTesting\AnimationTesting.uproject",
         "-server",
         "-log",
         '-epicapp="ServerClient"',

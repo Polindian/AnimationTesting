@@ -99,6 +99,8 @@ Plugins/**/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+PUBLISH/*
+ServerDeploy/server/server/*
 
 <<<<<<< HEAD
 <<<<<<< HEAD
