@@ -1,3 +1,5 @@
+import re
+
 from flask import Flask, request, jsonify
 import subprocess
 import time
@@ -6,7 +8,6 @@ from consts import SESSION_NAME_KEY, SESSION_SEARCH_ID_KEY, PORT_KEY, STATUS_KEY
 
 app = Flask(__name__)
 
-nextAvailablePort = 7777
 
 # search_id -> {name, port, status, last_seen}
 # status: "open" (joinable) or "started" (past team selection)
@@ -24,25 +25,49 @@ def PruneStaleSessions():
         print(f"[Coordinator] Pruning stale session {sid}")
         del activeSessions[sid]
 
+def GetUsedPorts():
+    result = subprocess.run(['docker', 'ps', '--format', '{{.Ports}}'], capture_output=True, text=True)
+    output = result.stdout
 
-def CreateServerLocalTest(sessionName, sessionSearchId):
-    global nextAvailablePort
+    usedPorts = set()
+
+    for line in output.strip().split("\n"):
+        matches = re.findall(r'0\.0\.0\.0:(\d+)->', line)
+       
+        usedPorts.update(map(int, matches))
+
+    return usedPorts
+    
+
+
+def FindNextAvailablePort(start=7777, end=8000):
+    usedPorts = GetUsedPorts()
+    for port in range(start, end+1):
+        if port not in usedPorts:
+            return port
+        
+    return 0
+
+def CreateServerImplementation(sessionName, sessionSearchId):
+    port = FindNextAvailablePort()
+    print(f"Launching server: {sessionName}, with id: ({sessionSearchId}), on port: {port}")
+
     proc = subprocess.Popen([
-        "C:/Kingdom of Monsters/UnrealSrce/UnrealEngine/Engine/Binaries/Win64/UnrealEditor.exe",
-        r"C:\Kingdom of Monsters\AnimationTesting\AnimationTesting.uproject",
+        "docker",
+        "run",
+        "--rm",
+        "-p", f"{port}:{port}/tcp",
+        "-p", f"{port}:{port}/udp",
+        "server",
         "-server",
         "-log",
-        '-epicapp="ServerClient"',
-        f'-SESSION_NAME="{sessionName}"',
-        f'-SESSION_SEARCH_ID="{sessionSearchId}"',
-        f'-PORT={nextAvailablePort}'
+        "-epicapp=ServerClient",
+        f"-SESSION_NAME={sessionName}",
+        f"-SESSION_SEARCH_ID={sessionSearchId}",
+        f"-PORT={port}"
     ])
 
-    usedPort = nextAvailablePort
-    nextAvailablePort += 1
-    return usedPort, proc
-
-
+    return port, proc
 
 
 # The UE server calls this on its heartbeat timer and when its status changes.
@@ -85,7 +110,7 @@ def CreateServer():
     sessionName = body.get(SESSION_NAME_KEY)
     sessionSearchId = body.get(SESSION_SEARCH_ID_KEY)
 
-    port, proc = CreateServerLocalTest(sessionName, sessionSearchId)
+    port, proc = CreateServerImplementation(sessionName, sessionSearchId)
 
     activeSessions[sessionSearchId] = {
         "name": sessionName,
@@ -117,5 +142,3 @@ def CancelServer():
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=80)
-
-
