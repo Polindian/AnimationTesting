@@ -1,0 +1,12 @@
+[OnlineSubsystem]
+DefaultPlatformService=EOS
+NativePlatformService=
+
+[OnlineSubsystemSteam]
+bEnabled=false
+
+[/Script/OnlineSubsystemEOS.EOSSettings]
++Artifacts=(ArtifactName="ServerClient",ClientId="xyza7891nHbGdb3jstwMaABMyvUsNOS2",ClientSecret="W7y/3VYC705y5x6TB215QQJEHmS25RxNEzpqRFNFTeU",ProductId="140ed9cdfcae4dfea04c5cdcad24795b",SandboxId="7e73309eb4ce406186a19b533a5211ab",DeploymentId="ddcee151511b4ea0a670668292a27b1d",ClientEncryptionKey="b9db1cc30947a56b4ac41c46bad349de770ec81dec773cc54ad76139dfc12b6c")
+
+[/Script/OnlineSubsystemUtils.OnlineEngineInterfaceImpl]
+MappedUniqueNetIdTypes=(("EOSPlus","EOS"))

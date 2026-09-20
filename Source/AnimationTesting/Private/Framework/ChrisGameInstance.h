@@ -39,6 +39,7 @@ public:
 	bool IsLoggedIn() const;
 	bool IsLoggingIn() const;
 	void ClientAccountPortalLogin();
+	void ClientSteamLogin();
 	FOnLoginCompleted OnLoginCompleted;
 
 	void ClientDevAuthLogin(const FString& CredentialName);
