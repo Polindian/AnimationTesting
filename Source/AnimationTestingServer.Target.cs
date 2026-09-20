@@ -11,5 +11,7 @@ public class AnimationTestingServerTarget : TargetRules
 		DefaultBuildSettings = BuildSettingsVersion.V5;
 
 		ExtraModuleNames.AddRange( new string[] { "AnimationTesting" } );
-	}
+
+        CustomConfig = "Server";
+    }
 }

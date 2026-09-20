@@ -84,6 +84,12 @@ void UChrisGameInstance::ClientAccountPortalLogin()
 	ClientLogin("AccountPortal", "", "");
 }
 
+// EOSPlus logs into Steam first, then EOS Connect using Steam's ticket, so there are no credentials to pass
+void UChrisGameInstance::ClientSteamLogin()
+{
+	ClientLogin(TEXT(""), TEXT(""), TEXT(""));
+}
+
 void UChrisGameInstance::ClientDevAuthLogin(const FString& CredentialName)
 {
 	ClientLogin("Developer", "localhost:6547", CredentialName);

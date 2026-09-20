@@ -992,19 +992,10 @@ void UMainMenuWidget::SwitchToMainWidget()
 // Widget trigger login UI
 void UMainMenuWidget::LoginButtonClicked()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Logging in..."));	
+	UE_LOG(LogTemp, Warning, TEXT("Logging in..."));
 	if (ChrisGameInstance && !ChrisGameInstance->IsLoggingIn() && !ChrisGameInstance->IsLoggedIn())
 	{
-		// -DevAuthCred=Name on the command line -> DevAuth tool; absent -> normal Account Portal
-		FString DevAuthCred;
-		if (FParse::Value(FCommandLine::Get(), TEXT("DevAuthCred="), DevAuthCred))
-		{
-			ChrisGameInstance->ClientDevAuthLogin(DevAuthCred);
-		}
-		else
-		{
-			ChrisGameInstance->ClientAccountPortalLogin();
-		}
+		ChrisGameInstance->ClientSteamLogin();
 		SwitchToWaitingWidget(FText::FromString("LOGGING IN"));
 	}
 }
