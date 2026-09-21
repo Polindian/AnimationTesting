@@ -38,11 +38,12 @@ public:
 public:
 	bool IsLoggedIn() const;
 	bool IsLoggingIn() const;
-	void ClientAccountPortalLogin();
 	void ClientSteamLogin();
 	FOnLoginCompleted OnLoginCompleted;
 
-	void ClientDevAuthLogin(const FString& CredentialName);
+	// False if Steam didn't start with the game — Unreal then falls back to the
+  // NULL subsystem, and no retry can fix that without a restart
+	bool IsSteamAvailable() const;
 
 private:
 	void ClientLogin(const FString& Type, const FString& Id, const FString& Token);

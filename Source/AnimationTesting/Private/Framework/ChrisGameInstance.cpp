@@ -79,21 +79,7 @@ bool UChrisGameInstance::IsLoggingIn() const
 	return LoggingInDelegateHandle.IsValid();
 }
 
-void UChrisGameInstance::ClientAccountPortalLogin()
-{
-	ClientLogin("AccountPortal", "", "");
-}
 
-// EOSPlus logs into Steam first, then EOS Connect using Steam's ticket, so there are no credentials to pass
-void UChrisGameInstance::ClientSteamLogin()
-{
-	ClientLogin(TEXT(""), TEXT(""), TEXT(""));
-}
-
-void UChrisGameInstance::ClientDevAuthLogin(const FString& CredentialName)
-{
-	ClientLogin("Developer", "localhost:6547", CredentialName);
-}
 
 void UChrisGameInstance::ClientLogin(const FString& Type, const FString& Id, const FString& Token)
 {
@@ -619,6 +605,26 @@ void UChrisGameInstance::PlayerLeft(const FUniqueNetIdRepl& UniqueId)
 		UE_LOG(LogTemp, Warning, TEXT("Session Server Shutdown after all players left!"));
 		TerminateSessionServer(); // New termination path instead of timer handle
 	}
+}
+
+// EOSPlus logs into Steam first, then EOS Connect using Steam's ticket,
+ // so there are no credentials to pass
+void UChrisGameInstance::ClientSteamLogin()
+{
+	if (!IsSteamAvailable())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Login skipped: Steam did not start with the game"));
+		OnLoginCompleted.Broadcast(false, "", "Steam unavailable");
+		return;
+	}
+
+	ClientLogin(TEXT(""), TEXT(""), TEXT(""));
+}
+
+bool UChrisGameInstance::IsSteamAvailable() const
+{
+	const IOnlineSubsystem* OnlineSubsystem = IOnlineSubsystem::Get();
+	return OnlineSubsystem && OnlineSubsystem->GetSubsystemName() == FName(TEXT("EOSPlus"));
 }
 
 void UChrisGameInstance::SetSessionJoinable(bool bJoinable)
