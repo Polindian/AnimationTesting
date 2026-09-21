@@ -47,6 +47,18 @@ void AChrisPlayerState::CopyProperties(APlayerState* PlayerState)
 	}
 }
 
+void AChrisPlayerState::SetPlayerName(const FString& S)
+{
+	// Trim again after cutting, in case the cut lands just after a space
+	FString Capped = S.TrimStartAndEnd().Left(MaxPlayerNameLength).TrimEnd();
+	if (Capped.IsEmpty())
+	{
+		Capped = TEXT("Player");
+	}
+
+	Super::SetPlayerName(Capped);
+}
+
 // Returns the character blueprint class the arena GameMode should spawn for this player.
 TSubclassOf<APawn> AChrisPlayerState::GetSelectedPawnClass() const
 {

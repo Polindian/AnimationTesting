@@ -166,6 +166,18 @@ def CancelServer():
  
 # ---------------- Leaderboard ----------------
  
+def ToWholeNumber(value):
+    """Unreal's JSON writer can send 5 as 5.0, so whole floats count as ints."""
+    # bool is a subclass of int in Python, so rule it out explicitly
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    return None
+ 
+ 
 def ParseMatchPlayer(raw):
     """Returns a clean player dict, or None if anything is missing or out of range."""
     if not isinstance(raw, dict):
@@ -173,17 +185,16 @@ def ParseMatchPlayer(raw):
  
     puid = raw.get(PUID_KEY)
     name = raw.get(NAME_KEY)
-    kills = raw.get(KILLS_KEY)
-    deaths = raw.get(DEATHS_KEY)
+    kills = ToWholeNumber(raw.get(KILLS_KEY))
+    deaths = ToWholeNumber(raw.get(DEATHS_KEY))
     won = raw.get(WON_KEY)
  
     if not isinstance(puid, str) or puid == "":
         return None
     if not isinstance(name, str) or name.strip() == "":
         return None
-    # bool is a subclass of int in Python, so rule it out explicitly
     for stat in (kills, deaths):
-        if not isinstance(stat, int) or isinstance(stat, bool) or not 0 <= stat <= MAX_STAT_PER_MATCH:
+        if stat is None or not 0 <= stat <= MAX_STAT_PER_MATCH:
             return None
     if not isinstance(won, bool):
         return None
@@ -217,14 +228,15 @@ def PostMatchResults():
             print(f"[Leaderboard] Skipped invalid player row: {raw}")
             continue
         players.append(player)
-
+ 
     if len(players) == 0:
         return jsonify({"status": "invalid player data"}), 400
-
+ 
     RecordMatch(players)
     skipped = len(rawPlayers) - len(players)
     print(f"[Leaderboard] Recorded match with {len(players)} players ({skipped} skipped)")
     return jsonify({"status": "success", "recorded": len(players), "skipped": skipped}), 200
+ 
  
 # The client's leaderboard widget calls this; rows arrive already sorted
 @app.route('/Leaderboard', methods=['GET'])

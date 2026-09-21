@@ -24,6 +24,13 @@ public:
 	virtual void BeginPlay() override;
 
 	virtual void CopyProperties(APlayerState* PlayerState) override;
+
+	// Every path that names a player (joining, seamless travel) goes through this,
+	// so capping here covers the lobby, arena, stats screen and leaderboard at once
+	virtual void SetPlayerName(const FString& S) override;
+
+	static constexpr int32 MaxPlayerNameLength = 12;
+
 	TSubclassOf<APawn> GetSelectedPawnClass() const;
 	FGenericTeamId GetTeamIdBasedOnSlot() const;
 
