@@ -95,7 +95,12 @@ void UMainMenuWidget::NativeConstruct()
 		ChrisGameInstance->OnJoinSessionFailed.AddUObject(this, &UMainMenuWidget::JoinSessionFailed);
 		ChrisGameInstance->OnTravelFailedWithReason.AddUObject(this, &UMainMenuWidget::TravelFailed);
 		ChrisGameInstance->OnGlobalSessionSearchCompleted.AddUObject(this, &UMainMenuWidget::UpdateLobbyList);
-		ChrisGameInstance->StartGlobalSessionSearch();
+
+		// EOS rejects searches from a logged-out user; LoginCompleted starts it otherwise
+		if (ChrisGameInstance->IsLoggedIn())
+		{
+			ChrisGameInstance->StartGlobalSessionSearch();
+		}
 	}
 
 	// Runs one frame later, when the Slate widgets actually exist
@@ -125,7 +130,7 @@ void UMainMenuWidget::NativeConstruct()
 					W->BuildNavigation();
 				}
 
-				UWidget * ActivePage = MainSwitcher ? MainSwitcher->GetActiveWidget() : nullptr;
+				UWidget* ActivePage = MainSwitcher ? MainSwitcher->GetActiveWidget() : nullptr;
 
 				if (ActivePage == MultiplayerPageRoot)
 				{
@@ -147,76 +152,82 @@ void UMainMenuWidget::NativeConstruct()
 				WireMultiplayerPageNavigation();
 			}));
 
-				LoginButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::LoginButtonClicked);
+	LoginButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::LoginButtonClicked);
 
-				// Every navigation button funnels into GoToPage — pages never switch themselves
-				StoryModeButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::StoryModeClicked);
-				MultiplayerButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::MultiplayerClicked);
-				ExitGameButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::ExitGameClicked);
+	// Every navigation button funnels into GoToPage — pages never switch themselves
+	StoryModeButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::StoryModeClicked);
+	MultiplayerButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::MultiplayerClicked);
+	ExitGameButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::ExitGameClicked);
 
-				LeaderboardsButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::LeaderboardsClickedFromMain);
-				MultiplayerLeaderboardsButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::LeaderboardsClickedFromMultiplayer);
+	LeaderboardsButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::LeaderboardsClickedFromMain);
+	MultiplayerLeaderboardsButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::LeaderboardsClickedFromMultiplayer);
 
-				PracticeArenaButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::PracticeArenaClicked);
+	PracticeArenaButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::PracticeArenaClicked);
 
-				// Both pages' back buttons lead to the same place
-				StoryBackButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::BackToMainClicked);
-				MultiplayerBackButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::BackToMainClicked);
+	// Both pages' back buttons lead to the same place
+	StoryBackButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::BackToMainClicked);
+	MultiplayerBackButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::BackToMainClicked);
 
-				// Bind animation-finished handlers ONCE — BindToAnimationFinished stacks duplicates if called repeatedly (e.g. per transition)
-				FWidgetAnimationDynamicEvent FadeOutFinished;
-				FadeOutFinished.BindDynamic(this, &UMainMenuWidget::OnFadeOutFinished);
-				BindToAnimationFinished(FadeOut, FadeOutFinished);
+	// Bind animation-finished handlers ONCE — BindToAnimationFinished stacks duplicates if called repeatedly (e.g. per transition)
+	FWidgetAnimationDynamicEvent FadeOutFinished;
+	FadeOutFinished.BindDynamic(this, &UMainMenuWidget::OnFadeOutFinished);
+	BindToAnimationFinished(FadeOut, FadeOutFinished);
 
-				FWidgetAnimationDynamicEvent FadeInFinished;
-				FadeInFinished.BindDynamic(this, &UMainMenuWidget::HideFadeImage);
-				BindToAnimationFinished(FadeIn, FadeInFinished);
+	FWidgetAnimationDynamicEvent FadeInFinished;
+	FadeInFinished.BindDynamic(this, &UMainMenuWidget::HideFadeImage);
+	BindToAnimationFinished(FadeIn, FadeInFinished);
 
-				CreateSessionButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::CreateSessionButtonClicked);
-				SessionSearchBar->OnSearchTextChanged.AddUObject(this, &UMainMenuWidget::NewSessionNameTextChanged);
-				SessionSearchBar->OnVirtualKeyboardRequested.AddUObject(this, &UMainMenuWidget::OpenVirtualKeyboard);
-				SessionSearchBar->OnMaxLengthExceeded.AddUObject(this, &UMainMenuWidget::SessionNameTooLong);
+	CreateSessionButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::CreateSessionButtonClicked);
+	SessionSearchBar->OnSearchTextChanged.AddUObject(this, &UMainMenuWidget::NewSessionNameTextChanged);
+	SessionSearchBar->OnVirtualKeyboardRequested.AddUObject(this, &UMainMenuWidget::OpenVirtualKeyboard);
+	SessionSearchBar->OnMaxLengthExceeded.AddUObject(this, &UMainMenuWidget::SessionNameTooLong);
 
-				// Stage 1 state: button fully active, name field hidden until first press
-				SessionNameContainer->SetVisibility(ESlateVisibility::Collapsed);
+	// Stage 1 state: button fully active, name field hidden until first press
+	SessionNameContainer->SetVisibility(ESlateVisibility::Collapsed);
 
-				JoinSessionButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::JoinSessionButtonClicked);
-				JoinSessionButton->SetIsEnabled(false);
+	JoinSessionButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::JoinSessionButtonClicked);
+	JoinSessionButton->SetIsEnabled(false);
 
-				TutorialBookButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::TutorialBookButtonClicked);
+	TutorialBookButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::TutorialBookButtonClicked);
 
-				SettingsButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::SettingsClicked);
+	SettingsButton->OnMenuButtonClicked.AddDynamic(this, &UMainMenuWidget::SettingsClicked);
 
 
-				if (bDebugFillSessionList)
-				{
-					PopulateDebugSessionEntries();
-				}
+	if (bDebugFillSessionList)
+	{
+		PopulateDebugSessionEntries();
+	}
 
-				if (BackgroundMediaPlayer)
-				{
-					BackgroundMediaPlayer->OnMediaOpened.AddDynamic(this, &UMainMenuWidget::HandleBackgroundMediaOpened);
-				}
+	if (BackgroundMediaPlayer)
+	{
+		BackgroundMediaPlayer->OnMediaOpened.AddDynamic(this, &UMainMenuWidget::HandleBackgroundMediaOpened);
+	}
 
-				if (MainMenuMediaPlayer)
-				{
-					MainMenuMediaPlayer->OnMediaOpened.AddDynamic(this, &UMainMenuWidget::HandleMainMenuMediaOpened);
-				}
+	if (MainMenuMediaPlayer)
+	{
+		MainMenuMediaPlayer->OnMediaOpened.AddDynamic(this, &UMainMenuWidget::HandleMainMenuMediaOpened);
+	}
 
-				UpdatePageAmbience();
+	UpdatePageAmbience();
 
-				AMainMenuPlayerController* MenuPC = Cast<AMainMenuPlayerController>(GetOwningPlayer());
+	AMainMenuPlayerController* MenuPC = Cast<AMainMenuPlayerController>(GetOwningPlayer());
 
-				// Not logged in means a cold launch — returning from a match keeps the login, so the intro doesn't replay
-				if (ChrisGameInstance && !ChrisGameInstance->IsLoggedIn())
-				{
-					PlayIntro();
-				}
-				else if (MenuPC)
-				{
-					// No intro on this path, so nothing else will start the music
-					StartMenuMusicNow();
-				}
+	// Not logged in means a cold launch — returning from a match keeps the login, so the intro doesn't replay
+	if (ChrisGameInstance && !ChrisGameInstance->IsLoggedIn())
+	{
+		// Log in behind the intro, so the player usually lands straight on the main page
+		bDeferLoginResult = true;
+		if (!ChrisGameInstance->IsLoggingIn() && !ShouldSkipLogin())   // DEBUG SKIP LOGIN
+		{
+			ChrisGameInstance->ClientSteamLogin();
+		}
+		PlayIntro();
+	}
+	else if (MenuPC)
+	{
+		// No intro on this path, so nothing else will start the music
+		StartMenuMusicNow();
+	}
 }
 
 FReply UMainMenuWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
@@ -286,45 +297,45 @@ void UMainMenuWidget::ExitGameClicked()
 
 void UMainMenuWidget::CreateSessionButtonClicked()
 {
-		if (ChrisGameInstance && ChrisGameInstance->IsLoggedIn())
+	if (ChrisGameInstance && ChrisGameInstance->IsLoggedIn())
+	{
+		UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this);
+
+		// Stage 1: field hidden -> this click only reveals the bar and arms stage 2
+		if (SessionNameContainer->GetVisibility() == ESlateVisibility::Collapsed)
 		{
-			UChrisAudioSubsystem* Audio = UChrisAudioSubsystem::Get(this);
-			
-			// Stage 1: field hidden -> this click only reveals the bar and arms stage 2
-			if (SessionNameContainer->GetVisibility() == ESlateVisibility::Collapsed)
-			{
-				if (Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Lobby_TeamSlot); }
+			if (Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Lobby_TeamSlot); }
 
-				SessionNameContainer->SetVisibility(ESlateVisibility::Visible);
-				
-				SessionNameContainer->SetVisibility(ESlateVisibility::Visible);
-				SessionSearchBar->FocusBar();
+			SessionNameContainer->SetVisibility(ESlateVisibility::Visible);
 
-				// Disable and dim until text arrives
-				CreateSessionButton->SetIsEnabled(false);
-				CreateSessionButton->SetRenderOpacity(0.5f);
-				WireMultiplayerPageNavigation();
-				return;
-			}
+			SessionNameContainer->SetVisibility(ESlateVisibility::Visible);
+			SessionSearchBar->FocusBar();
 
-			// Stage 2 (bar already visible): validate, then create
-			if (SessionSearchBar->GetText().ToString().Len() > SessionSearchBar->GetMaxLength())
-			{
-				SessionNameTooLong();
-				return;   // dialog instead of creating
-			}
-
-			if (ContainsProfanity(SessionSearchBar->GetText().ToString()))
-			{
-				SessionNameProfane();
-				return;
-			}
-
-			if (Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Lobby_Continue); }
-
-			ChrisGameInstance->RequestCreateAndJoinSession(FName(SessionSearchBar->GetText().ToString()));
-			SwitchToWaitingWidget(FText::FromString("CREATING LOBBY"), true).AddDynamic(this, &UMainMenuWidget::CancelSessionCreation);
+			// Disable and dim until text arrives
+			CreateSessionButton->SetIsEnabled(false);
+			CreateSessionButton->SetRenderOpacity(0.5f);
+			WireMultiplayerPageNavigation();
+			return;
 		}
+
+		// Stage 2 (bar already visible): validate, then create
+		if (SessionSearchBar->GetText().ToString().Len() > SessionSearchBar->GetMaxLength())
+		{
+			SessionNameTooLong();
+			return;   // dialog instead of creating
+		}
+
+		if (ContainsProfanity(SessionSearchBar->GetText().ToString()))
+		{
+			SessionNameProfane();
+			return;
+		}
+
+		if (Audio) { Audio->Play2D(ChrisGameplayTags::Audio_UI_Lobby_Continue); }
+
+		ChrisGameInstance->RequestCreateAndJoinSession(FName(SessionSearchBar->GetText().ToString()));
+		SwitchToWaitingWidget(FText::FromString("CREATING LOBBY"), true).AddDynamic(this, &UMainMenuWidget::CancelSessionCreation);
+	}
 }
 
 void UMainMenuWidget::NewSessionNameTextChanged(const FText& NewText)
@@ -575,7 +586,7 @@ void UMainMenuWidget::SessionNameTooLong()
 bool UMainMenuWidget::ContainsProfanity(const FString& Name) const
 {
 	UE_LOG(LogTemp, Warning, TEXT("[Profanity] %d words loaded"), BlockedWords.Num());
-	
+
 	// Strip anything that isn't a letter, so "f-u-c-k" and "f u c k" don't slip past
 	FString Stripped;
 	for (const TCHAR Char : Name)
@@ -908,7 +919,7 @@ void UMainMenuWidget::PlayIntro()
 	if (!IntroMediaPlayer || !IntroMediaSource)
 	{
 		// No video set — don't strand the player on a black screen
-		GoToPage(LoginWidgetRoot);
+		GoToPage((ChrisGameInstance && ChrisGameInstance->IsLoggedIn()) || ShouldSkipLogin() ? MainWidgetRoot : LoginWidgetRoot);
 		return;
 	}
 
@@ -947,7 +958,7 @@ void UMainMenuWidget::StartMenuMusicNow()
 void UMainMenuWidget::HandleMainMenuMediaOpened(FString OpenedUrl)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[MainMenuBG] Media opened: %s"), *OpenedUrl);
-	
+
 	if (!MainMenuMediaPlayer) { return; }
 
 	MainMenuMediaPlayer->SetLooping(true);
@@ -974,8 +985,9 @@ void UMainMenuWidget::HandleIntroFinished()
 		PC->StartMenuMusic();
 	}
 
-	// Reuses the existing fade-to-black-and-swap path
-	GoToPage(LoginWidgetRoot);
+	// Reuses the existing fade-to-black-and-swap path. If login is still running,
+	// the login page picks that up once it's on screen (ResolveLoginPage)
+	GoToPage((ChrisGameInstance && ChrisGameInstance->IsLoggedIn()) || ShouldSkipLogin() ? MainWidgetRoot : LoginWidgetRoot);
 }
 
 void UMainMenuWidget::SwitchToMainWidget()
@@ -995,15 +1007,29 @@ void UMainMenuWidget::LoginButtonClicked()
 	UE_LOG(LogTemp, Warning, TEXT("Logging in..."));
 	if (ChrisGameInstance && !ChrisGameInstance->IsLoggingIn() && !ChrisGameInstance->IsLoggedIn())
 	{
-		ChrisGameInstance->ClientSteamLogin();
+		// Overlay first: a login that fails instantly reports back before
+		// ClientSteamLogin returns, and would otherwise be covered by the overlay
 		SwitchToWaitingWidget(FText::FromString("LOGGING IN"));
+		ChrisGameInstance->ClientSteamLogin();
 	}
 }
 
 void UMainMenuWidget::LoginCompleted(bool bWasSuccessful, const FString& PlayerNickname, const FString& ErrorMessage)
 {
+	if (bWasSuccessful && ChrisGameInstance)
+	{
+		ChrisGameInstance->StartGlobalSessionSearch();
+	}
+
+	// Still in the intro — the page it lands on reads the result instead
+	if (bDeferLoginResult)
+	{
+		bLoginErrorPending = !bWasSuccessful;
+		return;
+	}
+
 	HideWaitingWidget();
-	
+
 	if (bWasSuccessful)
 	{
 		SwitchToMainWidget();
@@ -1012,9 +1038,56 @@ void UMainMenuWidget::LoginCompleted(bool bWasSuccessful, const FString& PlayerN
 	{
 		// Back to login page so the player can retry
 		MainSwitcher->SetActiveWidget(LoginWidgetRoot);
-
-		LoginButton->FocusButton();
+		ShowLoginError();
 	}
+}
+
+void UMainMenuWidget::ResolveLoginPage()
+{
+	if (!ChrisGameInstance) { return; }
+
+	// Finished during the fade — skip the login page entirely
+	if (ChrisGameInstance->IsLoggedIn())
+	{
+		MainSwitcher->SetActiveWidget(MainWidgetRoot);
+		StoryModeButton->FocusButton();
+	}
+	else if (ChrisGameInstance->IsLoggingIn())
+	{
+		SwitchToWaitingWidget(FText::FromString("LOGGING IN"));
+	}
+	// Otherwise it failed; HideFadeImage shows the error once the page is visible
+}
+
+void UMainMenuWidget::ShowLoginError()
+{
+	bLoginErrorPending = false;
+
+	// Steam failing at startup can't be fixed by retrying — the game has to be restarted with Steam open
+	const FText Message = (ChrisGameInstance && !ChrisGameInstance->IsSteamAvailable())
+		? NSLOCTEXT("MainMenu", "SteamUnavailable", "COULD NOT CONNECT TO STEAM. MAKE SURE STEAM IS RUNNING, THEN RESTART THE GAME")
+		: NSLOCTEXT("MainMenu", "LoginFailed", "LOGIN FAILED. CHECK YOUR INTERNET CONNECTION AND TRY AGAIN");
+
+	OpenGeneralMenu(EGeneralMenuType::Continue, Message)
+		.AddLambda([this](bool)
+			{
+				SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+				LoginButton->FocusButton();
+			});
+}
+
+// DEBUG SKIP LOGIN
+bool UMainMenuWidget::ShouldSkipLogin() const
+{
+#if UE_BUILD_SHIPPING
+	return false;
+#else
+	if (bDebugSkipLogin)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Login skipped: bDebugSkipLogin is on"));
+	}
+	return bDebugSkipLogin;
+#endif
 }
 
 FOnMenuButtonClicked& UMainMenuWidget::SwitchToWaitingWidget(const FText& WaitInfo, bool bAllowCancel)
@@ -1043,18 +1116,24 @@ void UMainMenuWidget::GoToPage(UWidget* TargetPage)
 	{
 		Audio->Play2D(ChrisGameplayTags::Audio_UI_Page_Change);
 	}
-	
+
 	if (!TargetPage || PendingPage) return;
 
 	PendingPage = TargetPage;
 	FadeImage->SetVisibility(ESlateVisibility::Visible);
-	PlayAnimation(FadeOut);  
+	PlayAnimation(FadeOut);
 }
 
 // FadeIn finished — image is fully transparent; hide it so it stops intercepting mouse clicks
 void UMainMenuWidget::HideFadeImage()
 {
 	FadeImage->SetVisibility(ESlateVisibility::Hidden);
+
+	// Waits for the fade so the message doesn't pop up over a black screen
+	if (bLoginErrorPending && MainSwitcher->GetActiveWidget() == LoginWidgetRoot)
+	{
+		ShowLoginError();
+	}
 }
 
 void UMainMenuWidget::OnFadeOutFinished()
@@ -1068,6 +1147,7 @@ void UMainMenuWidget::OnFadeOutFinished()
 	if (PendingPage == MainWidgetRoot)
 	{
 		StoryModeButton->FocusButton();
+		bDeferLoginResult = false;
 	}
 	else if (PendingPage == MultiplayerPageRoot)
 	{
@@ -1081,6 +1161,10 @@ void UMainMenuWidget::OnFadeOutFinished()
 	else if (PendingPage == LoginWidgetRoot)
 	{
 		LoginButton->FocusButton();
+
+		// The intro has handed over, so login results go straight to the page from here on
+		bDeferLoginResult = false;
+		ResolveLoginPage();
 	}
 
 	PendingPage = nullptr;
@@ -1096,4 +1180,3 @@ void UMainMenuWidget::OnFadeHoldFinished()
 {
 	PlayAnimation(FadeIn);
 }
-

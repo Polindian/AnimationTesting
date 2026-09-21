@@ -13,13 +13,13 @@
 class UAudioComponent;
 
 /**
- * 
+ *
  */
 UCLASS(Config = Game)
 class UMainMenuWidget : public UUserWidget
 {
 	GENERATED_BODY()
-	
+
 public:
 	virtual void NativeConstruct() override;
 
@@ -35,7 +35,7 @@ public:
 private:
 	UPROPERTY(meta = (BindWidget))
 	class UWidgetSwitcher* MainSwitcher;
-	
+
 	UPROPERTY()
 	class UChrisGameInstance* ChrisGameInstance;
 
@@ -59,6 +59,27 @@ private:
 
 	void LoginCompleted(bool bWasSuccessful, const FString& PlayerNickname, const FString& ErrorMessage);
 
+	// True on a cold launch until the intro hands over to a page. A login result
+	// arriving before then is held, so it can't yank the player out of the intro
+	bool bDeferLoginResult = false;
+
+	// A failed login that arrived while deferred; shown once the login page has faded in
+	bool bLoginErrorPending = false;
+
+	// The login page is only a fallback now — decides what it shows based on
+	// how far the automatic login got
+	void ResolveLoginPage();
+
+	void ShowLoginError();
+
+	// DEBUG SKIP LOGIN — lands on the main page without logging in, so
+	// coordinator-only features (leaderboard) can be tested before Steam login
+	// works. Sessions won't work in this mode. Always off in Shipping builds.
+	UPROPERTY(EditDefaultsOnly, Category = "Debug")
+	bool bDebugSkipLogin = false;
+
+	bool ShouldSkipLogin() const;
+
 	/*****************************/
 	/*          Waiting          */
 	/*****************************/
@@ -71,18 +92,18 @@ private:
 
 	void HideWaitingWidget();
 
- /*****************************/
- /*      Page Navigation      */
- /*****************************/
+	/*****************************/
+	/*      Page Navigation      */
+	/*****************************/
 
- // The main menu buttons
-	UPROPERTY(meta = (BindWidget)) 
+	// The main menu buttons
+	UPROPERTY(meta = (BindWidget))
 	class UMenuButtonWidget* StoryModeButton;
 
 	UPROPERTY(meta = (BindWidget))
 	class UMenuButtonWidget* MultiplayerButton;
 
-	UPROPERTY(meta = (BindWidget)) 
+	UPROPERTY(meta = (BindWidget))
 	class UMenuButtonWidget* ExitGameButton;
 
 	// Page roots inside MainSwitcher
@@ -96,7 +117,7 @@ private:
 	UPROPERTY(meta = (BindWidget))
 	class UMenuButtonWidget* StoryBackButton;
 
-	UPROPERTY(meta = (BindWidget)) 
+	UPROPERTY(meta = (BindWidget))
 	class UMenuButtonWidget* MultiplayerBackButton;
 
 	// Full-screen black image used for transitions; blocks clicks while fading
@@ -107,7 +128,7 @@ private:
 	UPROPERTY(Transient, meta = (BindWidgetAnim))
 	class UWidgetAnimation* FadeOut;
 
-	UPROPERTY(Transient, meta = (BindWidgetAnim)) 
+	UPROPERTY(Transient, meta = (BindWidgetAnim))
 	class UWidgetAnimation* FadeIn;
 
 	// The page we'll switch to once the screen is fully black
@@ -121,11 +142,11 @@ private:
 	FTimerHandle FadeHoldTimerHandle;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Transitions")
-	float FadeHoldDuration = 0.35f;   
+	float FadeHoldDuration = 0.35f;
 
 	UFUNCTION() void HideFadeImage();
 
-	UFUNCTION() 
+	UFUNCTION()
 	void OnFadeHoldFinished();
 
 	UFUNCTION()
@@ -135,18 +156,18 @@ private:
 	UFUNCTION()
 	void StoryModeClicked();
 
-	UFUNCTION() 
+	UFUNCTION()
 	void MultiplayerClicked();
 
-	UFUNCTION() 
+	UFUNCTION()
 	void BackToMainClicked();
 
 	UFUNCTION()
 	void ExitGameClicked();
 
-/*****************************/
-/*      Multiplayer Page     */
-/*****************************/
+	/*****************************/
+	/*      Multiplayer Page     */
+	/*****************************/
 
 private:
 	UPROPERTY(meta = (BindWidget))
@@ -168,9 +189,9 @@ private:
 	UPROPERTY(meta = (BindWidget))
 	class USizeBox* SessionNameContainer;
 
-	
 
-	UPROPERTY(meta=(BindWidget))
+
+	UPROPERTY(meta = (BindWidget))
 	class UScrollBox* SessionScrollBox;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Session")
@@ -275,9 +296,9 @@ private:
 	void ResetCreateSessionFlow();
 
 
-/*****************************/
-/*          Settings         */
-/*****************************/
+	/*****************************/
+	/*          Settings         */
+	/*****************************/
 
 private:
 
@@ -330,9 +351,9 @@ private:
 	class UMenuButtonWidget* MultiplayerLeaderboardsButton;
 
 
-/*****************************/
-/*        Game Title         */
-/*****************************/
+	/*****************************/
+	/*        Game Title         */
+	/*****************************/
 
 
 	UPROPERTY(meta = (BindWidget))
@@ -366,9 +387,9 @@ private:
 	void StartMenuMusicNow();
 
 
-/*****************************/
-/*       Main Menu Video     */
-/*****************************/
+	/*****************************/
+	/*       Main Menu Video     */
+	/*****************************/
 
 	UPROPERTY(EditDefaultsOnly, Category = "Main Page")
 	TObjectPtr<class UMediaPlayer> MainMenuMediaPlayer;

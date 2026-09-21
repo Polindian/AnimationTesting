@@ -101,6 +101,10 @@ public:
 	const TArray<FPlayerMatchStats>& GetMatchStats() const { return MatchStatsArray; }
 	FOnMatchStatsUpdated OnMatchStatsUpdated;
 
+	// Server only. Called by the game mode the moment the match is decided, so
+	// everyone connected at that point gets their result, even if they quit during the banners
+	void SubmitMatchResultsToLeaderboard(uint8 WinningTeamId);
+
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_MatchStatsArray)
 	TArray<FPlayerMatchStats> MatchStatsArray;
@@ -118,7 +122,7 @@ private:
 	// Guarantees one entry per real player, however passive they were
 	void SeedStatsForAllPlayers();
 
-	void SubmitMatchResultsToLeaderboard();
+	
 
 
 /*************************/

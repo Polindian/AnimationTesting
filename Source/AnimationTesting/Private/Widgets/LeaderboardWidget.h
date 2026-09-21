@@ -67,4 +67,8 @@ private:
 	void HandleRowFocused(int32 RowIndex);
 
 	void CloseLeaderboard();
+
+	void FocusFirstEntry();
+
+	void HandleLeaderboardFetched(bool bSuccess, const TArray<FLeaderboardEntry>& Entries);
 };

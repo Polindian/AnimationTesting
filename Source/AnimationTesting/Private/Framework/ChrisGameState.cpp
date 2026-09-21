@@ -18,6 +18,13 @@
 #include "Audio/ChrisAudioSubsystem.h"
 #include "Audio/ChrisGameplayTags.h"
 #include "Components/AudioComponent.h"
+#include "Player/ChrisPlayerState.h"
+#include "HttpModule.h"
+#include "Interfaces/IHttpRequest.h"
+#include "Interfaces/IHttpResponse.h"
+#include "Dom/JsonObject.h"
+#include "Serialization/JsonSerializer.h"
+#include "Serialization/JsonWriter.h"
 
 void AChrisGameState::RequestPlayerSelectionChange(const APlayerState* RequestingPlayer, uint8 DesiredSlot)
 {
@@ -447,7 +454,20 @@ void AChrisGameState::SeedStatsForAllPlayers()
 	}
 }
 
-void AChrisGameState::SubmitMatchResultsToLeaderboard()
+// EOS ids print as "EpicAccountId|ProductUserId". With Epic accounts off the first
+// half is empty; the leaderboard is keyed on the Product User ID, which is always there
+static FString ExtractProductUserId(const FString& UniqueIdString)
+{
+	FString EpicPart, ProductPart;
+	if (UniqueIdString.Split(TEXT("|"), &EpicPart, &ProductPart))
+	{
+		return ProductPart;
+	}
+	return UniqueIdString;
+}
+
+
+void AChrisGameState::SubmitMatchResultsToLeaderboard(uint8 WinningTeamId)
 {
 	if (!HasAuthority()) return;
 
@@ -459,17 +479,79 @@ void AChrisGameState::SubmitMatchResultsToLeaderboard()
 		return;
 	}
 
+	// A player with no kills or deaths still needs a row so their win or loss counts
+	SeedStatsForAllPlayers();
+
+	TArray<TSharedPtr<FJsonValue>> Players;
 	for (const FPlayerMatchStats& S : MatchStatsArray)
 	{
-		if (!S.OwningPlayer) continue;
+		// A leaver's PlayerState is destroyed when they disconnect — that's how
+		// "didn't reach the end" is detected
+		const AChrisPlayerState* PS = Cast<AChrisPlayerState>(S.OwningPlayer);
+		if (!IsValid(PS)) continue;
 
-		// The leaderboard needs: a stable player id and result - Wins/losses come from the game mode's round tally, so that gets passed in when this is wired up.
-		UE_LOG(LogTemp, Warning, TEXT("[Leaderboard] %s — Id:%s K:%d D:%d KD:%.2f"),
-			*S.PlayerName, *S.UniquePlayerId, S.HeroKills, S.Deaths, S.GetKD());
+		const FString Puid = ExtractProductUserId(S.UniquePlayerId);
+		const bool bWon = PS->GetTeamIdBasedOnSlot().GetId() == WinningTeamId;
 
-		// TODO: POST to the Flask coordinator, or write to EOS stats
+		// Key names must match consts.py on the coordinator
+		TSharedPtr<FJsonObject> Player = MakeShared<FJsonObject>();
+		Player->SetStringField(TEXT("PUID"), Puid);
+		Player->SetStringField(TEXT("NAME"), PS->GetPlayerName());
+		Player->SetNumberField(TEXT("KILLS"), S.HeroKills);
+		Player->SetNumberField(TEXT("DEATHS"), S.Deaths);
+		Player->SetBoolField(TEXT("WON"), bWon);
+		Players.Add(MakeShared<FJsonValueObject>(Player));
+
+		UE_LOG(LogTemp, Warning, TEXT("[Leaderboard] %s — RawId:%s PUID:%s K:%d D:%d %s"),
+			*PS->GetPlayerName(), *S.UniquePlayerId, *Puid, S.HeroKills, S.Deaths, bWon ? TEXT("WON") : TEXT("LOST"));
 	}
+
+	if (Players.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Leaderboard] Nobody left at match end — nothing submitted."));
+		return;
+	}
+
+	const FString Secret = UChrisNetStatics::GetCommandLineArgsAsString(FName("SERVER_SECRET"));
+	if (Secret.IsEmpty())
+	{
+		UE_LOG(LogTemp, Error, TEXT("[Leaderboard] No -SERVER_SECRET on the command line — results not submitted."));
+		return;
+	}
+
+	TSharedPtr<FJsonObject> Body = MakeShared<FJsonObject>();
+	Body->SetArrayField(TEXT("PLAYERS"), Players);
+
+	FString BodyString;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&BodyString);
+	FJsonSerializer::Serialize(Body.ToSharedRef(), Writer);
+
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
+	Request->SetURL(UChrisNetStatics::GetCoordinatorURLString() + TEXT("/MatchResults"));
+	Request->SetVerb(TEXT("POST"));
+	Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+	Request->SetHeader(TEXT("X-Server-Secret"), Secret);
+	Request->SetContentAsString(BodyString);
+	Request->SetTimeout(10.f);
+
+	// Doesn't capture 'this' — the server may be shutting the level down by the time the reply arrives
+	Request->OnProcessRequestComplete().BindLambda(
+		[](FHttpRequestPtr, FHttpResponsePtr Response, bool bSuccess)
+		{
+			if (bSuccess && Response.IsValid())
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[Leaderboard] Submit response %d: %s"),
+					Response->GetResponseCode(), *Response->GetContentAsString());
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("[Leaderboard] Submit failed — coordinator unreachable"));
+			}
+		});
+
+	Request->ProcessRequest();
 }
+
 void AChrisGameState::SetArenaAmbienceActive(bool bActive)
 {
 	if (!HasAuthority() || bArenaAmbienceActive == bActive) { return; }
@@ -596,12 +678,12 @@ void AChrisGameState::FinalizeMatchStats()
 	// Overall rank is XP — rank 1 is the MVP
 	AssignRanks([](const FPlayerMatchStats& S) { return S.Experience; }, [](FPlayerMatchStats& S) -> int32& { return S.RankOverall; });
 
-	// Submit to the leaderboard backend now - a player who quits from the stats screen (or crashes) must not be able to dodge their result
-	SubmitMatchResultsToLeaderboard();
+
 
 	// Tell any listeners on the server; clients get told by OnRep instead
 	OnMatchStatsUpdated.Broadcast(MatchStatsArray);
 }
+
 
 // Fires on clients when the array replicates down, which is the signal the stats screen waits for before it has anything to display
 void AChrisGameState::OnRep_MatchStatsArray()

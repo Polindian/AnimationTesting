@@ -79,21 +79,7 @@ bool UChrisGameInstance::IsLoggingIn() const
 	return LoggingInDelegateHandle.IsValid();
 }
 
-void UChrisGameInstance::ClientAccountPortalLogin()
-{
-	ClientLogin("AccountPortal", "", "");
-}
 
-// EOSPlus logs into Steam first, then EOS Connect using Steam's ticket, so there are no credentials to pass
-void UChrisGameInstance::ClientSteamLogin()
-{
-	ClientLogin(TEXT(""), TEXT(""), TEXT(""));
-}
-
-void UChrisGameInstance::ClientDevAuthLogin(const FString& CredentialName)
-{
-	ClientLogin("Developer", "localhost:6547", CredentialName);
-}
 
 void UChrisGameInstance::ClientLogin(const FString& Type, const FString& Id, const FString& Token)
 {
@@ -621,6 +607,26 @@ void UChrisGameInstance::PlayerLeft(const FUniqueNetIdRepl& UniqueId)
 	}
 }
 
+// EOSPlus logs into Steam first, then EOS Connect using Steam's ticket,
+ // so there are no credentials to pass
+void UChrisGameInstance::ClientSteamLogin()
+{
+	if (!IsSteamAvailable())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Login skipped: Steam did not start with the game"));
+		OnLoginCompleted.Broadcast(false, "", "Steam unavailable");
+		return;
+	}
+
+	ClientLogin(TEXT(""), TEXT(""), TEXT(""));
+}
+
+bool UChrisGameInstance::IsSteamAvailable() const
+{
+	const IOnlineSubsystem* OnlineSubsystem = IOnlineSubsystem::Get();
+	return OnlineSubsystem && OnlineSubsystem->GetSubsystemName() == FName(TEXT("EOSPlus"));
+}
+
 void UChrisGameInstance::SetSessionJoinable(bool bJoinable)
 {
 	IOnlineSessionPtr SessionPtr = UChrisNetStatics::GetSessionPtr();
@@ -865,4 +871,55 @@ void UChrisGameInstance::StartPracticeArena()
 	UGameplayStatics::OpenLevel(this, FName(*LevelName), true, TEXT("practice=1"));
 
 	UE_LOG(LogTemp, Warning, TEXT("[Practice] Flag SET before travel"));
+}
+
+void UChrisGameInstance::FetchLeaderboard()
+{
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
+	Request->SetURL(UChrisNetStatics::GetCoordinatorURLString() + TEXT("/Leaderboard"));
+	Request->SetVerb(TEXT("GET"));
+	Request->SetTimeout(10.f);
+	Request->OnProcessRequestComplete().BindUObject(this, &UChrisGameInstance::LeaderboardFetched);
+	Request->ProcessRequest();
+}
+
+void UChrisGameInstance::LeaderboardFetched(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess)
+{
+	TArray<FLeaderboardEntry> Entries;
+
+	if (!bSuccess || !Response.IsValid() || Response->GetResponseCode() != 200)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Leaderboard] Fetch failed — is the coordinator running?"));
+		OnLeaderboardFetched.Broadcast(false, Entries);
+		return;
+	}
+
+	// Key names must match consts.py on the coordinator
+	TSharedPtr<FJsonObject> Json;
+	TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Response->GetContentAsString());
+	const TArray<TSharedPtr<FJsonValue>>* Rows = nullptr;
+
+	if (!FJsonSerializer::Deserialize(Reader, Json) || !Json.IsValid() || !Json->TryGetArrayField(TEXT("ENTRIES"), Rows))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Leaderboard] Unexpected response: %s"), *Response->GetContentAsString());
+		OnLeaderboardFetched.Broadcast(false, Entries);
+		return;
+	}
+
+	for (const TSharedPtr<FJsonValue>& Value : *Rows)
+	{
+		const TSharedPtr<FJsonObject>* Row = nullptr;
+		if (!Value->TryGetObject(Row)) { continue; }
+
+		FLeaderboardEntry Entry;
+		(*Row)->TryGetStringField(TEXT("NAME"), Entry.PlayerName);
+		(*Row)->TryGetNumberField(TEXT("WINS"), Entry.Wins);
+		(*Row)->TryGetNumberField(TEXT("LOSSES"), Entry.Losses);
+		(*Row)->TryGetNumberField(TEXT("KILLS"), Entry.Kills);
+		(*Row)->TryGetNumberField(TEXT("DEATHS"), Entry.Deaths);
+		Entries.Add(Entry);
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("[Leaderboard] Fetched %d rows"), Entries.Num());
+	OnLeaderboardFetched.Broadcast(true, Entries);
 }

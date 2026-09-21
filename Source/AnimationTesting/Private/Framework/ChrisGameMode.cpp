@@ -725,6 +725,14 @@ void AChrisGameMode::EndMatch(bool bTeamOneWon)
 		});
 
 	PendingMatchWinningTeamId = WinningTeamId;
+
+	// Submitted now rather than with the stats screen a minute later: whoever is
+	// connected at this moment finished the match
+	if (AChrisGameState* GS = GetGameState<AChrisGameState>())
+	{
+		GS->SubmitMatchResultsToLeaderboard(WinningTeamId);
+	}
+
 	GetWorldTimerManager().SetTimer(BannerDelayTimerHandle, this, &AChrisGameMode::ShowMatchResultBanner, RoundResultBannerDelay, false);
 
 	// Reset zone time accumulators
