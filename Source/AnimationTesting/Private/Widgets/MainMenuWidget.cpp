@@ -217,7 +217,7 @@ void UMainMenuWidget::NativeConstruct()
 	{
 		// Log in behind the intro, so the player usually lands straight on the main page
 		bDeferLoginResult = true;
-		if (!ChrisGameInstance->IsLoggingIn())
+		if (!ChrisGameInstance->IsLoggingIn() && !ShouldSkipLogin())   // DEBUG SKIP LOGIN
 		{
 			ChrisGameInstance->ClientSteamLogin();
 		}
@@ -919,7 +919,7 @@ void UMainMenuWidget::PlayIntro()
 	if (!IntroMediaPlayer || !IntroMediaSource)
 	{
 		// No video set — don't strand the player on a black screen
-		GoToPage(ChrisGameInstance && ChrisGameInstance->IsLoggedIn() ? MainWidgetRoot : LoginWidgetRoot);
+		GoToPage((ChrisGameInstance && ChrisGameInstance->IsLoggedIn()) || ShouldSkipLogin() ? MainWidgetRoot : LoginWidgetRoot);
 		return;
 	}
 
@@ -987,7 +987,7 @@ void UMainMenuWidget::HandleIntroFinished()
 
 	// Reuses the existing fade-to-black-and-swap path. If login is still running,
 	// the login page picks that up once it's on screen (ResolveLoginPage)
-	GoToPage(ChrisGameInstance && ChrisGameInstance->IsLoggedIn() ? MainWidgetRoot : LoginWidgetRoot);
+	GoToPage((ChrisGameInstance && ChrisGameInstance->IsLoggedIn()) || ShouldSkipLogin() ? MainWidgetRoot : LoginWidgetRoot);
 }
 
 void UMainMenuWidget::SwitchToMainWidget()
@@ -1074,6 +1074,20 @@ void UMainMenuWidget::ShowLoginError()
 				SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 				LoginButton->FocusButton();
 			});
+}
+
+// DEBUG SKIP LOGIN
+bool UMainMenuWidget::ShouldSkipLogin() const
+{
+#if UE_BUILD_SHIPPING
+	return false;
+#else
+	if (bDebugSkipLogin)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Login skipped: bDebugSkipLogin is on"));
+	}
+	return bDebugSkipLogin;
+#endif
 }
 
 FOnMenuButtonClicked& UMainMenuWidget::SwitchToWaitingWidget(const FText& WaitInfo, bool bAllowCancel)

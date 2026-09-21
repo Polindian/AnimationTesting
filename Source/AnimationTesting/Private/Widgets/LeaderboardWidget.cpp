@@ -7,6 +7,7 @@
 #include "Audio/ChrisAudioSubsystem.h"
 #include "Audio/ChrisGameplayTags.h"
 #include "Animation/WidgetAnimation.h"
+#include "Framework/ChrisGameInstance.h"
 
 void ULeaderboardWidget::NativeOnInitialized()
 {
@@ -23,6 +24,11 @@ void ULeaderboardWidget::NativeOnInitialized()
 	{
 		LeaderboardScrollBox->OnUserScrolled.AddDynamic(this, &ULeaderboardWidget::HandleScrolled);
 	}
+
+	if (UChrisGameInstance* GI = GetGameInstance<UChrisGameInstance>())
+	{
+		GI->OnLeaderboardFetched.AddUObject(this, &ULeaderboardWidget::HandleLeaderboardFetched);
+	}
 }
 
 void ULeaderboardWidget::OpenLeaderboard()
@@ -38,22 +44,44 @@ void ULeaderboardWidget::OpenLeaderboard()
 	{
 		PopulateDebugEntries();   // fills AllEntries, sorted
 	}
+	else if (UChrisGameInstance* GI = GetGameInstance<UChrisGameInstance>())
+	{
+		// Last known rows show straight away; fresh ones replace them on arrival
+		GI->FetchLeaderboard();
+	}
 	RebuildFromScratch();
 
 	PlayAnimation(Anim_Open);
 
 	GetWorld()->GetTimerManager().SetTimerForNextTick(
-		FTimerDelegate::CreateWeakLambda(this, [this]()
-			{
-				for (UWidget* Child : LeaderboardScrollBox->GetAllChildren())
-				{
-					if (ULeaderboardEntryWidget* First = Cast<ULeaderboardEntryWidget>(Child))
-					{
-						First->FocusEntry();
-						break;
-					}
-				}
-			}));
+		FTimerDelegate::CreateWeakLambda(this, [this]() { FocusFirstEntry(); }));
+}
+
+void ULeaderboardWidget::FocusFirstEntry()
+{
+	for (UWidget* Child : LeaderboardScrollBox->GetAllChildren())
+	{
+		if (ULeaderboardEntryWidget* First = Cast<ULeaderboardEntryWidget>(Child))
+		{
+			First->FocusEntry();
+			break;
+		}
+	}
+}
+
+void ULeaderboardWidget::HandleLeaderboardFetched(bool bSuccess, const TArray<FLeaderboardEntry>& Entries)
+{
+	// A failed fetch keeps whatever was already showing rather than blanking the board
+	if (!bSuccess || bDebugFill) { return; }
+
+	SetLeaderboardData(Entries);
+
+	// The rebuild replaced every row, so focus has to be put back — but only if the board is still open
+	if (IsInViewport() && !bClosing)
+	{
+		GetWorld()->GetTimerManager().SetTimerForNextTick(
+			FTimerDelegate::CreateWeakLambda(this, [this]() { FocusFirstEntry(); }));
+	}
 }
 
 void ULeaderboardWidget::SetLeaderboardData(const TArray<FLeaderboardEntry>& InEntries)

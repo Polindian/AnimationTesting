@@ -872,3 +872,54 @@ void UChrisGameInstance::StartPracticeArena()
 
 	UE_LOG(LogTemp, Warning, TEXT("[Practice] Flag SET before travel"));
 }
+
+void UChrisGameInstance::FetchLeaderboard()
+{
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
+	Request->SetURL(UChrisNetStatics::GetCoordinatorURLString() + TEXT("/Leaderboard"));
+	Request->SetVerb(TEXT("GET"));
+	Request->SetTimeout(10.f);
+	Request->OnProcessRequestComplete().BindUObject(this, &UChrisGameInstance::LeaderboardFetched);
+	Request->ProcessRequest();
+}
+
+void UChrisGameInstance::LeaderboardFetched(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess)
+{
+	TArray<FLeaderboardEntry> Entries;
+
+	if (!bSuccess || !Response.IsValid() || Response->GetResponseCode() != 200)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Leaderboard] Fetch failed — is the coordinator running?"));
+		OnLeaderboardFetched.Broadcast(false, Entries);
+		return;
+	}
+
+	// Key names must match consts.py on the coordinator
+	TSharedPtr<FJsonObject> Json;
+	TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Response->GetContentAsString());
+	const TArray<TSharedPtr<FJsonValue>>* Rows = nullptr;
+
+	if (!FJsonSerializer::Deserialize(Reader, Json) || !Json.IsValid() || !Json->TryGetArrayField(TEXT("ENTRIES"), Rows))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Leaderboard] Unexpected response: %s"), *Response->GetContentAsString());
+		OnLeaderboardFetched.Broadcast(false, Entries);
+		return;
+	}
+
+	for (const TSharedPtr<FJsonValue>& Value : *Rows)
+	{
+		const TSharedPtr<FJsonObject>* Row = nullptr;
+		if (!Value->TryGetObject(Row)) { continue; }
+
+		FLeaderboardEntry Entry;
+		(*Row)->TryGetStringField(TEXT("NAME"), Entry.PlayerName);
+		(*Row)->TryGetNumberField(TEXT("WINS"), Entry.Wins);
+		(*Row)->TryGetNumberField(TEXT("LOSSES"), Entry.Losses);
+		(*Row)->TryGetNumberField(TEXT("KILLS"), Entry.Kills);
+		(*Row)->TryGetNumberField(TEXT("DEATHS"), Entry.Deaths);
+		Entries.Add(Entry);
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("[Leaderboard] Fetched %d rows"), Entries.Num());
+	OnLeaderboardFetched.Broadcast(true, Entries);
+}

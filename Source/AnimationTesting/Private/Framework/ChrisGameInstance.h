@@ -8,6 +8,7 @@
 #include "Interfaces/IHttpRequest.h"
 #include "Interfaces/OnlineSessionInterface.h"
 #include "OnlineSessionSettings.h"
+#include "Data/LeaderboardTypes.h"
 #include "ChrisGameInstance.generated.h"
 
 
@@ -15,6 +16,7 @@ DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnLoginCompleted, bool /*bWasSuccessful*
 DECLARE_MULTICAST_DELEGATE(FOnJoinSessionFailed);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnGlobalSessionSearchCompleted, const TArray<FOnlineSessionSearchResult>& /*SearchResults*/)
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnTravelFailedWithReason, const FString& /*Reason*/);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnLeaderboardFetched, bool /*bSuccess*/, const TArray<FLeaderboardEntry>& /*Entries*/);
 
 /**
  *
@@ -44,6 +46,8 @@ public:
 	// False if Steam didn't start with the game — Unreal then falls back to the
   // NULL subsystem, and no retry can fix that without a restart
 	bool IsSteamAvailable() const;
+
+
 
 private:
 	void ClientLogin(const FString& Type, const FString& Id, const FString& Token);
@@ -228,5 +232,15 @@ public:
 
 	// Lives here because it must survive the travel into the arena.
 	bool bPracticeMode = false;
+
+	/*********************************/
+	/*          Leaderboard          */
+	/*********************************/
+   public:
+	   void FetchLeaderboard();
+	   FOnLeaderboardFetched OnLeaderboardFetched;
+
+   private:
+	   void LeaderboardFetched(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess);
 
 };

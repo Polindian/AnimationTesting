@@ -72,6 +72,14 @@ private:
 
 	void ShowLoginError();
 
+	// DEBUG SKIP LOGIN — lands on the main page without logging in, so
+	// coordinator-only features (leaderboard) can be tested before Steam login
+	// works. Sessions won't work in this mode. Always off in Shipping builds.
+	UPROPERTY(EditDefaultsOnly, Category = "Debug")
+	bool bDebugSkipLogin = false;
+
+	bool ShouldSkipLogin() const;
+
 	/*****************************/
 	/*          Waiting          */
 	/*****************************/
