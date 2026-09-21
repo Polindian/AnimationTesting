@@ -1,0 +1,25 @@
+{
+  "PLAYERS": [
+    {
+      "PUID": "test-puid-alice",
+      "NAME": "Alice",
+      "KILLS": 12,
+      "DEATHS": 3,
+      "WON": true
+    },
+    {
+      "PUID": "test-puid-bob",
+      "NAME": "Bob",
+      "KILLS": 7,
+      "DEATHS": 5,
+      "WON": true
+    },
+    {
+      "PUID": "test-puid-long",
+      "NAME": "ThisNameIsWayTooLong",
+      "KILLS": 4,
+      "DEATHS": 9,
+      "WON": false
+    }
+  ]
+}

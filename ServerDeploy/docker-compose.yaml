@@ -2,12 +2,22 @@ services:
   server:
     build: ./server
     image: server
-
+ 
   coordinator: 
     build: ./coordinator
     image: coordinator
     container_name: servercoordinator
+    # Values come from the .env file next to this compose file
+    environment:
+      - SERVER_SECRET=${SERVER_SECRET}
+      - ADMIN_SECRET=${ADMIN_SECRET}
     volumes: 
       - /var/run/docker.sock:/var/run/docker.sock
+      - leaderboard-data:/data
     ports:
       - '80:80'
+ 
+# Named volume: survives container restarts, rebuilds and redeploys
+volumes:
+  leaderboard-data:
+ 
