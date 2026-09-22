@@ -175,3 +175,4 @@ void UChrisAudioSubsystem::SetMusicDeathEffect(bool bEnabled)
 	UAudioMixerBlueprintLibrary::SetSubmixEffectChainOverride(
 		this, MusicSubmix, bEnabled ? DeathEffectChain : OpenEffectChain, DeathEffectFadeTime);
 }
+
