@@ -273,6 +273,13 @@ void AChrisGameState::RemovePlayerFromSelection(APlayerState* LeavingPlayer)
 {
 	if (!HasAuthority() || !LeavingPlayer) { return; }
 
+	// Hero selection means they've committed to the match — quitting now is a loss.
+	// Checked before anything below can abort the lobby and clear the timer
+	if (HeroSelectionTimerHandle.IsValid())
+	{
+		SubmitLeaverLoss(LeavingPlayer);
+	}
+
 	const int32 Removed = PlayerSelectionArray.RemoveAll(
 		[&](const FPlayerSelection& PS) { return PS.IsForPlayer(LeavingPlayer); });
 
@@ -467,51 +474,20 @@ static FString ExtractProductUserId(const FString& UniqueIdString)
 }
 
 
-void AChrisGameState::SubmitMatchResultsToLeaderboard(uint8 WinningTeamId)
+TSharedPtr<FJsonValue> AChrisGameState::MakePlayerResult(const FString& Puid, const FString& Name, int32 Kills, int32 Deaths, bool bWon)
 {
-	if (!HasAuthority()) return;
+	// Key names must match consts.py on the coordinator
+	TSharedPtr<FJsonObject> Player = MakeShared<FJsonObject>();
+	Player->SetStringField(TEXT("PUID"), Puid);
+	Player->SetStringField(TEXT("NAME"), Name);
+	Player->SetNumberField(TEXT("KILLS"), Kills);
+	Player->SetNumberField(TEXT("DEATHS"), Deaths);
+	Player->SetBoolField(TEXT("WON"), bWon);
+	return MakeShared<FJsonValueObject>(Player);
+}
 
-	// Practice is solo against AI — those results must never reach the leaderboard
-	const AChrisGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<AChrisGameMode>() : nullptr;
-	if (GM && GM->IsPracticeMode())
-	{
-		UE_LOG(LogTemp, Log, TEXT("[Leaderboard] Practice match — results not submitted."));
-		return;
-	}
-
-	// A player with no kills or deaths still needs a row so their win or loss counts
-	SeedStatsForAllPlayers();
-
-	TArray<TSharedPtr<FJsonValue>> Players;
-	for (const FPlayerMatchStats& S : MatchStatsArray)
-	{
-		// A leaver's PlayerState is destroyed when they disconnect — that's how
-		// "didn't reach the end" is detected
-		const AChrisPlayerState* PS = Cast<AChrisPlayerState>(S.OwningPlayer);
-		if (!IsValid(PS)) continue;
-
-		const FString Puid = ExtractProductUserId(S.UniquePlayerId);
-		const bool bWon = PS->GetTeamIdBasedOnSlot().GetId() == WinningTeamId;
-
-		// Key names must match consts.py on the coordinator
-		TSharedPtr<FJsonObject> Player = MakeShared<FJsonObject>();
-		Player->SetStringField(TEXT("PUID"), Puid);
-		Player->SetStringField(TEXT("NAME"), PS->GetPlayerName());
-		Player->SetNumberField(TEXT("KILLS"), S.HeroKills);
-		Player->SetNumberField(TEXT("DEATHS"), S.Deaths);
-		Player->SetBoolField(TEXT("WON"), bWon);
-		Players.Add(MakeShared<FJsonValueObject>(Player));
-
-		UE_LOG(LogTemp, Warning, TEXT("[Leaderboard] %s — RawId:%s PUID:%s K:%d D:%d %s"),
-			*PS->GetPlayerName(), *S.UniquePlayerId, *Puid, S.HeroKills, S.Deaths, bWon ? TEXT("WON") : TEXT("LOST"));
-	}
-
-	if (Players.IsEmpty())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[Leaderboard] Nobody left at match end — nothing submitted."));
-		return;
-	}
-
+void AChrisGameState::PostResultsToCoordinator(const TArray<TSharedPtr<FJsonValue>>& Players)
+{
 	const FString Secret = UChrisNetStatics::GetCommandLineArgsAsString(FName("SERVER_SECRET"));
 	if (Secret.IsEmpty())
 	{
@@ -550,6 +526,82 @@ void AChrisGameState::SubmitMatchResultsToLeaderboard(uint8 WinningTeamId)
 		});
 
 	Request->ProcessRequest();
+}
+
+void AChrisGameState::SubmitMatchResultsToLeaderboard(uint8 WinningTeamId)
+{
+	if (!HasAuthority() || bMatchResultsSubmitted) return;
+
+	// Practice is solo against AI — those results must never reach the leaderboard
+	const AChrisGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<AChrisGameMode>() : nullptr;
+	if (GM && GM->IsPracticeMode())
+	{
+		UE_LOG(LogTemp, Log, TEXT("[Leaderboard] Practice match — results not submitted."));
+		return;
+	}
+
+	bMatchResultsSubmitted = true;
+
+	// A player with no kills or deaths still needs a row so their win or loss counts
+	SeedStatsForAllPlayers();
+
+	TArray<TSharedPtr<FJsonValue>> Players;
+	for (const FPlayerMatchStats& S : MatchStatsArray)
+	{
+		// Leavers already sent their loss when they left, and their PlayerState is gone
+		const AChrisPlayerState* PS = Cast<AChrisPlayerState>(S.OwningPlayer);
+		if (!IsValid(PS)) continue;
+
+		const FString Puid = ExtractProductUserId(S.UniquePlayerId);
+		const bool bWon = PS->GetTeamIdBasedOnSlot().GetId() == WinningTeamId;
+		Players.Add(MakePlayerResult(Puid, PS->GetPlayerName(), S.HeroKills, S.Deaths, bWon));
+
+		UE_LOG(LogTemp, Warning, TEXT("[Leaderboard] %s — RawId:%s PUID:%s K:%d D:%d %s"),
+			*PS->GetPlayerName(), *S.UniquePlayerId, *Puid, S.HeroKills, S.Deaths, bWon ? TEXT("WON") : TEXT("LOST"));
+	}
+
+	if (Players.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Leaderboard] Nobody left at match end — nothing submitted."));
+		return;
+	}
+
+	PostResultsToCoordinator(Players);
+}
+
+void AChrisGameState::SubmitLeaverLoss(APlayerState* LeavingPlayer)
+{
+	// After the result is in, leaving is free — the banners and stats screen don't count
+	if (!HasAuthority() || !LeavingPlayer || bMatchResultsSubmitted) return;
+	if (LeavingPlayer->IsABot() || LeavingPlayer->IsOnlyASpectator()) return;
+
+	// Null in the lobby (a different game mode), which is fine — the lobby has no practice mode
+	const AChrisGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<AChrisGameMode>() : nullptr;
+	if (GM && GM->IsPracticeMode()) return;
+
+	if (!LeavingPlayer->GetUniqueId().IsValid())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Leaderboard] %s left but has no player id — loss not recorded"), *LeavingPlayer->GetPlayerName());
+		return;
+	}
+
+	const FString Puid = ExtractProductUserId(LeavingPlayer->GetUniqueId()->ToString());
+
+	// Kills and deaths so far if they left mid-match; zero if they left in hero selection
+	int32 Kills = 0;
+	int32 Deaths = 0;
+	const FPlayerMatchStats* Stats = MatchStatsArray.FindByPredicate(
+		[LeavingPlayer](const FPlayerMatchStats& S) { return S.OwningPlayer == LeavingPlayer; });
+	if (Stats)
+	{
+		Kills = Stats->HeroKills;
+		Deaths = Stats->Deaths;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("[Leaderboard] %s left before the end — recording a loss (PUID:%s K:%d D:%d)"),
+		*LeavingPlayer->GetPlayerName(), *Puid, Kills, Deaths);
+
+	PostResultsToCoordinator({ MakePlayerResult(Puid, LeavingPlayer->GetPlayerName(), Kills, Deaths, false) });
 }
 
 void AChrisGameState::SetArenaAmbienceActive(bool bActive)

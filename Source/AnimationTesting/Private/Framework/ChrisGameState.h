@@ -105,6 +105,10 @@ public:
 	// everyone connected at that point gets their result, even if they quit during the banners
 	void SubmitMatchResultsToLeaderboard(uint8 WinningTeamId);
 
+	// Server only. A player who quits after committing to a match (hero selection
+	// onwards) takes a loss, with whatever kills and deaths they had so far
+	void SubmitLeaverLoss(APlayerState* LeavingPlayer);
+
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_MatchStatsArray)
 	TArray<FPlayerMatchStats> MatchStatsArray;
@@ -122,7 +126,13 @@ private:
 	// Guarantees one entry per real player, however passive they were
 	void SeedStatsForAllPlayers();
 
-	
+	// Set once the match result is sent, so a player leaving during the banners
+	// or stats screen doesn't also get a losing result
+	bool bMatchResultsSubmitted = false;
+
+	// Shared by the end-of-match submit and the leaver submit
+	static TSharedPtr<class FJsonValue> MakePlayerResult(const FString& Puid, const FString& Name, int32 Kills, int32 Deaths, bool bWon);
+	void PostResultsToCoordinator(const TArray<TSharedPtr<class FJsonValue>>& Players);
 
 
 /*************************/

@@ -46,6 +46,9 @@ public:
     // Called by the engine every time a player successfully joins, detects enough players to start game
     virtual void PostLogin(APlayerController* NewPlayer) override;
 
+    // Called by the engine when a player disconnects
+    virtual void Logout(AController* Exiting) override;
+
     // Called by PlayerController when a player clicks the Continue button.
     void OnPlayerVoteContinue(APlayerController* VotingPlayer);
 
