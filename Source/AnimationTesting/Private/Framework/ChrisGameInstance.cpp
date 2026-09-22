@@ -865,6 +865,26 @@ void UChrisGameInstance::StartPracticeArena()
 {
 	bPracticeMode = true;
 
+	// Same cover the multiplayer route uses, so both ways into the arena look alike
+	if (TravelCoverWidgetClass)
+	{
+		if (APlayerController* PC = GetFirstLocalPlayerController(GetWorld()))
+		{
+			if (UUserWidget* Cover = CreateWidget<UUserWidget>(PC, TravelCoverWidgetClass))
+			{
+				Cover->AddToViewport(2000);   // same layer HandlePostLoadMap uses
+			}
+		}
+	}
+
+	// The widget needs a frame or two to be drawn before the load freezes the screen
+	GetWorld()->GetTimerManager().SetTimer(PracticeTravelTimerHandle,
+		FTimerDelegate::CreateWeakLambda(this, [this]() { OpenPracticeLevel(); }),
+		PracticeTravelDelay, false);
+}
+
+void UChrisGameInstance::OpenPracticeLevel()
+{
 	const FString LevelName = FPackageName::ObjectPathToPackageName(Lvl_ThirdPerson.ToString());
 
 	// Pass as a URL option too: PIE can rebuild the game instance across a map change, which loses the member flag entirely
