@@ -44,6 +44,9 @@ void UMainMenuWidget::NativeConstruct()
 	HideWaitingWidget();
 
 	ChrisGameInstance = GetGameInstance<UChrisGameInstance>();
+
+	const bool bReturningFromMatch = ChrisGameInstance && ChrisGameInstance->bReturnToMultiplayerPage;
+
 	if (ChrisGameInstance)
 	{
 		ChrisGameInstance->OnLoginCompleted.AddUObject(this, &UMainMenuWidget::LoginCompleted);
@@ -213,7 +216,7 @@ void UMainMenuWidget::NativeConstruct()
 	AMainMenuPlayerController* MenuPC = Cast<AMainMenuPlayerController>(GetOwningPlayer());
 
 	// Not logged in means a cold launch — returning from a match keeps the login, so the intro doesn't replay
-	if (ChrisGameInstance && !ChrisGameInstance->IsLoggedIn())
+	if (ChrisGameInstance && !bReturningFromMatch && !ChrisGameInstance->IsLoggedIn())
 	{
 		// Log in behind the intro, so the player usually lands straight on the main page
 		bDeferLoginResult = true;
