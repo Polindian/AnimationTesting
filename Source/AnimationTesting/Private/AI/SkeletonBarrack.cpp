@@ -192,7 +192,7 @@ ASkeletonAI* ASkeletonBarrack::GetNextAvailableSkeleton(const TSet<ASkeletonAI*>
 {
 	for (ASkeletonAI* Skeleton : SkeletonPool)
 	{
-		if (Skeleton && !Skeleton->IsActive() && !Excluded.Contains(Skeleton))
+		if (Skeleton && Skeleton->IsReadyForReuse() && !Excluded.Contains(Skeleton))
 		{
 			return Skeleton;
 		}

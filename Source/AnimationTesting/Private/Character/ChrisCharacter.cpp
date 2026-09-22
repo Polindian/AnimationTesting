@@ -614,6 +614,12 @@ void AChrisCharacter::SetAIPerceptionStimuliSourceEnabled(bool bIsEnabled)
 
 void AChrisCharacter::ApplyDissolveMaterial(UMaterialInterface* DissolveMaterial)
 {
+	if (!IsDead())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Dissolve] Ignored on living %s"), *GetName());
+		return;
+	}
+	
 	if (!DissolveMaterial) return;
 
 	// Already dissolved and not yet restored — capturing now would record the

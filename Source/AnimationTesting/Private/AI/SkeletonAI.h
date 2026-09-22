@@ -18,7 +18,10 @@ public:
 
 	bool IsActive() const;
 	void Activate();
-	//void SetGoal(AActor* Goal);
+	
+
+	// Dead long enough for the death animation and dissolve to have finished
+	bool IsReadyForReuse() const;
 	
 private:
 
@@ -52,6 +55,13 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "AI")
 	float MaxAIWalkSpeed = 700.f;
+
+	// World time of the last death, so the pool can tell a fresh corpse from a finished one
+	float DeathTime = -1.f;
+
+	// Must cover the death montage plus the whole Blueprint dissolve
+	UPROPERTY(EditDefaultsOnly, Category = "Pool")
+	float MinTimeDeadBeforeReuse = 5.f;
 
 
 /*********************************/
