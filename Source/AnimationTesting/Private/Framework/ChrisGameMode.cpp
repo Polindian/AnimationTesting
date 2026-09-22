@@ -235,6 +235,21 @@ void AChrisGameMode::PostLogin(APlayerController* NewPlayer)
 	}
 }
 
+void AChrisGameMode::Logout(AController* Exiting)
+{
+	// Anything before MatchOver is mid-match, including the loading screen —
+	// they committed back in hero selection. After MatchOver their result is already in
+	if (Exiting && CurrentPhase != EMatchPhase::MatchOver && !IsPracticeMode())
+	{
+		if (AChrisGameState* GS = GetGameState<AChrisGameState>())
+		{
+			GS->SubmitLeaverLoss(Exiting->PlayerState);
+		}
+	}
+
+	Super::Logout(Exiting);
+}
+
 // Countdown Timer
 void AChrisGameMode::StartCountdown()
 {
