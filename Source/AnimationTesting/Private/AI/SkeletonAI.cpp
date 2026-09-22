@@ -71,6 +71,12 @@ void ASkeletonAI::Activate()
 	}
 }
 
+bool ASkeletonAI::IsReadyForReuse() const
+{
+	// Reusing a body mid-death teleports the corpse and races the dissolve
+	return IsDead() && GetWorld()->GetTimeSeconds() - DeathTime >= MinTimeDeadBeforeReuse;
+}
+
 
 void ASkeletonAI::BeginPlay()
 {
@@ -133,6 +139,8 @@ void ASkeletonAI::OnDead()
 {
 	Super::OnDead();
 
+	DeathTime = GetWorld()->GetTimeSeconds();
+
 	GetWorld()->GetTimerManager().ClearTimer(ScreamTimerHandle);
 
 	if (GetNetMode() == NM_DedicatedServer) { return; }
@@ -149,6 +157,10 @@ void ASkeletonAI::OnDead()
 void ASkeletonAI::OnRespawn()
 {
 	Super::OnRespawn();
+
+	// Runs on every machine, unlike Activate — a death sequence still in flight must not reapply the dissolve or change collision on a living skeleton
+	CancelDeathTimers();
+	RestoreOriginalMaterials();
 
 	// Any respawn that didn't come through the barrack — round-end cleanup, for
 	// one — would otherwise leave us standing where the body fell

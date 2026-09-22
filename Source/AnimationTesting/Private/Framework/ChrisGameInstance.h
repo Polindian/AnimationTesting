@@ -233,6 +233,13 @@ public:
 	// Lives here because it must survive the travel into the arena.
 	bool bPracticeMode = false;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Practice Arena")
+	float PracticeTravelDelay = 0.2f;
+
+	FTimerHandle PracticeTravelTimerHandle;
+
+	void OpenPracticeLevel();
+
 	/*********************************/
 	/*          Leaderboard          */
 	/*********************************/
