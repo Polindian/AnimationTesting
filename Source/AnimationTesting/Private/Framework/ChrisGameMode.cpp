@@ -784,6 +784,8 @@ void AChrisGameMode::OnTransitionToShopMidpoint()
 	StopAllAISpawning();
 	DestroyAllAI();
 	TeleportPlayersToStart();
+	ResetAllPlayerSwords();
+
 
 	for (TActorIterator<AFlag> It(GetWorld()); It; ++It)
 	{
@@ -892,17 +894,7 @@ void AChrisGameMode::OnTransitionToArenaMidpoint()
 		It->ResetCapture();
 	}
 
-	// Reset weapons to sheathed while screen is black
-	ForEachPlayerController([](AChrisPlayerController* PC)
-		{
-			if (APawn* Pawn = PC->GetPawn())
-			{
-				if (USwordEquipComponent* SwordComponent = Pawn->FindComponentByClass<USwordEquipComponent>())
-				{
-					SwordComponent->ResetToUnequipped();
-				}
-			}
-		});
+	ResetAllPlayerSwords();
 
 	float HalfTransition = TransitionDuration / 2.f;
 
@@ -1011,6 +1003,20 @@ void AChrisGameMode::TeleportPlayersToStart()
 					Pawn->SetActorTransform(StartSpot->GetActorTransform());
 					PC->SetControlRotation(SpawnRotation); // Server side
 					PC->Client_OnResetRotation(SpawnRotation); // Client side
+				}
+			}
+		});
+}
+
+void AChrisGameMode::ResetAllPlayerSwords()
+{
+	ForEachPlayerController([](AChrisPlayerController* PC)
+		{
+			if (APawn* Pawn = PC->GetPawn())
+			{
+				if (USwordEquipComponent* SwordComponent = Pawn->FindComponentByClass<USwordEquipComponent>())
+				{
+					SwordComponent->ServerResetToUnequipped();
 				}
 			}
 		});

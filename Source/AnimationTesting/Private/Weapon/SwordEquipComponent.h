@@ -64,6 +64,11 @@ class USwordEquipComponent : public UActorComponent
 
         void ResetToUnequipped();
 
+        // Server only: sheathes swords here and, via replication, on every client and in replays
+        void ServerResetToUnequipped();
+
+        virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
         UFUNCTION(BlueprintCallable, Category = "Swords")
         TArray<class UMeshComponent*> GetSwordMeshes() const;
 
@@ -193,6 +198,13 @@ private:
     // Optional socket on the sword mesh
     UPROPERTY(EditDefaultsOnly, Category = "Swords|VFX")
     FName SwordVFXSocket = NAME_None;
+
+    // Bumped by the server on every reset; clients reset when it changes
+    UPROPERTY(ReplicatedUsing = OnRep_ResetCount)
+    uint8 ResetCount = 0;
+
+    UFUNCTION()
+    void OnRep_ResetCount();
 
 
     void CreateSwordVFX();

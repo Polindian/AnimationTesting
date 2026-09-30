@@ -8,12 +8,16 @@
 #include "AbilitySystemComponent.h"
 #include "GAS/ChrisAbilitySystemStatics.h"
 #include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
 #include "Particles/ParticleSystemComponent.h"
 
 USwordEquipComponent::USwordEquipComponent()
 {
     PrimaryComponentTick.bCanEverTick = true;
     PrimaryComponentTick.bStartWithTickEnabled = false;
+
+    // Needed so the multicast reset can reach clients and replays
+    SetIsReplicatedByDefault(true);
 }
 
 void USwordEquipComponent::BeginPlay()
@@ -48,6 +52,7 @@ void USwordEquipComponent::BeginPlay()
     UpdateEquippedTag();
 }
 
+
 void USwordEquipComponent::FindSwords()
 {
     TArray<UActorComponent*> AllComponents = GetOwner()->GetComponents().Array();
@@ -77,6 +82,11 @@ void USwordEquipComponent::FindSwords()
 bool USwordEquipComponent::IsTransitioning() const
 {
     return (EquipState == ESwordEquipState::Equipping || EquipState == ESwordEquipState::Unequipping);
+}
+
+void USwordEquipComponent::OnRep_ResetCount()
+{
+    ResetToUnequipped();
 }
 
 void USwordEquipComponent::CreateSwordVFX()
@@ -226,6 +236,20 @@ void USwordEquipComponent::ResetToUnequipped()
 
     EquipState = ESwordEquipState::Unequipped;
     UpdateEquippedTag();
+}
+
+void USwordEquipComponent::ServerResetToUnequipped()
+{
+    if (!GetOwner() || !GetOwner()->HasAuthority()) return;
+
+    ++ResetCount;          // wraps at 255, which is fine, only the change matters
+    ResetToUnequipped();   // OnRep doesn't fire on the server, so reset here too
+}
+
+void USwordEquipComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+    DOREPLIFETIME(USwordEquipComponent, ResetCount);
 }
 
 TArray<class UMeshComponent*> USwordEquipComponent::GetSwordMeshes() const
