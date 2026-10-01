@@ -120,7 +120,7 @@ void UStabAbility::StartCombo(FGameplayEventData EventData)
             }
         }
 
-        // Impact VFX — server fires, GAS replicates to all clients
+        /*Impact VFX — server fires, GAS replicates to all clients
         if (ImpactCueTag.IsValid() && K2_HasAuthority())
         {
             UAbilitySystemComponent* CueASC = GetAbilitySystemComponentFromActorInfo();
@@ -142,7 +142,7 @@ void UStabAbility::StartCombo(FGameplayEventData EventData)
 
                 CueASC->ExecuteGameplayCue(ImpactCueTag, CueParams);
             }
-        }
+        } */
 
         // Duration GE that drives the looping stun cue (open / loop / close)
         if (VFXDurationEffect && K2_HasAuthority())

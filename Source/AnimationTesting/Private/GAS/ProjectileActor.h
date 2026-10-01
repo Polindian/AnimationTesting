@@ -35,6 +35,15 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "GameplayCue")
 	FGameplayTag HitGameplayCueTag;
 
+	// Impact effect spawned directly on every machine (and in replays) on hit
+	UPROPERTY(EditDefaultsOnly, Category = "VFX")
+	TObjectPtr<class UNiagaraSystem> ImpactVFX;
+
+	UPROPERTY(EditDefaultsOnly, Category = "VFX")
+	FVector ImpactVFXScale = FVector(1.f);
+
+	void SpawnImpactVFX();
+
 	UPROPERTY(Replicated)
 	FGenericTeamId TeamId;
 

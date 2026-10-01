@@ -8,6 +8,8 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "GameplayCueManager.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
 
 // Sets default values
 AProjectileActor::AProjectileActor()
@@ -94,14 +96,22 @@ void AProjectileActor::NotifyActorBeginOverlap(AActor* OtherActor)
 		HitResult.ImpactPoint = GetActorLocation();
 		HitResult.ImpactNormal = GetActorForwardVector();
 
-		UChrisAbilitySystemStatics::SendLocalGameplayCue(OtherActor, HitResult, HitGameplayCueTag);
-
+		SpawnImpactVFX();
 		Destroy();
 	}
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Projectile: OtherActor %s has NO ASC!"), *OtherActor->GetName());
 	}
+}
+
+void AProjectileActor::SpawnImpactVFX()
+{
+	// Cosmetic only; the dedicated server has nothing to render
+	if (!ImpactVFX || GetNetMode() == NM_DedicatedServer) return;
+
+	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		this, ImpactVFX, GetActorLocation(), GetActorRotation(), ImpactVFXScale,true, true, ENCPoolMethod::None,false);
 }
 
 // Called when the game starts or when spawned

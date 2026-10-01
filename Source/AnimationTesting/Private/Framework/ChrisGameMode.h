@@ -189,6 +189,9 @@ private:
     void DestroyAllAI();
     void TeleportPlayersToStart();
 
+    // Sheathes every player's swords and turns off their VFX on all machines
+    void ResetAllPlayerSwords();
+
     void StopAllAIBehavior();
 
 
