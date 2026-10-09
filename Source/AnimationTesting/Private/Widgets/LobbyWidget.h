@@ -7,6 +7,28 @@
 #include "Player/PlayerInfoTypes.h"
 #include "LobbyWidget.generated.h"
 
+// One scripted step for the trailer lobby simulator
+USTRUCT()
+struct FLobbySimEvent
+{
+	GENERATED_BODY()
+
+	// Seconds after the previous step
+	UPROPERTY(EditAnywhere)
+	float Delay = 0.4f;
+
+	// New name joins; existing name moves and/or readies. Empty = the local player
+	UPROPERTY(EditAnywhere)
+	FString PlayerName;
+
+	// Slot to join or move to (Red 0-4, Blue 5-9). -1 keeps the current slot
+	UPROPERTY(EditAnywhere)
+	int32 TargetSlot = -1;
+
+	UPROPERTY(EditAnywhere)
+	bool bReady = false;
+};
+
 class UPA_CharacterDefinition;
 
 /**
@@ -169,4 +191,26 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	FText LeaveHeroSelectionText = FText::FromString(TEXT("Are you sure you want to leave the match?\nIt will count as a loss on your record."));
+
+
+
+	private:
+
+	// ---------- Trailer lobby simulator (PIE only, F7) ----------
+
+	// Editable in the widget defaults; filled with a default script if left empty
+	UPROPERTY(EditDefaultsOnly, Category = "Debug|Lobby Simulator")
+	TArray<FLobbySimEvent> LobbySimScript;
+
+	TArray<FPlayerSelection> SimulatedSelections;
+	int32 SimEventIndex = 0;
+	bool bSimulatingLobby = false;
+	bool bApplyingSimulatedSelection = false;
+	FTimerHandle LobbySimTimerHandle;
+
+	void StartLobbySimulation();
+	void StopLobbySimulation();
+	void StepLobbySimulation();
+	void ApplySimulatedSelections();
+	void BuildDefaultLobbySimScript();
 };

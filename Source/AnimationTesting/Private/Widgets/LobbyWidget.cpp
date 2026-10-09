@@ -195,6 +195,11 @@ void ULobbyWidget::ConfigureGameState()
 // Refreshes all slot widgets: resets to "Unoccupied", then fills in occupied slots with player names
 void ULobbyWidget::UpdatePlayerSelectionDisplay(const TArray<FPlayerSelection>& PlayerSelections)
 {
+    UE_LOG(LogTemp, Warning, TEXT("Lobby sim key pressed, GameState valid: %d"), ChrisGameState != nullptr);
+
+    // A real network refresh would wipe the simulated lobby mid-take
+    if (bSimulatingLobby && !bApplyingSimulatedSelection) return;
+    
     if (!CharacterSelectionTileView || !IsValid(CharacterSelectionTileView))
         return;
 
@@ -480,6 +485,15 @@ FReply ULobbyWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEven
 {
     const FKey Key = InKeyEvent.GetKey();
 
+#if WITH_EDITOR
+    // F7 starts the trailer lobby simulation; pressing again restores the real lobby
+    if (Key == EKeys::F7)
+    {
+        bSimulatingLobby ? StopLobbySimulation() : StartLobbySimulation();
+        return FReply::Handled();
+    }
+#endif
+
     // Same key as the in-match pause menu, plus Start on a gamepad. Key events
     // bubble up from whichever slot or hero tile has focus, so this fires from
     // either page of the switcher
@@ -612,4 +626,130 @@ void ULobbyWidget::RestoreLobbyFocus()
 
                 FocusedSlotIndexBeforeMenu = INDEX_NONE;
             }));
+}
+
+void ULobbyWidget::StartLobbySimulation()
+{
+    if (!ChrisGameState || !GetWorld()) return;
+
+    if (LobbySimScript.Num() == 0)
+    {
+        BuildDefaultLobbySimScript();
+    }
+
+    // Starts from the real lobby so the local player keeps their own slot
+    SimulatedSelections = ChrisGameState->GetPlayerSelection();
+    SimEventIndex = 0;
+    bSimulatingLobby = true;
+    ApplySimulatedSelections();
+
+    GetWorld()->GetTimerManager().SetTimer(LobbySimTimerHandle, this,
+        &ULobbyWidget::StepLobbySimulation, FMath::Max(LobbySimScript[0].Delay, 0.01f), false);
+}
+
+void ULobbyWidget::StopLobbySimulation()
+{
+    if (GetWorld())
+    {
+        GetWorld()->GetTimerManager().ClearTimer(LobbySimTimerHandle);
+    }
+
+    bSimulatingLobby = false;
+    SimulatedSelections.Reset();
+
+    if (ChrisGameState)
+    {
+        UpdatePlayerSelectionDisplay(ChrisGameState->GetPlayerSelection());
+    }
+}
+
+void ULobbyWidget::StepLobbySimulation()
+{
+    if (!LobbySimScript.IsValidIndex(SimEventIndex)) return;
+    const FLobbySimEvent& Event = LobbySimScript[SimEventIndex];
+
+    const bool bValidTarget = Event.TargetSlot >= 0 && Event.TargetSlot < TeamSelectionSlots.Num();
+    APlayerState* LocalPlayerState = GetOwningPlayerState();
+
+    // Empty name targets the local player's real entry
+    FPlayerSelection* Existing = SimulatedSelections.FindByPredicate(
+        [&Event, LocalPlayerState](const FPlayerSelection& Selection)
+        {
+            return Event.PlayerName.IsEmpty()
+                ? Selection.IsForPlayer(LocalPlayerState)
+                : Selection.GetPlayerNickname() == Event.PlayerName;
+        });
+
+    if (Existing)
+    {
+        if (bValidTarget) { Existing->SetSlot(Event.TargetSlot); }
+        Existing->SetIsReady(Event.bReady);
+    }
+    else if (bValidTarget && !Event.PlayerName.IsEmpty())
+    {
+        FPlayerSelection NewSelection;
+        NewSelection.SetSlot(Event.TargetSlot);
+        NewSelection.SetPlayerNickname(Event.PlayerName);
+        NewSelection.SetIsReady(Event.bReady);
+        SimulatedSelections.Add(NewSelection);
+    }
+
+    ApplySimulatedSelections();
+
+    ++SimEventIndex;
+    if (LobbySimScript.IsValidIndex(SimEventIndex) && GetWorld())
+    {
+        GetWorld()->GetTimerManager().SetTimer(LobbySimTimerHandle, this,
+            &ULobbyWidget::StepLobbySimulation, FMath::Max(LobbySimScript[SimEventIndex].Delay, 0.01f), false);
+    }
+}
+
+void ULobbyWidget::ApplySimulatedSelections()
+{
+    bApplyingSimulatedSelection = true;
+    UpdatePlayerSelectionDisplay(SimulatedSelections);
+    bApplyingSimulatedSelection = false;
+}
+
+void ULobbyWidget::BuildDefaultLobbySimScript()
+{
+    // Red = slots 0-4, Blue = 5-9
+    auto AddEvent = [this](float Delay, const TCHAR* Name, int32 SlotIndex, bool bReady)
+        {
+            FLobbySimEvent Event;
+            Event.Delay = Delay;
+            Event.PlayerName = Name;
+            Event.TargetSlot = SlotIndex;
+            Event.bReady = bReady;
+            LobbySimScript.Add(Event);
+        };
+
+    // Joining, with switches between teams and slots
+    AddEvent(0.8f, TEXT("Jxke_07"), 0, false);
+    AddEvent(0.5f, TEXT("xSlayerz"), 5, false);
+    AddEvent(1.0f, TEXT("TommyB_99"), 1, false);
+    AddEvent(0.4f, TEXT("ghostyy44"), 6, false);
+    AddEvent(0.9f, TEXT("Lukeyy_UK"), 2, false);
+    AddEvent(1.2f, TEXT("Jxke_07"), 7, false); // Red -> Blue
+    AddEvent(0.6f, TEXT("Raptor2k"), 0, false); // takes Jxke's old slot
+    AddEvent(0.7f, TEXT("Dezzy360"), 3, false);
+    AddEvent(1.1f, TEXT("ghostyy44"), 9, false); // moves down within Blue
+    AddEvent(0.5f, TEXT("kxng_reece"), 6, false);
+    AddEvent(0.9f, TEXT("Lukeyy_UK"), 8, false); // Red -> Blue
+    AddEvent(0.8f, TEXT("M0rgan"), 2, false); // takes Lukeyy's old slot
+    AddEvent(0.6f, TEXT("xSlayerz"), -1, true);  // first to ready
+    AddEvent(1.0f, TEXT("NxvaFPS"), 4, false); // last slot filled
+    AddEvent(0.7f, TEXT("TommyB_99"), -1, true);
+
+    // Ready-ups, including one player who unreadies and readies again
+    AddEvent(0.8f, TEXT("Raptor2k"), -1, true);
+    AddEvent(0.6f, TEXT("ghostyy44"), -1, true);
+    AddEvent(0.9f, TEXT("xSlayerz"), -1, false); // unreadies
+    AddEvent(0.7f, TEXT("Jxke_07"), -1, true);
+    AddEvent(1.0f, TEXT("kxng_reece"), -1, true);
+    AddEvent(0.8f, TEXT("xSlayerz"), -1, true);  // readies again
+    AddEvent(0.6f, TEXT("M0rgan"), -1, true);
+    AddEvent(0.9f, TEXT("Lukeyy_UK"), -1, true);
+    AddEvent(0.7f, TEXT("Dezzy360"), -1, true);
+    AddEvent(1.2f, TEXT("NxvaFPS"), -1, true);  // last one in
 }
