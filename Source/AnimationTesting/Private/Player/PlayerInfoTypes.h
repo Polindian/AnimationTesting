@@ -33,6 +33,9 @@ public:
 	FORCEINLINE bool GetIsLockedIn() const { return bIsLockedIn; }
 	FORCEINLINE void SetIsLockedIn(bool bLocked) { bIsLockedIn = bLocked; }
 
+	// Trailer/debug only: real selections take their name from the PlayerState
+	FORCEINLINE void SetPlayerNickname(const FString& NewNickname) { PlayerNickname = NewNickname; }
+
 	bool IsForPlayer(const APlayerState* PlayerState) const;
 	bool IsValid() const;
 
