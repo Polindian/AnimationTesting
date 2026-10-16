@@ -76,6 +76,9 @@ void UChrisAbilitySystemComponent::InitializeBaseAttributes()
 		UE_LOG(LogTemp, Log, TEXT("Max Level: %d, Max Experience: %f"), MaxLevel, MaxExperience);
 	}
 
+	// Heroes start at level 1; without this the first XP check counts 0 -> 1 as a level-up and grants a point
+	SetNumericAttributeBase(UCHeroAttributeSet::GetLevelAttribute(), 1);
+
 	ExperienceUpdated(FOnAttributeChangeData());
 }
 
@@ -205,7 +208,7 @@ bool UChrisAbilitySystemComponent::IsAtMaxLevel() const
 void UChrisAbilitySystemComponent::Server_UpgradeAbilityWithID_Implementation(EChrisAbilityInputID InputID)
 {
 	bool bFound = false;
-	float UpgradePoint = GetGameplayAttributeValue(UCHeroAttributeSet::GetUpgradePointAttribute(), bFound);
+	const float UpgradePoint = GetGameplayAttributeValue(UCHeroAttributeSet::GetUpgradePointAttribute(), bFound);
 	if (!bFound)
 		return;
 
@@ -213,7 +216,12 @@ void UChrisAbilitySystemComponent::Server_UpgradeAbilityWithID_Implementation(EC
 	if (!AbilitySpec || UChrisAbilitySystemStatics::IsAbilityAtMaxLevel(*AbilitySpec))
 		return;
 
-	SetNumericAttributeBase(UCHeroAttributeSet::GetUpgradePointAttribute(), UpgradePoint - 1);
+	// Cost = the level being bought: 0->1 costs 1, 1->2 costs 2, and so on
+	const int32 UpgradeCost = AbilitySpec->Level + 1;
+	if (UpgradePoint < UpgradeCost)
+		return;
+
+	SetNumericAttributeBase(UCHeroAttributeSet::GetUpgradePointAttribute(), UpgradePoint - UpgradeCost);
 	AbilitySpec->Level += 1;
 	MarkAbilitySpecDirty(*AbilitySpec);
 

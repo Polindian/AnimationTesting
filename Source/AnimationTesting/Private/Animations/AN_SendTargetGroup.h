@@ -32,7 +32,7 @@ private:
     TEnumAsByte<ETeamAttitude::Type> TargetTeam = ETeamAttitude::Hostile;
 
     UPROPERTY(EditAnywhere, Category = "Gameplay Ability")
-    bool bDrawDebug = true;
+    bool bDrawDebug = false;
 
     UPROPERTY(EditAnywhere, Category = "Gameplay Ability")
     float SphereSweepRadius = 35.f;

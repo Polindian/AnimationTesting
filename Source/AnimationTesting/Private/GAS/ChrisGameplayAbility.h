@@ -39,7 +39,7 @@ protected:
 	void ApplyGameplayEffectToHitResultActor(const FHitResult& HitResult, TSubclassOf<UGameplayEffect> GameplayEffect, int Level = 1);
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "Debug")
-	bool bShouldDrawDebug = true;
+	bool bShouldDrawDebug = false;
 
 	UPROPERTY()
 	class ACharacter* AvatarCharacter;
