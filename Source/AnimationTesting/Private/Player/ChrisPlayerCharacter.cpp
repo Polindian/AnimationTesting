@@ -377,7 +377,7 @@ void AChrisPlayerCharacter::LerpCameraToLocalOffsetLocation(const FVector& GoalL
 {
 	// Store the goal and start a repeating timer.
 	// Using a proper looping SetTimer with a handle so ClearTimer actually works.
-	// If a lerp is already running, ClearTimer stops it before starting a new one.
+	// If a lerp is already running, ClearTimer stops it before starting a new one
 	CameraLerpGoal = GoalLocation;
 	GetWorldTimerManager().ClearTimer(CameraLerpTimerHandle);
 	GetWorldTimerManager().SetTimer(CameraLerpTimerHandle, this, &AChrisPlayerCharacter::TickCameraLocalOffsetLerp, 0.016f, true);

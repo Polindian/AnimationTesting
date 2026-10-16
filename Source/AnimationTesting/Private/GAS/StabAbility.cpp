@@ -104,6 +104,9 @@ const FGenericDamageEffectDefinition* UStabAbility::GetDamageEffectDefinitionFor
 
 void UStabAbility::StartCombo(FGameplayEventData EventData)
 {
+    UE_LOG(LogTemp, Warning, TEXT("StartCombo in %s, montage %s"),
+        *GetName(), RightStabMontage ? *RightStabMontage->GetName() : TEXT("none"));
+    
     // Freeze movement on ground impact for smash / stun
     if (RadiusAttribute.IsValid())
     {
@@ -235,6 +238,14 @@ void UStabAbility::HandleComboChangeEvent(FGameplayEventData EventData)
 
 void UStabAbility::HandleComboCommit(FGameplayEventData EventData)
 {
+    UE_LOG(LogTemp, Warning, TEXT("ComboCommit: received %s, Next=%s, Section=%s, Required=%s"),
+        *EventData.EventTag.ToString(),
+        *NextComboName.ToString(),
+        GetOwnerAnimInstance() ? *GetOwnerAnimInstance()->Montage_GetCurrentSection(RightStabMontage).ToString() : TEXT("none"),
+        ComboInputMap.Find(GetOwnerAnimInstance() ? GetOwnerAnimInstance()->Montage_GetCurrentSection(RightStabMontage) : NAME_None)
+        ? *ComboInputMap.Find(GetOwnerAnimInstance()->Montage_GetCurrentSection(RightStabMontage))->ToString()
+        : TEXT("none"));
+    
     if (NextComboName == NAME_None)
     {
         return;
