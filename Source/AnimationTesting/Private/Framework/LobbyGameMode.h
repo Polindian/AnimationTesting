@@ -6,8 +6,9 @@
 #include "LobbyGameMode.generated.h"
 
 /**
- * Game mode for the pre-match lobby level.
- * Enables seamless travel for server-to-game transitions.
+ * Rules for the pre-match lobby. Exists only on the server.
+ * - Uses seamless travel so players and their selections carry over into the arena
+ * - Rejects new joins once team selection is over (PreLogin)
  */
 UCLASS()
 class ALobbyGameMode : public AGameModeBase

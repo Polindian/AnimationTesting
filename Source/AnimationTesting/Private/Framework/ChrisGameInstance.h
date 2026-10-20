@@ -19,7 +19,10 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FOnTravelFailedWithReason, const FString& /*
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnLeaderboardFetched, bool /*bSuccess*/, const TArray<FLeaderboardEntry>& /*Entries*/);
 
 /**
- *
+ * The only gameplay object that survives map travel. One per running game (each client and the server have their own).
+ * Client: Steam login via EOS, create/find/join sessions through the Flask coordinator, practice arena, leaderboard fetch.
+ * Dedicated server: create the EOS session, track players joining/leaving, heartbeat to the coordinator, shut down when empty.
+ * Also handles network failures and the lobby -> arena travel.
  */
 UCLASS()
 class UChrisGameInstance : public UGameInstance
