@@ -11,7 +11,9 @@
 class UPA_CharacterDefinition;
 
 /**
- * 
+ * Per-player info everyone can see. Exists on the server and all clients.
+ * - Player name, team slot and chosen hero (PlayerSelection)
+ * - CopyProperties carries the selection from the lobby into the arena on seamless travel
  */
 UCLASS()
 class AChrisPlayerState : public APlayerState

@@ -14,7 +14,9 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerSelectionUpdated, const TArray<FPla
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnMatchStatsUpdated, const TArray<FPlayerMatchStats>&);
 
 /**
- * 
+ * Shared match info, replicated to every client.
+ * - Lobby: team slots, hero picks, ready/lock-in states, hero-selection timer
+ * - Arena: kill/death tally and end-of-match stats (used by the results screen and leaderboard)
  */
 UCLASS()
 class AChrisGameState : public AGameStateBase

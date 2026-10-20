@@ -15,7 +15,10 @@ class UShopWidget;
 class UMatchStatsWidget;
 
 /**
- * 
+ * One player's link to the server. Exists on the server and on the owning client only.
+ * - Server -> client (Client_ RPCs): countdown, round start/end, banners, camera and shop transitions, match stats
+ * - Client -> server (Server_ RPCs): continue vote, "finished loading" report
+ * - Owns the gameplay, shop and match-stats UI; handles respawn/death resets
  */
 UCLASS()
 class AChrisPlayerController : public APlayerController, public IGenericTeamAgentInterface

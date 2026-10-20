@@ -27,6 +27,14 @@ enum class EMatchPhase : uint8
     MatchOver             // One team has won the match
 };
 
+/**
+ * Arena rules. Exists only on the dedicated server; clients are told what happens via RPCs on their controllers.
+ * - Match flow: loading hold -> countdown -> round -> result -> shop, repeated until a team wins 2 rounds
+ * - Decides round winners (flags, territory, kills tiebreak) and awards souls
+ * - Spawns each player's chosen hero at their team's start spot
+ * - Spawns and clears AI between rounds; supports a solo practice mode
+ */
+
 UCLASS()
 class AChrisGameMode : public AGameModeBase
 {
